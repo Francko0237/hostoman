@@ -16,6 +16,18 @@ class MedecinServices {
         .toList();
   }
 
+  /// 📋 Récupère la liste des examens disponibles depuis la base de données
+  Future<List<Map<String, dynamic>>> getListeExamens() async {
+    final response = await supabase
+        .from('listeexamen')
+        .select('id_examlist, nom_examen, prix_examen')
+        .order('nom_examen', ascending: true);
+
+    return (response as List<dynamic>)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+  }
+
   /// 🩺 Sauvegarde les données de la consultation (Adapté à ton UI)
   Future<void> saveConsultationData({
     required int idConsultation,
@@ -73,7 +85,13 @@ class MedecinServices {
       // 3. GÉNÉRATION AUTOMATIQUE DE LA FACTURE
       double totalPrix = 0;
       for (var ex in examensPrescrits) {
-        totalPrix += (ex['prix'] as num).toDouble();
+        // Conversion sécurisée : gère String ou num
+        final prix = ex['prix'];
+        if (prix is String) {
+          totalPrix += double.parse(prix);
+        } else if (prix is num) {
+          totalPrix += prix.toDouble();
+        }
       }
 
       await supabase.from('paiement').insert({

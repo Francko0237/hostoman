@@ -21,10 +21,14 @@ class _ConsultationPageState extends State<ConsultationPage> {
 
   // --- Contrôleurs ---
   final TextEditingController _antecedentsController = TextEditingController();
-  final TextEditingController _signesSymptomesController = TextEditingController();
-  final TextEditingController _diagnosticInitialController = TextEditingController();
-  final TextEditingController _diagnosticFinalController = TextEditingController();
-  final TextEditingController _traitementPrescritController = TextEditingController();
+  final TextEditingController _signesSymptomesController =
+      TextEditingController();
+  final TextEditingController _diagnosticInitialController =
+      TextEditingController();
+  final TextEditingController _diagnosticFinalController =
+      TextEditingController();
+  final TextEditingController _traitementPrescritController =
+      TextEditingController();
   final TextEditingController _rdvDateController = TextEditingController();
   final TextEditingController _rdvHeureController = TextEditingController();
 
@@ -36,21 +40,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
   bool _showExamens = false;
   bool _showRdvDateTime = false;
 
-  // État des examens (Liste pré-remplie avec prix provisoires)
-  final Map<String, dynamic> _examens = {
-    'Globules rouges': {'selected': false, 'prix': 2500.0},
-    'Globules blancs': {'selected': false, 'prix': 2500.0},
-    "Taux d'hemoglobine": {'selected': false, 'prix': 3000.0},
-    'Hématocrite': {'selected': false, 'prix': 2000.0},
-    'Neutrophiles': {'selected': false, 'prix': 1500.0},
-    'Monocytes': {'selected': false, 'prix': 1500.0},
-    'Glycémie': {'selected': false, 'prix': 2500.0},
-    'Cholestérol': {'selected': false, 'prix': 4000.0},
-    'Triglicéride': {'selected': false, 'prix': 4000.0},
-    'Créatine': {'selected': false, 'prix': 3500.0},
-    'Urisémie': {'selected': false, 'prix': 3500.0},
-    'Groupe Sanguin (Rhésus)': {'selected': false, 'prix': 5000.0},
-  };
+  // État des examens (Chargés depuis la base de données)
+  List<Map<String, dynamic>> _examens = [];
+  bool _examensLoading = true;
 
   // --- Couleurs et Styles (Consolidés) ---
   final Color fieldBackgroundColor = const Color(0xFFF8F9FA);
@@ -59,12 +51,12 @@ class _ConsultationPageState extends State<ConsultationPage> {
   final Color primaryBlue = const Color(0xFF007BFF);
   final Color lightPurple = const Color(0xFF8A7DF0);
 
-
   @override
   void initState() {
+    super.initState();
     medecinService = MedecinServices(Supabase.instance.client);
     _loadPatientName();
-    super.initState();
+    _loadExamens();
   }
 
   @override
@@ -87,7 +79,8 @@ class _ConsultationPageState extends State<ConsultationPage> {
       final data = await medecinService.infosPatient(widget.idConsultation);
       if (data.isNotEmpty) {
         final patient = data[0]['Patient'] as Map<String, dynamic>;
-        final String nomComplet = (patient['nom_complet']?.toString() ?? 'Patient Inconnu');
+        final String nomComplet =
+            (patient['nom_complet']?.toString() ?? 'Patient Inconnu');
         if (mounted) {
           setState(() {
             _patientName = nomComplet;
@@ -104,13 +97,41 @@ class _ConsultationPageState extends State<ConsultationPage> {
     }
   }
 
+  Future<void> _loadExamens() async {
+    try {
+      final examensData = await medecinService.getListeExamens();
+      if (mounted) {
+        setState(() {
+          _examens = examensData.map((examen) {
+            return {
+              'id_examlist': examen['id_examlist'],
+              'nom_examen': examen['nom_examen'],
+              'prix_examen': examen['prix_examen'],
+              'selected': false,
+            };
+          }).toList();
+          _examensLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _examensLoading = false;
+        });
+      }
+      print('Erreur de chargement des examens: $e');
+    }
+  }
+
   void _showPatientInfoModal(BuildContext context) {
     // ... (Logique inchangée pour le modal d'information patient)
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
           title: const Text("Informations du Patient "),
           content: SingleChildScrollView(
             child: FutureBuilder<List<Map<String, dynamic>>>(
@@ -120,20 +141,31 @@ class _ConsultationPageState extends State<ConsultationPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Center(child: Text('Erreur de chargement: ${snapshot.error}'));
+                  return Center(
+                    child: Text('Erreur de chargement: ${snapshot.error}'),
+                  );
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('Aucune information patient trouvée.'));
+                  return const Center(
+                    child: Text('Aucune information patient trouvée.'),
+                  );
                 }
 
                 final consultationData = snapshot.data![0];
-                final patient = consultationData['Patient'] as Map<String, dynamic>;
-                final parametresVitaux = consultationData['Parametres_vitaux'] as Map<String, dynamic>? ?? {};
+                final patient =
+                    consultationData['Patient'] as Map<String, dynamic>;
+                final parametresVitaux =
+                    consultationData['Parametres_vitaux']
+                        as Map<String, dynamic>? ??
+                    {};
 
-                final String nomComplet = (patient['nom_complet']?.toString() ?? 'N/A');
+                final String nomComplet =
+                    (patient['nom_complet']?.toString() ?? 'N/A');
                 final String sexe = (patient['sexe']?.toString() ?? 'INE');
-                final String telephone = (patient['telephone']?.toString() ?? 'INE');
-                final String adresse = (patient['adresse']?.toString() ?? 'INE');
+                final String telephone =
+                    (patient['telephone']?.toString() ?? 'INE');
+                final String adresse =
+                    (patient['adresse']?.toString() ?? 'INE');
                 final int? age = patient['age'] as int?;
                 final profesion = patient['profession'] ?? 'INE';
                 final StatutMatrimonial = patient['statut_matrimonial'];
@@ -149,7 +181,10 @@ class _ConsultationPageState extends State<ConsultationPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text("Infos Administratives", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      "Infos Administratives",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     const Divider(),
                     Text("Nom Complet: $nomComplet"),
                     Text("Sexe : $sexe"),
@@ -159,14 +194,17 @@ class _ConsultationPageState extends State<ConsultationPage> {
                     Text("Statut Matrimonial : $StatutMatrimonial"),
                     Text("Adress : $adresse"),
                     const SizedBox(height: 20),
-                    const Text("Paramètres Vitaux", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      "Paramètres Vitaux",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     const Divider(),
                     Text("Temperature : $temperature"),
                     Text("Tension : $systolique/$diastolique"),
                     Text("Poids : $poid"),
                     Text('Statut VIH : $statutVih'),
                     Text('Vaccination : $vaccination'),
-                    Text("Motif de la consultation : $motif")
+                    Text("Motif de la consultation : $motif"),
                   ],
                 );
               },
@@ -193,7 +231,8 @@ class _ConsultationPageState extends State<ConsultationPage> {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField( // 🛑 Utilisation de TextFormField pour la validation
+      child: TextFormField(
+        // 🛑 Utilisation de TextFormField pour la validation
         controller: controller,
         minLines: 3,
         maxLines: 5,
@@ -201,7 +240,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(color: Colors.grey),
-          errorStyle: const TextStyle(height: 0.5), // Réduit l'espace des messages d'erreur
+          errorStyle: const TextStyle(
+            height: 0.5,
+          ), // Réduit l'espace des messages d'erreur
           filled: true,
           fillColor: fieldBackgroundColor,
           border: OutlineInputBorder(
@@ -218,7 +259,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Colors.red), // Mettre en évidence les erreurs
+            borderSide: const BorderSide(
+              color: Colors.red,
+            ), // Mettre en évidence les erreurs
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
@@ -229,14 +272,20 @@ class _ConsultationPageState extends State<ConsultationPage> {
     );
   }
 
-  /// Construit une case à cocher pour un examen (inchangé)
-  Widget _buildExamCheckbox({required String title}) {
+  /// Construit une case à cocher pour un examen
+  Widget _buildExamCheckbox({
+    required Map<String, dynamic> examen,
+    required int index,
+  }) {
     return CheckboxListTile(
-      title: Text('$title (Prix: ${_examens[title]['prix']} FCFA)', style: const TextStyle(fontSize: 14)),
-      value: _examens[title]['selected'] as bool,
+      title: Text(
+        '${examen['nom_examen']} (Prix: ${examen['prix_examen']} FCFA)',
+        style: const TextStyle(fontSize: 14),
+      ),
+      value: examen['selected'] as bool,
       onChanged: (bool? newValue) {
         setState(() {
-          _examens[title]['selected'] = newValue!;
+          _examens[index]['selected'] = newValue!;
         });
       },
       contentPadding: EdgeInsets.zero,
@@ -253,7 +302,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
       // Si la validation échoue (champs obligatoires vides), arrêter l'exécution
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez remplir tous les champs obligatoires du formulaire.'),
+          content: Text(
+            'Veuillez remplir tous les champs obligatoires du formulaire.',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -261,17 +312,21 @@ class _ConsultationPageState extends State<ConsultationPage> {
     }
 
     // 1. Collecte des examens prescrits
-    final List<Map<String, dynamic>> examensPrescrits = _examens.entries
-        .where((entry) => entry.value['selected'] == true)
-        .map((entry) => {
-      'nom': entry.key,
-      'prix': entry.value['prix'],
-    })
+    final List<Map<String, dynamic>> examensPrescrits = _examens
+        .where((examen) => examen['selected'] == true)
+        .map(
+          (examen) => {
+            'nom': examen['nom_examen'],
+            'prix': examen['prix_examen'],
+          },
+        )
         .toList();
 
     // 2. Calcul de la date et heure du RDV
     DateTime? finalRdvDate;
-    if (_programmationRdv == 'programmer' && _selectedRdvDate != null && _selectedRdvTime != null) {
+    if (_programmationRdv == 'programmer' &&
+        _selectedRdvDate != null &&
+        _selectedRdvTime != null) {
       finalRdvDate = DateTime(
         _selectedRdvDate!.year,
         _selectedRdvDate!.month,
@@ -297,11 +352,12 @@ class _ConsultationPageState extends State<ConsultationPage> {
       );
 
       if (mounted) {
-
         context.push('/Dashboard_Medecin/ConsultationList');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Consultation finalisée et enregistrée avec succès. ✅'),
+            content: Text(
+              'Consultation finalisée et enregistrée avec succès. ✅',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -337,17 +393,20 @@ class _ConsultationPageState extends State<ConsultationPage> {
         _buildFormField(
           hint: "Antécédents *",
           controller: _antecedentsController,
-          validator: (value) => value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Champ obligatoire' : null,
         ),
         _buildFormField(
           hint: "Signes et symptomes *",
           controller: _signesSymptomesController,
-          validator: (value) => value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Champ obligatoire' : null,
         ),
         _buildFormField(
           hint: "Diagnostic initial *",
           controller: _diagnosticInitialController,
-          validator: (value) => value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Champ obligatoire' : null,
         ),
       ],
     );
@@ -361,9 +420,18 @@ class _ConsultationPageState extends State<ConsultationPage> {
           hintStyle: const TextStyle(color: Colors.grey),
           filled: true,
           fillColor: fieldBackgroundColor,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: fieldBorderColor)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: primaryBlue.withOpacity(0.5))),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: fieldBorderColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: primaryBlue.withOpacity(0.5)),
+          ),
           errorStyle: const TextStyle(height: 0.5),
         ),
         hint: const Text("Statut Consultation *"),
@@ -372,7 +440,10 @@ class _ConsultationPageState extends State<ConsultationPage> {
         validator: (value) => value == null ? 'Sélection obligatoire' : null,
         items: const [
           DropdownMenuItem(value: 'examen', child: Text("Examen à effectuer")),
-          DropdownMenuItem(value: 'pas_examen', child: Text("Pas d'examen à effectuer")), // ⬅️ Corrigé
+          DropdownMenuItem(
+            value: 'pas_examen',
+            child: Text("Pas d'examen à effectuer"),
+          ), // ⬅️ Corrigé
         ],
         onChanged: (String? newValue) {
           setState(() {
@@ -391,18 +462,24 @@ class _ConsultationPageState extends State<ConsultationPage> {
       children: [
         const Text(
           "Finalisation de la consultation",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
         const SizedBox(height: 15),
         _buildFormField(
           hint: "Diagnostic final *",
           controller: _diagnosticFinalController,
-          validator: (value) => value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Champ obligatoire' : null,
         ),
         _buildFormField(
           hint: "Traitement prescrit *",
           controller: _traitementPrescritController,
-          validator: (value) => value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Champ obligatoire' : null,
         ),
       ],
     );
@@ -416,9 +493,18 @@ class _ConsultationPageState extends State<ConsultationPage> {
           hintStyle: const TextStyle(color: Colors.grey),
           filled: true,
           fillColor: fieldBackgroundColor,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: fieldBorderColor)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: primaryBlue.withOpacity(0.5))),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: fieldBorderColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: primaryBlue.withOpacity(0.5)),
+          ),
           errorStyle: const TextStyle(height: 0.5),
         ),
         hint: const Text("Programmation de rendez-vous *"),
@@ -426,8 +512,14 @@ class _ConsultationPageState extends State<ConsultationPage> {
         // 🛑 VALIDATION: Programmation RDV est obligatoire
         validator: (value) => value == null ? 'Sélection obligatoire' : null,
         items: const [
-          DropdownMenuItem(value: 'programmer', child: Text("Rendez-vous à effectuer")),
-          DropdownMenuItem(value: 'pas_programmer', child: Text("Pas de nouveau rendez-vous")),
+          DropdownMenuItem(
+            value: 'programmer',
+            child: Text("Rendez-vous à effectuer"),
+          ),
+          DropdownMenuItem(
+            value: 'pas_programmer',
+            child: Text("Pas de nouveau rendez-vous"),
+          ),
         ],
         onChanged: (String? newValue) {
           setState(() {
@@ -448,8 +540,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
 
   Widget _buildRdvDateTimeFields(BuildContext context) {
     // 🛑 VALIDATION : Si programmer est sélectionné, la date/heure devient obligatoire
-     String? rdvValidator(String? value) {
-      if (_programmationRdv == 'programmer' && (value == null || value.isEmpty)) {
+    String? rdvValidator(String? value) {
+      if (_programmationRdv == 'programmer' &&
+          (value == null || value.isEmpty)) {
         return 'Date/Heure obligatoire';
       }
       return null;
@@ -460,37 +553,60 @@ class _ConsultationPageState extends State<ConsultationPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Choisir la date et l'heure :", style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black87)),
+          const Text(
+            "Choisir la date et l'heure :",
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
               // Champ Date
               Expanded(
-                child: TextFormField( // 🛑 Utilisation de TextFormField
+                child: TextFormField(
+                  // 🛑 Utilisation de TextFormField
                   controller: _rdvDateController,
-                  validator: rdvValidator, // 🛑 Ajout de la validation contextuelle
+                  validator:
+                      rdvValidator, // 🛑 Ajout de la validation contextuelle
                   decoration: InputDecoration(
                     hintText: 'Date *',
                     errorStyle: const TextStyle(height: 0.5),
                     filled: true,
                     fillColor: fieldBackgroundColor,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: fieldBorderColor)),
-                    errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.red)),
-                    focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.red)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: fieldBorderColor),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
                   ),
                   readOnly: true,
                   onTap: () async {
                     final date = await showDatePicker(
                       context: context,
-                      initialDate: _selectedRdvDate ?? DateTime.now().add(const Duration(days: 1)),
+                      initialDate:
+                          _selectedRdvDate ??
+                          DateTime.now().add(const Duration(days: 1)),
                       firstDate: DateTime.now(),
                       lastDate: DateTime(2030),
                     );
                     if (date != null) {
                       setState(() {
                         _selectedRdvDate = date;
-                        _rdvDateController.text = '${date.day}/${date.month}/${date.year}';
+                        _rdvDateController.text =
+                            '${date.day}/${date.month}/${date.year}';
                       });
                       // Si la date change, forcer la revalidation du formulaire pour le champ
                       _formKey.currentState!.validate();
@@ -501,18 +617,32 @@ class _ConsultationPageState extends State<ConsultationPage> {
               const SizedBox(width: 10),
               // Champ Heure
               Expanded(
-                child: TextFormField( // 🛑 Utilisation de TextFormField
+                child: TextFormField(
+                  // 🛑 Utilisation de TextFormField
                   controller: _rdvHeureController,
-                  validator: rdvValidator, // 🛑 Ajout de la validation contextuelle
+                  validator:
+                      rdvValidator, // 🛑 Ajout de la validation contextuelle
                   decoration: InputDecoration(
                     hintText: 'Heure *',
                     errorStyle: const TextStyle(height: 0.5),
                     filled: true,
                     fillColor: fieldBackgroundColor,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: fieldBorderColor)),
-                    errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.red)),
-                    focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.red)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: fieldBorderColor),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
                   ),
                   readOnly: true,
                   onTap: () async {
@@ -552,7 +682,10 @@ class _ConsultationPageState extends State<ConsultationPage> {
         ),
         title: Text(
           _patientName,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
@@ -578,7 +711,11 @@ class _ConsultationPageState extends State<ConsultationPage> {
                 child: const Center(
                   child: Text(
                     "Formulaire de Consultation",
-                    style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 21,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -591,11 +728,19 @@ class _ConsultationPageState extends State<ConsultationPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Form( // 🔑 Enveloppe tout le contenu du formulaire dans le widget Form
+                child: Form(
+                  // 🔑 Enveloppe tout le contenu du formulaire dans le widget Form
                   key: _formKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction, // Validation lors de l'interaction
+                  autovalidateMode: AutovalidateMode
+                      .onUserInteraction, // Validation lors de l'interaction
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -608,17 +753,56 @@ class _ConsultationPageState extends State<ConsultationPage> {
                       // Liste des examens (conditionnel)
                       if (_showExamens)
                         Padding(
-                          padding: const EdgeInsets.only(top: 15.0, bottom: 8.0),
+                          padding: const EdgeInsets.only(
+                            top: 15.0,
+                            bottom: 8.0,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("Liste des examens à effectuer :", style: TextStyle(fontWeight: FontWeight.w500)),
-                              const SizedBox(height: 5),
-                              Container(
-                                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                decoration: BoxDecoration(color: fieldBackgroundColor, borderRadius: BorderRadius.circular(10), border: Border.all(color: fieldBorderColor)),
-                                child: Column(children: _examens.keys.map((String key) => _buildExamCheckbox(title: key)).toList()),
+                              const Text(
+                                "Liste des examens à effectuer :",
+                                style: TextStyle(fontWeight: FontWeight.w500),
                               ),
+                              const SizedBox(height: 5),
+                              _examensLoading
+                                  ? const Center(
+                                      child: CircularProgressIndicator(),
+                                    )
+                                  : Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: fieldBackgroundColor,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: fieldBorderColor,
+                                        ),
+                                      ),
+                                      child: _examens.isEmpty
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(16.0),
+                                              child: Text(
+                                                'Aucun examen disponible',
+                                                style: TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            )
+                                          : Column(
+                                              children: _examens
+                                                  .asMap()
+                                                  .entries
+                                                  .map((entry) {
+                                                    return _buildExamCheckbox(
+                                                      examen: entry.value,
+                                                      index: entry.key,
+                                                    );
+                                                  })
+                                                  .toList(),
+                                            ),
+                                    ),
                             ],
                           ),
                         ),
@@ -640,17 +824,23 @@ class _ConsultationPageState extends State<ConsultationPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _finalizeConsultation ,
+                          onPressed: _finalizeConsultation,
                           // 🛑 Déclenche la validation avant la sauvegarde
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryBlue,
                             padding: const EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                             elevation: 2,
                           ),
                           child: const Text(
                             "Finaliser la consultation",
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -662,7 +852,10 @@ class _ConsultationPageState extends State<ConsultationPage> {
               const SizedBox(height: 25),
 
               // --- Footer ---
-              const Text("@2025 Yamgai Mokube Franck Daniel", style: TextStyle(color: Colors.white70, fontSize: 12)),
+              const Text(
+                "@2025 Yamgai Mokube Franck Daniel",
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
               const SizedBox(height: 20),
             ],
           ),
