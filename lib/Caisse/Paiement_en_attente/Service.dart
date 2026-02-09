@@ -16,7 +16,7 @@ class PaiementService {
             Patient(*),
             paiement!inner(*)
           ''')
-          .eq('paiement.statut_paiement', 'en_cour');
+          .eq('paiement.statut_paiement', 'en_attente');
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
