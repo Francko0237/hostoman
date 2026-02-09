@@ -16,7 +16,7 @@ class PaiementService {
             Patient(*),
             paiement!inner(*)
           ''')
-          .eq('paiement.statut_paiement', 'non payer');
+          .eq('paiement.statut_paiement', 'en_cour');
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
@@ -31,12 +31,6 @@ class PaiementService {
       await supabase
           .from('paiement')
           .update({'statut_paiement': 'payer'})
-          .eq('id_consultation', idConsultation);
-
-      // Optionnel : Mettre aussi à jour la colonne 'payer' dans Consultation pour la synchro
-      await supabase
-          .from('Consultation')
-          .update({'payer': 'oui'})
           .eq('id_consultation', idConsultation);
 
       print("Paiement validé avec succès");

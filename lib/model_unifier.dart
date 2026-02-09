@@ -1,6 +1,5 @@
-
 class Patient {
-  final String ?  id_patient;
+  final String? id_patient;
   final String nom_complet;
   final String sexe;
   final int age;
@@ -37,14 +36,15 @@ class Patient {
   factory Patient.fromMap(Map<String, dynamic> map) => Patient(
     id_patient: map['id_patient']?.toString() ?? 'idError',
     nom_complet: map['nom_complet'] ?? 'nameError',
-    sexe: map['sexe']?? 'sexeError',
-    age: map['age']?? 0,
-    telephone: map['telephone']?? 'sexeError',
-    adresse: map['adresse']??'adresseError',
-    profession: map['profession']??'professionError',
-    statut_matrimonial: map['statut_matrimonial']??'statutError',
-      date_enregistrement: DateTime.parse(map['date_enregistrement']??'dateError'),
-
+    sexe: map['sexe'] ?? 'sexeError',
+    age: map['age'] ?? 0,
+    telephone: map['telephone'] ?? 'sexeError',
+    adresse: map['adresse'] ?? 'adresseError',
+    profession: map['profession'] ?? 'professionError',
+    statut_matrimonial: map['statut_matrimonial'] ?? 'statutError',
+    date_enregistrement: DateTime.parse(
+      map['date_enregistrement'] ?? 'dateError',
+    ),
   );
 }
 
@@ -71,10 +71,9 @@ class Parametres_vitaux {
     required this.statut_VIH,
     required this.vaccination,
     required this.motif_de_consultation,
-   required this.id_personnel,
+    required this.id_personnel,
     required this.date_enregistrement,
     required this.type_service,
-
   });
 
   Map<String, dynamic> toMap() {
@@ -122,7 +121,7 @@ class Medecin {
   int? patient_enregistre;
   int? age;
   String? specialite;
-String? sexe;
+  String? sexe;
   Medecin({
     required this.nom,
     required this.prenom,
@@ -133,7 +132,7 @@ String? sexe;
     required this.email,
     required this.patient_enregistre,
     required this.age,
-    this.sexe
+    this.sexe,
   });
 
   Map<String, dynamic> toMap() {
@@ -143,11 +142,11 @@ String? sexe;
       'telephone': telephone,
       'adresse': adresse,
       'email': email,
-      'patient_enregistre':patient_enregistre,
-      'age':age,
+      'patient_enregistre': patient_enregistre,
+      'age': age,
       'Specialite': specialite,
-    'id_personnel':id_personnel,
-      'sexe':sexe
+      'id_personnel': id_personnel,
+      'sexe': sexe,
     };
   }
 
@@ -156,13 +155,13 @@ String? sexe;
       nom: (map['Nom'] ?? 'nomError'),
       prenom: (map['Prenom'] ?? 'prenomError'),
       specialite: (map['Specialite'] ?? 'specialiteError'),
-        id_personnel:(map['id_personnel']),
+      id_personnel: (map['id_personnel']),
       telephone: (map['telephone']),
       adresse: (map['adresse']),
       email: (map['email']),
       age: (map['age']),
       patient_enregistre: (map['patient_enregistre']),
-      sexe: (map['sexe'])
+      sexe: (map['sexe']),
     );
   }
 }
@@ -177,17 +176,15 @@ class Consultation {
   String id_patient;
   int id_parametres_vitaux;
   bool? Disponibilite;
-  String?antecedents;
+  String? antecedents;
   String? id_personnel;
-  String? payer;
 
-String?signes_symptomes;
-String?diagnostic_initial;
-String?diagnostic_final;
-String?traitement_prescrit;
-String?programmation_rdv;
-String?date_rdv_prevu;
-
+  String? signes_symptomes;
+  String? diagnostic_initial;
+  String? diagnostic_final;
+  String? traitement_prescrit;
+  String? programmation_rdv;
+  String? date_rdv_prevu;
 
   Consultation({
     required this.Statut_Consultation,
@@ -196,7 +193,6 @@ String?date_rdv_prevu;
     required this.id_patient,
     required this.id_parametres_vitaux,
     required this.id_personnel,
-   this.payer,
     this.antecedents,
     this.Disponibilite,
     this.signes_symptomes,
@@ -205,8 +201,7 @@ String?date_rdv_prevu;
     this.traitement_prescrit,
     this.programmation_rdv,
     this.date_rdv_prevu,
-required this.date_derniere_mise_ajour
-
+    required this.date_derniere_mise_ajour,
   });
 
   Map<String, dynamic> toMap() {
@@ -216,16 +211,15 @@ required this.date_derniere_mise_ajour
       'type_service': type_service,
       'id_patient': id_patient,
       'id_parametres_vitaux': id_parametres_vitaux,
-      'id_personnel':id_personnel,
-      'payer':payer,
-      'date_derniere_mise_ajour':date_derniere_mise_ajour,
-      'antecedents':antecedents,
-      'signes_symptomes':signes_symptomes,
-      'diagnostic_initial':diagnostic_initial,
-      'diagnostic_final':diagnostic_final,
-      'traitement_prescrit':traitement_prescrit,
-      'programmation_rdv':programmation_rdv,
-      'date_rdv_prevu':date_rdv_prevu,
+      'id_personnel': id_personnel,
+      'date_derniere_mise_ajour': date_derniere_mise_ajour,
+      'antecedents': antecedents,
+      'signes_symptomes': signes_symptomes,
+      'diagnostic_initial': diagnostic_initial,
+      'diagnostic_final': diagnostic_final,
+      'traitement_prescrit': traitement_prescrit,
+      'programmation_rdv': programmation_rdv,
+      'date_rdv_prevu': date_rdv_prevu,
     };
   }
 
@@ -237,37 +231,29 @@ required this.date_derniere_mise_ajour
       id_patient: (map['id_patient']),
       id_parametres_vitaux: (map['id_parametres_vitaux']),
       id_personnel: (map['id_personnel']),
-      payer: (map['payer']),
-        date_derniere_mise_ajour:(map['date_derniere_mise_ajour']),
-        antecedents:(map['antecedents']),
-        signes_symptomes:(map['signes_symptomes']),
-        diagnostic_initial:(map['diagnostic_initial']),
-        diagnostic_final:(map['diagnostic_final']),
-        traitement_prescrit:(map['traitement_prescrit']),
-        programmation_rdv:(map['programmation_rdv']),
-        date_rdv_prevu:(map['date_rdv_prevu'])
+      date_derniere_mise_ajour: (map['date_derniere_mise_ajour']),
+      antecedents: (map['antecedents']),
+      signes_symptomes: (map['signes_symptomes']),
+      diagnostic_initial: (map['diagnostic_initial']),
+      diagnostic_final: (map['diagnostic_final']),
+      traitement_prescrit: (map['traitement_prescrit']),
+      programmation_rdv: (map['programmation_rdv']),
+      date_rdv_prevu: (map['date_rdv_prevu']),
     );
   }
-
 }
 //Paiement
 
 class Paiement {
   final prix_a_paye;
 
-  Paiement({
-    this.prix_a_paye
-  });
+  Paiement({this.prix_a_paye});
 
   Map<String, dynamic> toMap() {
-    return {
-      'prix_a_paye': prix_a_paye
-    };
-  }
-  factory Paiement.fromMap(Map<String, dynamic>map){
-    return Paiement(
-      prix_a_paye: (map['prix_a_paye'])
-    );
+    return {'prix_a_paye': prix_a_paye};
   }
 
+  factory Paiement.fromMap(Map<String, dynamic> map) {
+    return Paiement(prix_a_paye: (map['prix_a_paye']));
+  }
 }

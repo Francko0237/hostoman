@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'service.dart';
+import 'validators.dart';
 import 'dart:ui';
 
 /// ---------------------------
@@ -519,13 +520,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 label: 'Nom Complet *',
                                 hint: 'Ex: Yamga Mokube Francko Daniel',
                                 icon: Icons.person,
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty)
-                                    return 'Veuillez entrer le nom complet.';
-                                  if (v.trim().length < 3)
-                                    return 'Le nom doit faire au moins 3 caractères.';
-                                  return null;
-                                },
+                                validator:
+                                    PatientFormConfig.nomComplet.validator,
                               ),
                               const SizedBox(height: 16),
 
@@ -609,15 +605,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       hint: 'Ex: 25',
                                       icon: Icons.cake,
                                       keyboardType: TextInputType.number,
-                                      validator: (v) {
-                                        if (v == null || v.isEmpty)
-                                          return 'Requis';
-                                        final n = int.tryParse(v);
-                                        if (n == null) return 'Invalide';
-                                        if (n <= 0 || n > 120)
-                                          return '1-120 ans';
-                                        return null;
-                                      },
+                                      validator:
+                                          PatientFormConfig.age.validator,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -628,10 +617,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       hint: 'Ex: 670619582',
                                       icon: Icons.phone,
                                       keyboardType: TextInputType.phone,
-                                      validator: (v) =>
-                                          (v == null || v.trim().isEmpty)
-                                          ? 'Requis'
-                                          : null,
+                                      validator:
+                                          PatientFormConfig.telephone.validator,
                                     ),
                                   ),
                                 ],
@@ -643,8 +630,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 label: 'Adresse *',
                                 hint: 'Ex: Pk-14',
                                 icon: Icons.house,
-                                validator: (v) =>
-                                    (v == null || v.isEmpty) ? 'Requis' : null,
+                                validator: PatientFormConfig.adresse.validator,
                               ),
                               const SizedBox(height: 16),
 
@@ -653,8 +639,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 label: 'Profession *',
                                 hint: 'Ex: Etudiant',
                                 icon: Icons.work,
-                                validator: (v) =>
-                                    (v == null || v.isEmpty) ? 'Requis' : null,
+                                validator:
+                                    PatientFormConfig.profession.validator,
                               ),
                               const SizedBox(height: 16),
 
@@ -722,23 +708,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           const TextInputType.numberWithOptions(
                                             decimal: true,
                                           ),
-                                      validator: (v) {
-                                        if (v == null || v.trim().isEmpty)
-                                          return 'Requis';
-                                        final cleanValue = v.trim().replaceAll(
-                                          RegExp(r'[^\d.,]'),
-                                          '',
-                                        );
-                                        if (cleanValue.isEmpty)
-                                          return 'Chiffres uniquement';
-                                        final temp = double.tryParse(
-                                          cleanValue.replaceAll(',', '.'),
-                                        );
-                                        if (temp == null) return 'Invalide';
-                                        if (temp < 32 || temp > 43)
-                                          return '32-43°C';
-                                        return null;
-                                      },
+                                      validator: PatientFormConfig
+                                          .temperature
+                                          .validator,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -752,17 +724,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           TextInputType.numberWithOptions(
                                             decimal: true,
                                           ),
-                                      validator: (v) {
-                                        if (v == null || v.trim().isEmpty)
-                                          return 'Requis';
-                                        final poidsVal = double.tryParse(
-                                          v.replaceAll(',', '.'),
-                                        );
-                                        if (poidsVal == null) return 'Invalide';
-                                        if (poidsVal <= 0 || poidsVal > 350)
-                                          return '1-350kg';
-                                        return null;
-                                      },
+                                      validator:
+                                          PatientFormConfig.poids.validator,
                                     ),
                                   ),
                                 ],
@@ -786,15 +749,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       hint: '120',
                                       icon: Icons.monitor_heart_outlined,
                                       keyboardType: TextInputType.number,
-                                      validator: (v) {
-                                        if (v == null || v.trim().isEmpty)
-                                          return 'Requis';
-                                        final val = int.tryParse(v);
-                                        if (val == null) return 'Nombre';
-                                        if (val < 50 || val > 300)
-                                          return '50-300';
-                                        return null;
-                                      },
+                                      validator: PatientFormConfig
+                                          .tensionSystolique
+                                          .validator,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -805,15 +762,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       hint: '80',
                                       icon: Icons.monitor_heart_outlined,
                                       keyboardType: TextInputType.number,
-                                      validator: (v) {
-                                        if (v == null || v.trim().isEmpty)
-                                          return 'Requis';
-                                        final val = int.tryParse(v);
-                                        if (val == null) return 'Nombre';
-                                        if (val < 30 || val > 200)
-                                          return '30-200';
-                                        return null;
-                                      },
+                                      validator: PatientFormConfig
+                                          .tensionDiastolique
+                                          .validator,
                                     ),
                                   ),
                                 ],
@@ -824,8 +775,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 controller: test_VIH,
                                 label: 'Statut Test VIH *',
                                 icon: Icons.bloodtype,
-                                validator: (v) =>
-                                    (v == null || v.isEmpty) ? 'Requis' : null,
+                                validator: PatientFormConfig.testVIH.validator,
                               ),
                               const SizedBox(height: 16),
 
@@ -833,8 +783,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 controller: vaccination,
                                 label: 'Vaccination *',
                                 icon: Icons.vaccines,
-                                validator: (v) =>
-                                    (v == null || v.isEmpty) ? 'Requis' : null,
+                                validator:
+                                    PatientFormConfig.vaccination.validator,
                               ),
                               const SizedBox(height: 16),
 
@@ -844,8 +794,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 icon: Icons.medical_information,
                                 keyboardType: TextInputType.multiline,
                                 maxLines: 4,
-                                validator: (v) =>
-                                    (v == null || v.isEmpty) ? 'Requis' : null,
+                                validator: PatientFormConfig
+                                    .motifConsultation
+                                    .validator,
                               ),
                             ],
                           ),

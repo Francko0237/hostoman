@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:hostoman/model_unifier.dart';
@@ -551,7 +549,6 @@ class PatientService {
       id_patient: patientId,
       id_parametres_vitaux: parametreid,
       id_personnel: idMedecin,
-      payer: 'non',
     );
 
     final consultationResponse = await supabase
@@ -571,14 +568,18 @@ class PatientService {
     );
     print('=== ENREGISTREMENT TERMINÉ AVEC SUCCÈS ===');
 
-    final paiement = await supabase.from('paiement').insert({
+    // 💰 Création automatique du paiement pour la consultation
+    final prixConsultation = 600; // Prix de la consultation
+
+    await supabase.from('paiement').insert({
       'id_consultation': idConsultation,
-      'prix_a_paye': 600,
-      'statut_paiement': 'non payer',
       'motif': 'Frais de Consultation',
+      'statut_paiement': 'en_attente',
       'date_paiement': DateTime.now().toIso8601String(),
+      'prix_a_paye': prixConsultation, // montant = prix de la consultation
     });
-    print("paiement enregistrer avec succes $paiement");
+
+    print('✅ Paiement créé automatiquement - Montant: $prixConsultation FCFA');
 
     // 🧹 Nettoyage du formulaire
     _clearFormFields();
