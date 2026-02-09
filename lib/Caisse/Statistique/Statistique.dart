@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:hostoman/model_unifier.dart'; // Assure-toi que le chemin est correct
 import 'Service.dart'; // Assure-toi que le chemin vers ton service est correct
+import '../HistoriquePaiement/detail/detail_historique_ui.dart'; // Import pour la navigation
 
 // Couleurs (Tes couleurs d'origine)
 const Color npPrimaryColor = Color(0xFF4CAF50);
@@ -23,6 +24,7 @@ class _StatsPageState extends State<StatsPage> {
 
   bool isLoading = true;
   String periodeSelectorionnee = 'today';
+  String typePaiement = 'payer'; // Type de paiement : 'payer' ou 'annuler'
   Map<String, dynamic>? statsData;
   List<Map<String, dynamic>> consultations = [];
   List<Map<String, dynamic>> filteredConsultations = [];
@@ -43,22 +45,27 @@ class _StatsPageState extends State<StatsPage> {
       Map<String, dynamic> data;
       switch (periodeSelectorionnee) {
         case 'today':
-          data = await statsService.getStatsToday();
+          data = await statsService.getStatsToday(statutPaiement: typePaiement);
           break;
         case 'week':
-          data = await statsService.getStatsThisWeek();
+          data = await statsService.getStatsThisWeek(
+            statutPaiement: typePaiement,
+          );
           break;
         case 'month':
-          data = await statsService.getStatsThisMonth();
+          data = await statsService.getStatsThisMonth(
+            statutPaiement: typePaiement,
+          );
           break;
         case 'custom':
           data = await statsService.getStatsByPeriod(
             dateDebut: dateDebutPersonnalisee!,
             dateFin: dateFinPersonnalisee!,
+            statutPaiement: typePaiement,
           );
           break;
         default:
-          data = await statsService.getStatsToday();
+          data = await statsService.getStatsToday(statutPaiement: typePaiement);
       }
 
       setState(() {
@@ -124,6 +131,7 @@ class _StatsPageState extends State<StatsPage> {
                   child: Column(
                     children: [
                       _buildPeriodSelector(),
+                      _buildTypePaiementSelector(),
                       _buildStatSection(isDesktop),
                       _buildPatientListSection(isDesktop),
                       _buildFooter(),
@@ -158,6 +166,61 @@ class _StatsPageState extends State<StatsPage> {
             style: const TextStyle(
               color: npAccentColor,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypePaiementSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                setState(() => typePaiement = 'payer');
+                chargerStats();
+              },
+              icon: const Icon(Icons.check_circle, size: 20),
+              label: const Text('Paiements Validés'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: typePaiement == 'payer'
+                    ? npSuccessColor
+                    : Colors.grey.shade300,
+                foregroundColor: typePaiement == 'payer'
+                    ? Colors.white
+                    : Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                setState(() => typePaiement = 'annuler');
+                chargerStats();
+              },
+              icon: const Icon(Icons.cancel, size: 20),
+              label: const Text('Paiements Annulés'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: typePaiement == 'annuler'
+                    ? npErrorColor
+                    : Colors.grey.shade300,
+                foregroundColor: typePaiement == 'annuler'
+                    ? Colors.white
+                    : Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ),
         ],
@@ -253,40 +316,53 @@ class _StatsPageState extends State<StatsPage> {
     final montant = listPaiements.isNotEmpty
         ? listPaiements[0]['prix_a_paye']
         : 0;
+    final idConsultation = item['id_consultation'].toString();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-        ],
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: npPrimaryColor,
-          child: Text(
-            patient.nom_complet[0].toUpperCase(),
-            style: const TextStyle(color: Colors.white),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                DetailHistoriqueUI(idConsultation: idConsultation),
           ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          ],
         ),
-        title: Text(
-          patient.nom_complet,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(DateFormat('dd/MM/yyyy à HH:mm').format(date)),
-        trailing: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: npSuccessColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: npPrimaryColor,
+            child: Text(
+              patient.nom_complet[0].toUpperCase(),
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
-          child: Text(
-            '${_formatNumber(montant.toInt())} FCFA',
-            style: const TextStyle(
-              color: npSuccessColor,
-              fontWeight: FontWeight.bold,
+          title: Text(
+            patient.nom_complet,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(DateFormat('dd/MM/yyyy à HH:mm').format(date)),
+          trailing: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: npSuccessColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${_formatNumber(montant.toInt())} FCFA',
+              style: const TextStyle(
+                color: npSuccessColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),

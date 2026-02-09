@@ -10,10 +10,10 @@ class ConsultationService {
     final response = await supabase
         .from('Consultation')
         .select(
-          'id_consultation, type_service, id_patient, date_enregistrement, Patient(*)',
+          '''id_consultation, type_service, id_patient, date_enregistrement, Patient(*),paiement!inner(*)''',
         )
         .eq('type_service', 'Consultation')
-        .eq('payer', 'oui')
+        .eq('paiement.statut_paiement', 'payer')
         .eq('Statut_Consultation', 'en-attente-consultation')
         .order('date_enregistrement', ascending: true);
     print(response);

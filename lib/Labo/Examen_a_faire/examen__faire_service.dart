@@ -5,16 +5,22 @@ class LaboExamensService {
   LaboExamensService(this.supabase);
 
   /// 📋 Liste des patients en attente (Filtrée par le champ 'payer' de ta DB)
+  /// Et qui ont au moins un examen non traité (ni "En cours", ni "Terminé", ni "Annulé")
   Future<List<Map<String, dynamic>>> getPatientsEnAttenteExamen() async {
     final response = await supabase
         .from('Consultation')
         .select('''
             *,
             Patient(*),
-            paiement!inner(*)
+            paiement!inner(*),
+            examen_a_effectuer!inner(id_examen)
           ''')
         .eq('Statut_Consultation', 'en-attente-examen')
         .eq('paiement.statut_paiement', 'payer') // Filtre sur la table jointe
+        // On ne veut que les consultations qui ont au moins un examen "en attente"
+        .neq('examen_a_effectuer.statut_examen', 'En cours')
+        .neq('examen_a_effectuer.statut_examen', 'Terminé')
+        .neq('examen_a_effectuer.statut_examen', 'Annulé')
         .order('date_enregistrement', ascending: true);
 
     return (response as List<dynamic>)
@@ -22,7 +28,7 @@ class LaboExamensService {
         .toList();
   }
 
-  /// 🔬 Récupère les examens d'une consultation
+  /// 🔬 Récupère les examens d'une consultation (seulement ceux en attente)
   Future<List<Map<String, dynamic>>> getExamensParConsultation(
     int idConsultation,
   ) async {
@@ -30,6 +36,9 @@ class LaboExamensService {
         .from('examen_a_effectuer')
         .select('*')
         .eq('id_consultation', idConsultation)
+        .neq('statut_examen', 'En cours') // On masque ceux en cours
+        .neq('statut_examen', 'Terminé') // On masque ceux terminés
+        .neq('statut_examen', 'Annulé') // On masque ceux annulés
         .order('id_examen', ascending: true);
 
     return (response as List<dynamic>)
@@ -69,7 +78,7 @@ class LaboExamensService {
         .inFilter('id_examen', idExamens);
   }
 
-  /// 🔍 Vérifie si tous les examens sont finis pour libérer le patient
+  /// 🔍 Vérifie si tous les examens sont finis ou en cours pour libérer le patient
   Future<String> verifierStatutExamens(int idConsultation) async {
     final response = await supabase
         .from('examen_a_effectuer')
@@ -79,42 +88,43 @@ class LaboExamensService {
     final examens = response as List<dynamic>;
     if (examens.isEmpty) return 'vide';
 
-    int nbTermines = examens
+    // Compte les examens qui sont "traités" (Terminé, Annulé ou En cours)
+    int nbTraites = examens
         .where(
           (e) =>
-              e['statut_examen'] == 'Terminé' || e['statut_examen'] == 'Annulé',
+              e['statut_examen'] == 'Terminé' ||
+              e['statut_examen'] == 'Annulé' ||
+              e['statut_examen'] == 'En cours',
         )
         .length;
 
-    if (nbTermines == examens.length) return 'tous-termines';
-    return 'en-cours';
+    // Si tous les examens sont traités (donc plus aucun "en attente"), on renvoie un statut spécial
+    if (nbTraites == examens.length) return 'tous-traites';
+    return 'partiel';
   }
 
-  /// ✅ Met à jour la consultation quand le labo a fini toutes les analyses
+  /// ✅ Met à jour la consultation quand le labo a pris en charge toutes les analyses
   Future<void> mettreAJourStatutConsultation(int idConsultation) async {
     // 1. On vérifie l'état réel de TOUS les examens de cette consultation
     final statut = await verifierStatutExamens(idConsultation);
 
     print('🔍 Résultat de la vérification : $statut');
 
-    if (statut == 'tous-termines') {
-      // 2. Si tout est fini, on met à jour la table Consultation
-      // On touche à Statut_Consultation POUR LE FLUX
-      // On touche à statut_examen POUR TON CAS PRÉCIS
+    if (statut == 'tous-traites') {
+      // 2. Si tout est traité (En cours ou Terminé), on met à jour la table Consultation
+      // On passe à 'en-attente-resultat' comme demandé
       await supabase
           .from('Consultation')
           .update({
             'Statut_Consultation': 'en-attente-resultat',
-            'statut_examen':
-                'termine', // C'est ici qu'on touche ta colonne spécifique
             'date_derniere_mise_ajour': DateTime.now().toIso8601String(),
           })
           .eq('id_consultation', idConsultation);
 
-      print('✅ Statut Consultation mis à jour avec succès en base de données.');
+      print('✅ Statut Consultation mis à jour : en-attente-resultat');
     } else {
       print(
-        '⏸️ Il reste encore des examens actifs, on ne change pas le statut global.',
+        '⏸️ Il reste encore des examens en attente, on ne change pas le statut global.',
       );
     }
   }

@@ -293,16 +293,15 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                                   height: 24,
                                 ), // Espacement augmenté
 
-                                     Text(
-                                        'Mr. ${medecin!.prenom} ${medecin!.nom}', // Affichage "Mr."
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          fontSize:
-                                              28, // Taille de texte plus grande
-                                          fontWeight: FontWeight.w700,
-                                          color: npCardColor,
-                                        ),
-                                      ),
+                                Text(
+                                  'Mr. ${medecin!.prenom} ${medecin!.nom}', // Affichage "Mr."
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 28, // Taille de texte plus grande
+                                    fontWeight: FontWeight.w700,
+                                    color: npCardColor,
+                                  ),
+                                ),
 
                                 const SizedBox(height: 10),
                                 if (medecin!.specialite != null &&
@@ -451,7 +450,7 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
-                                  'Patients enregistrés',
+                                  'Paiements enregistrés',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 18, // Taille de texte augmentée

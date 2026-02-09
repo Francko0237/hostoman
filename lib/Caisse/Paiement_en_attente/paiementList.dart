@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'Service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'detail/detail_ui.dart';
 
 // Couleurs
 const Color npPrimaryColor = Color(0xFF4CAF50);
@@ -578,218 +579,251 @@ class _PaiementlistState extends State<Paiementlist> {
                                 item['paiement'] ?? [];
                             patientMap['id_patient'] = item['id_patient'];
                             final patient = Patient.fromMap(patientMap);
+
+                            // Prendre le dernier paiement (le plus récent)
                             final paiementDataMap =
-                                paiementsList.first as Map<String, dynamic>;
+                                paiementsList.last as Map<String, dynamic>;
                             final finalPaiement = Paiement.fromMap(
                               paiementDataMap,
                             );
                             final idConsultation = item['id_consultation']
                                 .toString();
+
+                            // Utiliser le motif du paiement au lieu du type_service
                             final motif =
-                                item['type_service'] ?? 'Consultation';
+                                paiementDataMap['motif'] ??
+                                'Frais de Consultation';
                             String Sexe = patient.sexe.toString();
                             String prixAPayer =
                                 finalPaiement.prix_a_paye?.toString() ??
                                 '0.0'; // Prix à payer
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 4),
+                            return InkWell(
+                              onTap: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => DetailUI(
+                                      idConsultation: idConsultation,
+                                    ),
                                   ),
-                                ],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 50,
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                npPrimaryColor,
-                                                npAccentColor,
-                                              ],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              patient.nom_complet[0]
-                                                  .toUpperCase(),
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.w700,
+                                );
+                                // Recharger la liste si le paiement a été modifié
+                                if (result == true) {
+                                  chargerConsultations();
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 50,
+                                            height: 50,
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  npPrimaryColor,
+                                                  npAccentColor,
+                                                ],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
                                               ),
+                                              shape: BoxShape.circle,
                                             ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                patient.nom_complet,
+                                            child: Center(
+                                              child: Text(
+                                                patient.nom_complet[0]
+                                                    .toUpperCase(),
                                                 style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w700,
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
-                                              Row(
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  patient.nom_complet,
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    Sexe == 'Homme'
+                                                        ? Icon(
+                                                            Icons.man,
+                                                            size: 17,
+                                                            color: Colors
+                                                                .grey[600],
+                                                          )
+                                                        : Icon(
+                                                            Icons.woman,
+                                                            size: 17,
+                                                            color: Colors
+                                                                .grey[600],
+                                                          ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      patient.sexe,
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: Colors.grey[700],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 9,
+                                                    vertical: 8,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: npOrangeColor
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Row(
                                                 children: [
-                                                  Sexe == 'Homme'
-                                                      ? Icon(
-                                                          Icons.man,
-                                                          size: 17,
-                                                          color:
-                                                              Colors.grey[600],
-                                                        )
-                                                      : Icon(
-                                                          Icons.woman,
-                                                          size: 17,
-                                                          color:
-                                                              Colors.grey[600],
-                                                        ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    patient.sexe,
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      color: Colors.grey[700],
+                                                  Icon(
+                                                    Icons.medical_services,
+                                                    size: 16,
+                                                    color: npOrangeColor,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Flexible(
+                                                    child: Text(
+                                                      motif,
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: npOrangeColor,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ),
                                                 ],
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 8,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: npOrangeColor.withOpacity(
-                                              0.1,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
                                             ),
                                           ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.medical_services,
-                                                size: 16,
-                                                color: npOrangeColor,
+                                          const SizedBox(width: 45),
+                                          //Affichage du paiement a effectuer
+                                          Container(
+                                            child: Text(
+                                              'Prix : $prixAPayer',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.black,
                                               ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                motif,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: npOrangeColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              onPressed: () => AnnulerPaiement(
+                                                idConsultation,
+                                              ),
+                                              icon: const Icon(
+                                                Icons.cancel,
+                                                size: 20,
+                                              ),
+                                              label: const Text('Annuler'),
+                                              style: OutlinedButton.styleFrom(
+                                                backgroundColor: npErrorColor,
+                                                foregroundColor: Colors.white,
+                                                side: BorderSide(
+                                                  color: npErrorColor,
+                                                  width: 2,
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                        SizedBox(width: 115),
-                                        //Affichage du paiement a effectuer
-                                        Container(
-                                          child: Text(
-                                            'Prix : $prixAPayer',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.black,
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: () =>
-                                                AnnulerPaiement(idConsultation),
-                                            icon: const Icon(
-                                              Icons.cancel,
-                                              size: 20,
-                                            ),
-                                            label: const Text('Annuler'),
-                                            style: OutlinedButton.styleFrom(
-                                              backgroundColor: npErrorColor,
-                                              foregroundColor: Colors.white,
-                                              side: BorderSide(
-                                                color: npErrorColor,
-                                                width: 2,
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () => validerPaiement(
+                                                idConsultation,
                                               ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 12,
-                                                  ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
+                                              icon: const Icon(
+                                                Icons.check,
+                                                size: 18,
+                                              ),
+                                              label: const Text('Valider'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: npSuccessColor,
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                elevation: 2,
                                               ),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: ElevatedButton.icon(
-                                            onPressed: () =>
-                                                validerPaiement(idConsultation),
-                                            icon: const Icon(
-                                              Icons.check,
-                                              size: 18,
-                                            ),
-                                            label: const Text('Valider'),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: npSuccessColor,
-                                              foregroundColor: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 12,
-                                                  ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              elevation: 2,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );

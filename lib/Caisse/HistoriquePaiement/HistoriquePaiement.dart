@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'ServiceHistorique.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'detail/detail_historique_ui.dart';
 
 // Couleurs - Thème vert comme Paiements en attente
 const Color npPrimaryColor = Color(0xFF4CAF50);
@@ -18,7 +19,9 @@ class PaiementHistorique extends StatefulWidget {
 }
 
 class _PaiementHistoriqueState extends State<PaiementHistorique> {
-  final PaiementService paiementService = PaiementService(Supabase.instance.client);
+  final PaiementService paiementService = PaiementService(
+    Supabase.instance.client,
+  );
   List<Map<String, dynamic>> consultations = [];
   List<Map<String, dynamic>> filteredConsultations = [];
   bool isLoading = true;
@@ -54,29 +57,45 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
     switch (sortOption) {
       case 'name_asc':
         temp.sort((a, b) {
-          final nomA = (a['Patient']['nom_complet'] ?? '').toString().toLowerCase();
-          final nomB = (b['Patient']['nom_complet'] ?? '').toString().toLowerCase();
+          final nomA = (a['Patient']['nom_complet'] ?? '')
+              .toString()
+              .toLowerCase();
+          final nomB = (b['Patient']['nom_complet'] ?? '')
+              .toString()
+              .toLowerCase();
           return nomA.compareTo(nomB);
         });
         break;
       case 'name_desc':
         temp.sort((a, b) {
-          final nomA = (a['Patient']['nom_complet'] ?? '').toString().toLowerCase();
-          final nomB = (b['Patient']['nom_complet'] ?? '').toString().toLowerCase();
+          final nomA = (a['Patient']['nom_complet'] ?? '')
+              .toString()
+              .toLowerCase();
+          final nomB = (b['Patient']['nom_complet'] ?? '')
+              .toString()
+              .toLowerCase();
           return nomB.compareTo(nomA);
         });
         break;
       case 'date_desc':
         temp.sort((a, b) {
-          final dateA = DateTime.tryParse(a['date_enregistrement'] ?? '') ?? DateTime(2000);
-          final dateB = DateTime.tryParse(b['date_enregistrement'] ?? '') ?? DateTime(2000);
+          final dateA =
+              DateTime.tryParse(a['date_enregistrement'] ?? '') ??
+              DateTime(2000);
+          final dateB =
+              DateTime.tryParse(b['date_enregistrement'] ?? '') ??
+              DateTime(2000);
           return dateB.compareTo(dateA);
         });
         break;
       case 'date_asc':
         temp.sort((a, b) {
-          final dateA = DateTime.tryParse(a['date_enregistrement'] ?? '') ?? DateTime(2000);
-          final dateB = DateTime.tryParse(b['date_enregistrement'] ?? '') ?? DateTime(2000);
+          final dateA =
+              DateTime.tryParse(a['date_enregistrement'] ?? '') ??
+              DateTime(2000);
+          final dateB =
+              DateTime.tryParse(b['date_enregistrement'] ?? '') ??
+              DateTime(2000);
           return dateA.compareTo(dateB);
         });
         break;
@@ -155,12 +174,12 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
             // Barre de recherche + filtres
             Container(
               padding: EdgeInsets.all(isDesktop ? 20 : 16),
-              decoration: BoxDecoration(
-                color: Color(0xFFF5F3F3),
-              ),
+              decoration: BoxDecoration(color: Color(0xFFF5F3F3)),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isDesktop ? 1200 : double.infinity),
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 1200 : double.infinity,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -174,9 +193,15 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                             decoration: InputDecoration(
                               hintText: 'Rechercher un patient par nom...',
                               hintStyle: TextStyle(color: Colors.grey.shade500),
-                              prefixIcon: Icon(Icons.search, color: Color(0xFF378127)),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color: Color(0xFF378127),
+                              ),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
                             ),
                             onChanged: (value) {
                               searchQuery = value;
@@ -202,7 +227,11 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                           icon: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.filter_list, color: Colors.white, size: 20),
+                              Icon(
+                                Icons.filter_list,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                               if (isTablet) ...[
                                 const SizedBox(width: 8),
                                 Text(
@@ -219,7 +248,9 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                           tooltip: 'Trier',
                           color: Colors.white,
                           elevation: 8,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           onSelected: (value) {
                             setState(() => sortOption = value);
                             _applyFilters();
@@ -265,283 +296,339 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
             Expanded(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isDesktop ? 1200 : double.infinity),
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 1200 : double.infinity,
+                  ),
                   child: isLoading
                       ? Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(color: npPrimaryColor),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Chargement...',
-                            style: TextStyle(
-                              color: npPrimaryColor,
-                              fontWeight: FontWeight.w500,
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(
+                                  color: npPrimaryColor,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Chargement...',
+                                  style: TextStyle(
+                                    color: npPrimaryColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  )
+                        )
                       : consultations.isEmpty
                       ? Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(32),
-                      margin: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
+                          child: Container(
+                            padding: const EdgeInsets.all(32),
+                            margin: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            child: Icon(
-                              Icons.history,
-                              size: 64,
-                              color: Colors.grey[600],
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade200,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.history,
+                                    size: 64,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'Aucun historique',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: npPrimaryColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Les paiements effectués apparaîtront ici',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          Text(
-                            'Aucun historique',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: npPrimaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Les paiements effectués apparaîtront ici',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
+                        )
                       : ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.all(isDesktop ? 20 : 16),
-                    itemCount: filteredConsultations.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredConsultations[index];
-                      final patientMap = item['Patient'] as Map<String, dynamic>;
-                      patientMap['id_patient'] = item['id_patient'];
-                      final patient = Patient.fromMap(patientMap);
-                      final idConsultation = item['id_consultation'].toString();
-                      final motif = item['type_service'] ?? 'Consultation';
-                      final paiement=item['payer'] ;
-                      String sexe = patient.sexe.toString();
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.all(isDesktop ? 20 : 16),
+                          itemCount: filteredConsultations.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredConsultations[index];
+                            final patientMap =
+                                item['Patient'] as Map<String, dynamic>;
+                            patientMap['id_patient'] = item['id_patient'];
+                            final patient = Patient.fromMap(patientMap);
+                            final idConsultation = item['id_consultation']
+                                .toString();
+                            final motif =
+                                item['type_service'] ?? 'Consultation';
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 15,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                             // Paiement Valider
+                            // Récupération du statut de paiement depuis la table paiement
+                            final List<dynamic> paiementsList =
+                                item['paiement'] ?? [];
+                            String statutPaiement = 'en_attente';
+                            if (paiementsList.isNotEmpty) {
+                              final paiementData =
+                                  paiementsList.first as Map<String, dynamic>;
+                              statutPaiement =
+                                  paiementData['statut_paiement'] ??
+                                  'en_attente';
+                            }
 
-                              paiement=='oui'
-                                  ?
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: npSuccessColor.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: npSuccessColor.withOpacity(0.3),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.check_circle,
-                                    color: npSuccessColor,
-                                    size: 28,
-                                  ),
-                                ),
-                              )
-                              // Paiement Annuler
-                              :
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.redAccent.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.red.withOpacity(0.3),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.cancel,
-                                    color: Colors.redAccent,
-                                    size: 28,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      patient.nom_complet,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                            String sexe = patient.sexe.toString();
+
+                            return InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => DetailHistoriqueUI(
+                                      idConsultation: idConsultation,
                                     ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        sexe == 'Homme'
-                                            ? Icon(Icons.man, size: 16, color: Colors.grey[600])
-                                            : Icon(Icons.woman, size: 16, color: Colors.grey[600]),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          patient.sexe,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.grey[700],
-                                          ),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
+                                      // Paiement Validé
+                                      statutPaiement == 'payer'
+                                          ? Container(
+                                              width: 50,
+                                              height: 50,
+                                              decoration: BoxDecoration(
+                                                color: npSuccessColor
+                                                    .withOpacity(0.15),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: npSuccessColor
+                                                      .withOpacity(0.3),
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              child: Center(
+                                                child: Icon(
+                                                  Icons.check_circle,
+                                                  color: npSuccessColor,
+                                                  size: 28,
+                                                ),
+                                              ),
+                                            )
+                                          // Paiement Annuler
+                                          : Container(
+                                              width: 50,
+                                              height: 50,
+                                              decoration: BoxDecoration(
+                                                color: Colors.redAccent
+                                                    .withOpacity(0.15),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.red.withOpacity(
+                                                    0.3,
+                                                  ),
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              child: Center(
+                                                child: Icon(
+                                                  Icons.cancel,
+                                                  color: Colors.redAccent,
+                                                  size: 28,
+                                                ),
+                                              ),
+                                            ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              patient.nom_complet,
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              children: [
+                                                sexe == 'Homme'
+                                                    ? Icon(
+                                                        Icons.man,
+                                                        size: 16,
+                                                        color: Colors.grey[600],
+                                                      )
+                                                    : Icon(
+                                                        Icons.woman,
+                                                        size: 16,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  patient.sexe,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Icon(
+                                                  Icons.medical_services,
+                                                  size: 14,
+                                                  color: Colors.grey[600],
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  motif,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 12),
-                                        Icon(Icons.medical_services, size: 14, color: Colors.grey[600]),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          motif,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.grey[700],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              paiement=='oui'
-                              ?
-                              //Badge "Paye"
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: npSuccessColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: npSuccessColor.withOpacity(0.3),
-                                    width: 1,
+                                      ),
+                                      statutPaiement == 'payer'
+                                          ?
+                                            //Badge "Paye"
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: npSuccessColor
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: npSuccessColor
+                                                      .withOpacity(0.3),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.check,
+                                                    size: 14,
+                                                    color: npSuccessColor,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Payé',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: npSuccessColor,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            )
+                                          // Badge "Annuler"
+                                          : Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.redAccent
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: Colors.red.withOpacity(
+                                                    0.3,
+                                                  ),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.check,
+                                                    size: 14,
+                                                    color: Colors.redAccent,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Annuler',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: Colors.redAccent,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                    ],
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.check,
-                                      size: 14,
-                                      color: npSuccessColor,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Payé',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: npSuccessColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                              // Badge "Annuler"
-                            :  Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.redAccent.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.red.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.check,
-                                      size: 14,
-                                      color: Colors.redAccent,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Annuler',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.redAccent,
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.02),
-              ),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.02)),
               child: Text(
                 '© 2025 Yamgai Mokube Franck Daniel',
                 textAlign: TextAlign.center,

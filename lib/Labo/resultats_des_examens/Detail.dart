@@ -30,7 +30,9 @@ class ResultatDetailScreen extends StatefulWidget {
 }
 
 class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
-  final ResultatsService resultatsService = ResultatsService(Supabase.instance.client);
+  final ResultatsService resultatsService = ResultatsService(
+    Supabase.instance.client,
+  );
 
   List<Map<String, dynamic>> examens = [];
   bool isLoading = true;
@@ -44,12 +46,19 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
   Future<void> chargerExamens() async {
     setState(() => isLoading = true);
     try {
-      final data = await resultatsService.getExamensTerminesParConsultation(widget.idConsultation);
+      final data = await resultatsService.getExamensEnAttenteResultat(
+        widget.idConsultation,
+      );
       setState(() {
         examens = data;
         isLoading = false;
       });
       print('✅ ${examens.length} examen(s) chargé(s)');
+
+      // Si la liste est vide, on vérifie si on doit fermer l'écran
+      if (examens.isEmpty && mounted) {
+        _verifierEtFermer();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -57,6 +66,25 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
         );
         setState(() => isLoading = false);
       }
+    }
+  }
+
+  Future<void> _verifierEtFermer() async {
+    // On revérifie s'il reste des examens côté serveur pour être sûr
+    final restants = await resultatsService.getExamensEnAttenteResultat(
+      widget.idConsultation,
+    );
+    if (restants.isEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '🎉 Tous les résultats sont saisis ! Consultation finalisée.',
+          ),
+          backgroundColor: labSuccessColor,
+        ),
+      );
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) context.pop();
     }
   }
 
@@ -80,7 +108,12 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
           children: [
             Icon(Icons.edit_note, color: labBlueColor),
             const SizedBox(width: 12),
-            Expanded(child: Text('Résultat: $nomExamen', overflow: TextOverflow.ellipsis)),
+            Expanded(
+              child: Text(
+                'Résultat: $nomExamen',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -91,7 +124,9 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
               decoration: InputDecoration(
                 labelText: 'Saisir le résultat',
                 hintText: 'Ex: Positif, Négatif, 12.5 g/dL...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 prefixIcon: Icon(Icons.science, color: labBlueColor),
               ),
               maxLines: 3,
@@ -106,10 +141,11 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: labSuccessColor,
+            style: ElevatedButton.styleFrom(backgroundColor: labSuccessColor),
+            child: const Text(
+              'Enregistrer',
+              style: TextStyle(color: Colors.white),
             ),
-            child: const Text('Enregistrer', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -118,7 +154,11 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
     if (resultat != null && resultat.isNotEmpty) {
       try {
         setState(() => isLoading = true);
-        await resultatsService.enregistrerResultatExamen(idExamen, resultat);
+        await resultatsService.enregistrerResultatExamen(
+          idExamen,
+          resultat,
+          widget.idConsultation,
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -129,25 +169,9 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
           );
         }
 
-        // Vérifie si tous les résultats sont saisis
-        final tousLeResultatsSaisis = await resultatsService.tousLesResultatsSaisis(widget.idConsultation);
-
-        if (tousLeResultatsSaisis) {
-          await resultatsService.finaliserConsultation(widget.idConsultation);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('🎉 Tous les résultats sont saisis ! Consultation finalisée.'),
-                backgroundColor: labSuccessColor,
-              ),
-            );
-            await Future.delayed(const Duration(milliseconds: 800));
-            context.pop();
-          }
-        } else {
-          await chargerExamens();
-        }
-
+        // On recharge la liste, ce qui va masquer l'examen traité
+        // Et déclencher _verifierEtFermer si la liste devient vide
+        await chargerExamens();
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -158,12 +182,18 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
           );
         }
       } finally {
-        setState(() => isLoading = false);
+        if (mounted && isLoading) {
+          setState(() => isLoading = false);
+        }
       }
     }
   }
 
-  Widget _buildInfoItem({required IconData icon, required String label, required String value}) {
+  Widget _buildInfoItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,13 +202,20 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
             children: [
               Icon(icon, size: 14, color: Colors.grey[400]),
               const SizedBox(width: 4),
-              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+              Text(
+                label,
+                style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+              ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -197,8 +234,10 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: const Text("Saisie des résultats",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Saisie des résultats",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -212,7 +251,10 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
                   color: const Color(0xFF33333D),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                    ),
                   ],
                 ),
                 child: Column(
@@ -224,40 +266,60 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+                            color: Colors.white.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
                           child: Center(
-                              child: Text(
-                                  widget.nomPatient.isNotEmpty
-                                      ? widget.nomPatient[0].toUpperCase()
-                                      : '?',
-                                  style:
-                                  const TextStyle(fontSize: 20, color: Colors.white))),
+                            child: Text(
+                              widget.nomPatient.isNotEmpty
+                                  ? widget.nomPatient[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 15),
                         Expanded(
                           child: Text(
                             widget.nomPatient,
                             style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                              color: widget.sexe == 'Homme'
-                                  ? Colors.blue.shade600
-                                  : Colors.pink.shade600,
-                              borderRadius: BorderRadius.circular(20)),
-                          child: Text(widget.sexe,
-                              style: const TextStyle(color: Colors.white, fontSize: 12)),
+                            color: widget.sexe == 'Homme'
+                                ? Colors.blue.shade600
+                                : Colors.pink.shade600,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            widget.sexe,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
-                    const Divider(color: Colors.grey, height: 1, thickness: 0.5),
+                    const Divider(
+                      color: Colors.grey,
+                      height: 1,
+                      thickness: 0.5,
+                    ),
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -288,7 +350,10 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
 
             // Message d'instruction
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -319,102 +384,121 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
             Expanded(
               child: isLoading
                   ? const Center(
-                  child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
                   : examens.isEmpty
                   ? Center(
-                  child: Text("Aucun examen disponible",
-                      style: TextStyle(color: Colors.grey[400])))
+                      child: Text(
+                        "Aucun examen disponible",
+                        style: TextStyle(color: Colors.grey[400]),
+                      ),
+                    )
                   : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                itemCount: examens.length,
-                itemBuilder: (context, index) {
-                  final examen = examens[index];
-                  final nomExamen = examen['nom_examen']?.toString() ?? 'Examen';
-                  final statutExamen = examen['statut_examen']?.toString() ?? 'En cours';
-                  final isTermine = statutExamen == 'Terminé';
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      itemCount: examens.length,
+                      itemBuilder: (context, index) {
+                        final examen = examens[index];
+                        final nomExamen =
+                            examen['nom_examen']?.toString() ?? 'Examen';
+                        final statutExamen =
+                            examen['statut_examen']?.toString() ?? 'En cours';
+                        final isTermine = statutExamen == 'Terminé';
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: Material(
-                      color: isTermine
-                          ? labSuccessColor.withOpacity(0.1)
-                          : const Color(0xFF33333D),
-                      borderRadius: BorderRadius.circular(12),
-                      elevation: isTermine ? 0 : 2,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: isTermine ? null : () => _ouvrirExamen(examen),
-                        child: Container(
-                          padding: const EdgeInsets.all(16.0),
-                          decoration: BoxDecoration(
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Material(
+                            color: isTermine
+                                ? labSuccessColor.withOpacity(0.1)
+                                : const Color(0xFF33333D),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isTermine
-                                  ? labSuccessColor.withOpacity(0.3)
-                                  : Colors.transparent,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
+                            elevation: isTermine ? 0 : 2,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: isTermine
+                                  ? null
+                                  : () => _ouvrirExamen(examen),
+                              child: Container(
+                                padding: const EdgeInsets.all(16.0),
                                 decoration: BoxDecoration(
-                                  color: isTermine
-                                      ? labSuccessColor
-                                      : labBlueColor.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isTermine
+                                        ? labSuccessColor.withOpacity(0.3)
+                                        : Colors.transparent,
+                                    width: 1.5,
+                                  ),
                                 ),
-                                child: Icon(
-                                  isTermine ? Icons.check : Icons.science,
-                                  color: isTermine ? Colors.white : labBlueColor,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      nomExamen,
-                                      style: TextStyle(
-                                        fontSize: 16,
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
                                         color: isTermine
                                             ? labSuccessColor
-                                            : Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                        decoration: isTermine
-                                            ? TextDecoration.lineThrough
-                                            : null,
+                                            : labBlueColor.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      isTermine ? 'Résultat saisi ✓' : 'En attente de résultat',
-                                      style: TextStyle(
-                                        fontSize: 12,
+                                      child: Icon(
+                                        isTermine ? Icons.check : Icons.science,
                                         color: isTermine
-                                            ? labSuccessColor.withOpacity(0.8)
-                                            : Colors.grey.shade500,
+                                            ? Colors.white
+                                            : labBlueColor,
+                                        size: 22,
                                       ),
                                     ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            nomExamen,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: isTermine
+                                                  ? labSuccessColor
+                                                  : Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                              decoration: isTermine
+                                                  ? TextDecoration.lineThrough
+                                                  : null,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            isTermine
+                                                ? 'Résultat saisi ✓'
+                                                : 'En attente de résultat',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: isTermine
+                                                  ? labSuccessColor.withOpacity(
+                                                      0.8,
+                                                    )
+                                                  : Colors.grey.shade500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (!isTermine)
+                                      Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                        color: Colors.grey.shade600,
+                                      ),
                                   ],
                                 ),
                               ),
-                              if (!isTermine)
-                                Icon(Icons.arrow_forward_ios,
-                                    size: 16, color: Colors.grey.shade600),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

@@ -33,15 +33,17 @@ class MedecinService {
         throw Exception('Aucun utilisateur connecté');
       }
 
+      // Compter tous les paiements validés (statut = 'payer')
       final response = await client
           .from('paiement')
-          .select('*')
-          .eq('statut_paiement', 'non payer');
-      final nbrpai = response.length;
-      print("Le nombre de paiement est de $nbrpai");
-      return response.length;
+          .select('id_paiement')
+          .eq('statut_paiement', 'payer');
+
+      final nbrPaiements = response.length;
+      print("Le nombre de paiements enregistrés est de $nbrPaiements");
+      return nbrPaiements;
     } catch (e) {
-      print('❌ Erreur lors du comptage des patients : $e');
+      print('❌ Erreur lors du comptage des paiements : $e');
       return 0;
     }
   }

@@ -61,7 +61,6 @@ class MedecinServices {
           'Statut_Consultation': statutFinal,
           'date_rdv_prevu': rdvDate?.toIso8601String(),
           'date_derniere_mise_ajour': now,
-          'payer': (examensPrescrits.isNotEmpty) ? 'non' : 'oui',
         })
         .eq('id_consultation', idConsultation);
 
@@ -97,7 +96,7 @@ class MedecinServices {
       await supabase.from('paiement').insert({
         'id_consultation': idConsultation,
         'prix_a_paye': totalPrix,
-        'statut_paiement': 'non payer',
+        'statut_paiement': 'en_attente',
         'motif': 'Examens: ${examensPrescrits.length} analyses',
         'date_paiement': now,
       });

@@ -5,7 +5,7 @@ class PaiementService {
 
   PaiementService(this.supabase);
 
-  /// 🔍 Récupère les patients dont le paiement est effectué
+  /// 🔍 Récupère les patients dont le paiement est effectué ou annulé
   Future<List<Map<String, dynamic>>> getPatientsNonPayes() async {
     try {
       final response = await supabase
@@ -13,15 +13,13 @@ class PaiementService {
           .select('''
           id_consultation, 
           type_service, 
-          payer, 
+          date_enregistrement,
           id_patient, 
           Patient(*), 
           paiement!inner(*)
         ''')
-          .eq('type_service', 'Consultation')
-          // On précise "paiement." devant chaque condition pour éviter l'ambiguïté
           .or(
-            'statut_paiement.eq.annuler, statut_paiement.eq.payer',
+            'statut_paiement.eq.payer,statut_paiement.eq.annuler',
             referencedTable: 'paiement',
           );
 
