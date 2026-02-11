@@ -47,7 +47,8 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
     // Filtre par recherche
     if (searchQuery.isNotEmpty) {
       temp = temp.where((item) {
-        final patientMap = item['Patient'] as Map<String, dynamic>;
+        final consultationMap = item['Consultation'] as Map<String, dynamic>;
+        final patientMap = consultationMap['Patient'] as Map<String, dynamic>;
         final nom = (patientMap['nom_complet'] ?? '').toString().toLowerCase();
         return nom.contains(searchQuery.toLowerCase());
       }).toList();
@@ -57,10 +58,10 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
     switch (sortOption) {
       case 'name_asc':
         temp.sort((a, b) {
-          final nomA = (a['Patient']['nom_complet'] ?? '')
+          final nomA = (a['Consultation']['Patient']['nom_complet'] ?? '')
               .toString()
               .toLowerCase();
-          final nomB = (b['Patient']['nom_complet'] ?? '')
+          final nomB = (b['Consultation']['Patient']['nom_complet'] ?? '')
               .toString()
               .toLowerCase();
           return nomA.compareTo(nomB);
@@ -68,10 +69,10 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
         break;
       case 'name_desc':
         temp.sort((a, b) {
-          final nomA = (a['Patient']['nom_complet'] ?? '')
+          final nomA = (a['Consultation']['Patient']['nom_complet'] ?? '')
               .toString()
               .toLowerCase();
-          final nomB = (b['Patient']['nom_complet'] ?? '')
+          final nomB = (b['Consultation']['Patient']['nom_complet'] ?? '')
               .toString()
               .toLowerCase();
           return nomB.compareTo(nomA);
@@ -80,22 +81,18 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
       case 'date_desc':
         temp.sort((a, b) {
           final dateA =
-              DateTime.tryParse(a['date_enregistrement'] ?? '') ??
-              DateTime(2000);
+              DateTime.tryParse(a['date_paiement'] ?? '') ?? DateTime(2000);
           final dateB =
-              DateTime.tryParse(b['date_enregistrement'] ?? '') ??
-              DateTime(2000);
+              DateTime.tryParse(b['date_paiement'] ?? '') ?? DateTime(2000);
           return dateB.compareTo(dateA);
         });
         break;
       case 'date_asc':
         temp.sort((a, b) {
           final dateA =
-              DateTime.tryParse(a['date_enregistrement'] ?? '') ??
-              DateTime(2000);
+              DateTime.tryParse(a['date_paiement'] ?? '') ?? DateTime(2000);
           final dateB =
-              DateTime.tryParse(b['date_enregistrement'] ?? '') ??
-              DateTime(2000);
+              DateTime.tryParse(b['date_paiement'] ?? '') ?? DateTime(2000);
           return dateA.compareTo(dateB);
         });
         break;
@@ -383,36 +380,33 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                           itemCount: filteredConsultations.length,
                           itemBuilder: (context, index) {
                             final item = filteredConsultations[index];
-                            final patientMap =
-                                item['Patient'] as Map<String, dynamic>;
-                            patientMap['id_patient'] = item['id_patient'];
-                            final patient = Patient.fromMap(patientMap);
-                            final idConsultation = item['id_consultation']
-                                .toString();
-                            final motif =
-                                item['type_service'] ?? 'Consultation';
 
-                            // Récupération du statut de paiement depuis la table paiement
-                            final List<dynamic> paiementsList =
-                                item['paiement'] ?? [];
-                            String statutPaiement = 'en_attente';
-                            if (paiementsList.isNotEmpty) {
-                              final paiementData =
-                                  paiementsList.first as Map<String, dynamic>;
-                              statutPaiement =
-                                  paiementData['statut_paiement'] ??
-                                  'en_attente';
-                            }
+                            // Accès aux données via la structure payment-centric
+                            final consultationMap =
+                                item['Consultation'] as Map<String, dynamic>;
+                            final patientMap =
+                                consultationMap['Patient']
+                                    as Map<String, dynamic>;
+                            patientMap['id_patient'] =
+                                consultationMap['id_patient'];
+                            final patient = Patient.fromMap(patientMap);
+
+                            // Récupération du motif et statut depuis le paiement (top level)
+                            String motif = item['motif'] ?? 'Consultation';
+                            String statutPaiement =
+                                item['statut_paiement'] ?? 'en_attente';
 
                             String sexe = patient.sexe.toString();
 
                             return InkWell(
                               onTap: () {
+                                final idPaiement = item['id_paiement']
+                                    .toString();
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => DetailHistoriqueUI(
-                                      idConsultation: idConsultation,
+                                      idPaiement: idPaiement,
                                     ),
                                   ),
                                 );

@@ -573,7 +573,7 @@ class PatientService {
 
     await supabase.from('paiement').insert({
       'id_consultation': idConsultation,
-      'motif': 'Frais de Consultation',
+      'motif': 'Consultation',
       'statut_paiement': 'en_attente',
       'date_paiement': DateTime.now().toIso8601String(),
       'prix_a_paye': prixConsultation, // montant = prix de la consultation

@@ -320,6 +320,8 @@ class _StatsPageState extends State<StatsPage> {
 
     return InkWell(
       onTap: () {
+        // Note: Statistique affiche les consultations, pas les paiements individuels
+        // On utilise donc l'ancienne méthode avec idConsultation
         Navigator.push(
           context,
           MaterialPageRoute(

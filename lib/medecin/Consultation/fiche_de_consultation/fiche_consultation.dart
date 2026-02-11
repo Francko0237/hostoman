@@ -352,7 +352,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
       );
 
       if (mounted) {
-        context.push('/Dashboard_Medecin/ConsultationList');
+        // Utiliser context.go au lieu de context.push pour remplacer la route
+        // Cela évite de revenir à la fiche de consultation lors du retour
+        context.go('/Dashboard_Medecin/ConsultationList');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(

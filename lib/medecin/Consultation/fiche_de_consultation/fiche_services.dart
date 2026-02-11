@@ -97,7 +97,7 @@ class MedecinServices {
         'id_consultation': idConsultation,
         'prix_a_paye': totalPrix,
         'statut_paiement': 'en_attente',
-        'motif': 'Examens: ${examensPrescrits.length} analyses',
+        'motif': 'Examens',
         'date_paiement': now,
       });
     }

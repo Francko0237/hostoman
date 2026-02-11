@@ -5,23 +5,27 @@ class PaiementService {
 
   PaiementService(this.supabase);
 
-  /// 🔍 Récupère les patients dont le paiement est effectué ou annulé
+  /// 🔍 Récupère tous les paiements effectués ou annulés
   Future<List<Map<String, dynamic>>> getPatientsNonPayes() async {
     try {
       final response = await supabase
-          .from('Consultation')
+          .from('paiement')
           .select('''
-          id_consultation, 
-          type_service, 
-          date_enregistrement,
-          id_patient, 
-          Patient(*), 
-          paiement!inner(*)
+          id_paiement,
+          motif,
+          prix_a_paye,
+          statut_paiement,
+          date_paiement,
+          id_consultation,
+          Consultation!inner(
+            id_consultation,
+            type_service,
+            date_enregistrement,
+            id_patient,
+            Patient(*)
+          )
         ''')
-          .or(
-            'statut_paiement.eq.payer,statut_paiement.eq.annuler',
-            referencedTable: 'paiement',
-          );
+          .or('statut_paiement.eq.payer,statut_paiement.eq.annuler');
 
       // SI L'ERREUR PERSISTE avec le code ci-dessus, utilise cette syntaxe alternative :
       // .or('paiement.statut_paiement.eq.annuler, paiement.statut_paiement.eq.payer');
