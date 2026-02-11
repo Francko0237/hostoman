@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart'; // ✅ indispensable pour initializeDateFormatting
@@ -31,10 +32,14 @@ import 'package:hostoman/medecin/Consultation/liste_patient_attente_examen/liste
 
 //Laboratoire
 import 'package:hostoman/Labo/Dashboard/Dashboard.dart';
+import 'package:hostoman/Labo/Dashboard/Profil.dart';
 import 'package:hostoman/Labo/Examen_a_faire/examen_a_faire.dart';
 import 'package:hostoman/Labo/Examen_a_faire/Detail.dart';
 import 'package:hostoman/Labo/resultats_des_examens/resultat_des_examens.dart';
 import 'package:hostoman/Labo/resultats_des_examens/Detail.dart';
+import 'package:hostoman/Labo/historique/historique_ui.dart';
+import 'package:hostoman/Labo/historique/detail/detail_historique_ui.dart';
+import 'package:hostoman/Labo/statistique/statistique_ui.dart';
 
 //Configuration de toutes les route du projets
 final GoRouter _router = GoRouter(
@@ -203,6 +208,27 @@ final GoRouter _router = GoRouter(
             );
           },
         ),
+        GoRoute(
+          path: 'Historique',
+          builder: (context, state) => const HistoriqueLaboUI(),
+        ),
+        GoRoute(
+          path: 'HistoriqueDetail/:idConsultation',
+          builder: (context, state) {
+            final idConsultation = int.parse(
+              state.pathParameters['idConsultation']!,
+            );
+            return DetailHistoriqueLaboUI(idConsultation: idConsultation);
+          },
+        ),
+        GoRoute(
+          path: 'Statistiques',
+          builder: (context, state) => const StatistiqueLaboUI(),
+        ),
+        GoRoute(
+          path: 'Profil',
+          builder: (context, state) => const ProfilLaborantinPage(),
+        ),
       ],
     ),
   ],
@@ -230,6 +256,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('fr', 'FR'), Locale('en', 'US')],
+      locale: const Locale('fr', 'FR'),
       routerConfig: _router, // ⬅️ ici tu mets ton GoRouter
     );
   }

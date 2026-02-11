@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dashboard_service.dart';
+import '../resultats_des_examens/resultat_des_examens.dart'; // Pour PatientResultatData
 
 // ============================================================================
 // CONSTANTES
@@ -23,10 +25,7 @@ class ExamenEnCours {
   final String patientName;
   final String examDetails;
 
-  ExamenEnCours({
-    required this.patientName,
-    required this.examDetails,
-  });
+  ExamenEnCours({required this.patientName, required this.examDetails});
 }
 
 // ============================================================================
@@ -41,27 +40,41 @@ class DashboardLaboratoire extends StatefulWidget {
 }
 
 class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
+  final dashboardService = DashboardLaboService(Supabase.instance.client);
+
   // État des données
-  int patientsEnAttenteExamen = 8;
-  int patientsEnAttenteResultat = 10;
-  List<ExamenEnCours> examensEnCours = [
-    ExamenEnCours(
-      patientName: 'Yamga Franck',
-      examDetails: 'taux_d\'hemoglobine, VIH, Palu...',
-    ),
-    ExamenEnCours(
-      patientName: 'Kouamo Sylvie',
-      examDetails: 'Glycémie, Cholestérol, Fonction Rénale...',
-    ),
-    ExamenEnCours(
-      patientName: 'Ndiaye Fatou',
-      examDetails: 'Test de grossesse, Groupe sanguin...',
-    ),
-    ExamenEnCours(
-      patientName: 'Talla Pierre',
-      examDetails: 'Hépatite B, NFS, VS...',
-    ),
-  ];
+  int patientsEnAttenteExamen = 0;
+  int patientsEnAttenteResultat = 0;
+  List<Map<String, dynamic>> patientsEnCours = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    chargerDonnees();
+  }
+
+  Future<void> chargerDonnees() async {
+    setState(() => isLoading = true);
+    try {
+      final stats = await dashboardService.getStatistiquesJour();
+      final patients = await dashboardService.getPatientsEnAttenteResultat();
+
+      setState(() {
+        patientsEnAttenteExamen = stats['en_attente_examen'] ?? 0;
+        patientsEnAttenteResultat = stats['en_attente_resultat'] ?? 0;
+        patientsEnCours = patients;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage =
+            'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +82,46 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
       backgroundColor: LabTheme.primaryColor,
       appBar: _CustomAppBar(onMenuSelected: _handleMenuSelection),
       bottomNavigationBar: _CustomBottomNav(currentIndex: 0),
-      body: _buildBody(),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: LabTheme.primaryColor),
+            )
+          : errorMessage != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red, fontSize: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: chargerDonnees,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Réessayer'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: LabTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _buildBody(),
     );
   }
 
@@ -157,7 +209,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
               label: 'Examens à faire',
               color: LabTheme.accentColor.withOpacity(0.1),
               iconColor: LabTheme.accentColor,
-              onTap: () => context.push('/Dashboard_Laboratoire/ExamensAFaire')
+              onTap: () => context.push('/Dashboard_Laboratoire/ExamensAFaire'),
             ),
           ),
           const SizedBox(width: 20),
@@ -207,15 +259,34 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
 
   // Liste des examens
   Widget _buildExamensList() {
+    if (patientsEnCours.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40.0),
+          child: Text(
+            'Aucun patient en attente de résultat aujourd\'hui',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       height: 400,
       child: ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: examensEnCours.length,
+        itemCount: patientsEnCours.length,
         itemBuilder: (context, index) {
+          final patient = patientsEnCours[index];
+          final patientMap = patient['Patient'] as Map<String, dynamic>;
+          final nomComplet = patientMap['nom_complet'] ?? 'Inconnu';
+          final examensDetails = patient['examens_details'] ?? '';
+
           return _ExamenListItem(
-            examen: examensEnCours[index],
-            onFinalize: () => _handleFinalizeExamen(examensEnCours[index]),
+            patientName: nomComplet,
+            examDetails: examensDetails,
+            onFinalize: () => _handleFinalizeExamen(patient),
           );
         },
       ),
@@ -225,9 +296,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
   // Gestion de la sélection du menu
   void _handleMenuSelection(String value) async {
     if (value == 'profile') {
-      context.push('/lab/profil');
-    } else if (value == 'parametre') {
-      // Logique Paramètres à implémenter
+      context.go('/Dashboard_Laboratoire/Profil');
     } else if (value == 'deconnexion') {
       await _handleDeconnexion();
     }
@@ -259,9 +328,32 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
   }
 
   // Gestion de la finalisation d'examen
-  void _handleFinalizeExamen(ExamenEnCours examen) {
-    print('Finaliser examen pour ${examen.patientName}');
-    // Logique de finalisation à implémenter
+  void _handleFinalizeExamen(Map<String, dynamic> patient) {
+    final patientMap = patient['Patient'] as Map<String, dynamic>;
+    final nomComplet = patientMap['nom_complet'] ?? 'Inconnu';
+    final idConsultation = patient['id_consultation'];
+    final telephone = patientMap['telephone']?.toString() ?? 'N/A';
+    final age = patient['age'] != null
+        ? patient['age'].toString()
+        : (patientMap['age'] != null ? patientMap['age'].toString() : '0');
+    final sexe = patientMap['sexe'] ?? 'N/A';
+
+    final data = PatientResultatData(
+      nomComplet: nomComplet,
+      sexe: sexe,
+      age: age,
+      telephone: telephone,
+    );
+
+    context
+        .push(
+          '/Dashboard_Laboratoire/ResultatDetail/$idConsultation',
+          extra: data,
+        )
+        .then((_) {
+          // Recharger les données au retour
+          chargerDonnees();
+        });
   }
 }
 
@@ -289,17 +381,17 @@ class _CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white.withOpacity(0.1),
-            border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 0.5,
+            ),
           ),
           child: ClipOval(
             child: Image.asset(
               'assets/images/logo.png',
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Icon(
-                Icons.local_hospital,
-                color: Colors.white,
-                size: 24,
-              ),
+              errorBuilder: (context, error, stackTrace) =>
+                  Icon(Icons.local_hospital, color: Colors.white, size: 24),
             ),
           ),
         ),
@@ -337,13 +429,6 @@ class _CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 icon: Icons.person_outline,
                 label: 'Profile',
                 color: LabTheme.primaryColor,
-              ),
-              const PopupMenuDivider(),
-              _buildPopupMenuItem(
-                value: 'parametre',
-                icon: Icons.settings_outlined,
-                label: 'Paramètres',
-                color: Colors.grey,
               ),
               const PopupMenuDivider(),
               _buildPopupMenuItem(
@@ -501,11 +586,13 @@ class _ActionCard extends StatelessWidget {
 
 // Item de la liste d'examens
 class _ExamenListItem extends StatelessWidget {
-  final ExamenEnCours examen;
+  final String patientName;
+  final String examDetails;
   final VoidCallback onFinalize;
 
   const _ExamenListItem({
-    required this.examen,
+    required this.patientName,
+    required this.examDetails,
     required this.onFinalize,
   });
 
@@ -514,10 +601,10 @@ class _ExamenListItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15.0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(10),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade200),
         ),
         child: Row(
@@ -543,7 +630,7 @@ class _ExamenListItem extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          examen.patientName.substring(0, 1),
+          patientName.isNotEmpty ? patientName.substring(0, 1) : '?',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -559,7 +646,7 @@ class _ExamenListItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            examen.patientName,
+            patientName,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 16,
@@ -568,11 +655,8 @@ class _ExamenListItem extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            examen.examDetails,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
+            examDetails,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -586,15 +670,10 @@ class _ExamenListItem extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: LabTheme.successColor,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       ),
-      child: const Text(
-        'Finaliser',
-        style: TextStyle(fontSize: 14),
-      ),
+      child: const Text('Finaliser', style: TextStyle(fontSize: 14)),
     );
   }
 }
@@ -634,13 +713,13 @@ class _CustomBottomNav extends StatelessWidget {
   void _handleNavigation(BuildContext context, int index) {
     switch (index) {
       case 0:
-        context.go('/lab/dashboard');
+        // Already on dashboard, do nothing
         break;
       case 1:
-        context.go('/lab/statistiques');
+        context.push('/Dashboard_Laboratoire/Statistiques');
         break;
       case 2:
-        context.go('/lab/historique');
+        context.push('/Dashboard_Laboratoire/Historique');
         break;
     }
   }
