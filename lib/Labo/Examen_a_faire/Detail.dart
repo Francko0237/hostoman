@@ -35,7 +35,9 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
 
   List<Map<String, dynamic>> examens = [];
   Set<int> selectedExamensIds = {};
+
   bool isLoading = true;
+  String? errorMessage;
 
   @override
   void initState() {
@@ -55,12 +57,11 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
         selectedExamensIds.clear();
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de chargement des examens : $e')),
-        );
-        setState(() => isLoading = false);
-      }
+      setState(() {
+        isLoading = false;
+        errorMessage =
+            'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+      });
     }
   }
 
@@ -419,6 +420,48 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
+                  : errorMessage != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 60,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: chargerExamens,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Réessayer'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: labPrimaryColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
                   : examens.isEmpty
                   ? Center(
                       child: Text(
@@ -435,7 +478,6 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
                         final isSelected = selectedExamensIds.contains(
                           idExamen,
                         );
-
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: Material(

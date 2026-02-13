@@ -34,6 +34,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
   bool isLoading = true;
   bool showFilters = false;
   String? statutFiltre; // null = tous, 'Terminé', 'Annulé'
+  String? errorMessage;
 
   @override
   void initState() {
@@ -42,7 +43,10 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
   }
 
   Future<void> chargerDonnees() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
     try {
       final stats = await statistiqueService.getStatistiques(
         dateDebut,
@@ -60,14 +64,12 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
         isLoading = false;
       });
     } catch (e) {
-      setState(() => isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur de chargement: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          isLoading = false;
+          errorMessage =
+              'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+        });
       }
     }
   }
@@ -113,6 +115,41 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator(color: labBlueColor))
+          : errorMessage != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red, fontSize: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: chargerDonnees,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Réessayer'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: labBlueColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
           : SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,7 +322,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
         children: [
           Expanded(
             child: _buildStatCard(
-              label: 'Terminés',
+              label: 'Patients Terminés',
               count: statistiques['termines'] ?? 0,
               color: labGreenColor,
               icon: Icons.check_circle,
@@ -301,7 +338,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
           const SizedBox(width: 12),
           Expanded(
             child: _buildStatCard(
-              label: 'Annulés',
+              label: 'Patients Annulés',
               count: statistiques['annules'] ?? 0,
               color: Colors.red,
               icon: Icons.cancel,

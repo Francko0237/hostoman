@@ -119,10 +119,9 @@ class DashboardLaboService {
               id_patient,
               nom_complet,
               sexe,
-              date_de_naissance,
-              numero_de_telephone,
-              adresse,
-              groupe_sanguin
+              age,
+              telephone,
+              adresse
             ),
             examen_a_effectuer!inner(
               id_examen,
@@ -130,19 +129,20 @@ class DashboardLaboService {
               statut_examen
             )
           ''')
+          .eq('Statut_Consultation', 'en-attente-resultat')
           .eq('examen_a_effectuer.statut_examen', 'En cours')
           .gte('date_enregistrement', debutJour.toIso8601String())
           .lte('date_enregistrement', finJour.toIso8601String());
 
       print(
-        '📋 Patients en attente résultat: ${(data as List).length} consultations',
+        '📋 Patients en attente résultat (filtrés): ${(data as List).length} consultations',
       );
 
       // Grouper par patient pour éviter les doublons
-      final Map<int, Map<String, dynamic>> patientsMap = {};
+      final Map<String, Map<String, dynamic>> patientsMap = {};
 
       for (var item in data) {
-        final idPatient = item['id_patient'] as int;
+        final idPatient = item['id_patient'] as String; // UUID is String
 
         if (!patientsMap.containsKey(idPatient)) {
           // Compter les examens en cours pour ce patient

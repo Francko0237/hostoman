@@ -23,32 +23,37 @@ class StatistiqueLaboService {
         '🔍 Période: ${debutTimestamp.toIso8601String()} → ${finTimestamp.toIso8601String()}',
       );
 
-      // Compter les examens terminés directement
+      // Compter les consultations distinctes pour les examens terminés
       final terminesData = await supabase
           .from('examen_a_effectuer')
-          .select('id_examen')
+          .select('id_consultation')
           .eq('statut_examen', 'Terminé')
           .gte('date_enregistrement', debutTimestamp.toIso8601String())
           .lte('date_enregistrement', finTimestamp.toIso8601String());
 
-      print('✅ Terminés brut: ${terminesData.length} résultats');
-      print('📊 Données terminés: $terminesData');
+      final nbTermines = (terminesData as List)
+          .map((e) => e['id_consultation'])
+          .toSet()
+          .length;
 
-      // Compter les examens annulés directement
+      print('✅ Terminés (consultations): $nbTermines');
+
+      // Compter les consultations distinctes pour les examens annulés
       final annulesData = await supabase
           .from('examen_a_effectuer')
-          .select('id_examen')
+          .select('id_consultation')
           .eq('statut_examen', 'Annulé')
           .gte('date_enregistrement', debutTimestamp.toIso8601String())
           .lte('date_enregistrement', finTimestamp.toIso8601String());
 
-      print('❌ Annulés brut: ${annulesData.length} résultats');
-      print('📊 Données annulés: $annulesData');
+      final nbAnnules = (annulesData as List)
+          .map((e) => e['id_consultation'])
+          .toSet()
+          .length;
 
-      return {
-        'termines': (terminesData as List).length,
-        'annules': (annulesData as List).length,
-      };
+      print('❌ Annulés (consultations): $nbAnnules');
+
+      return {'termines': nbTermines, 'annules': nbAnnules};
     } catch (e) {
       print('❌ Erreur getStatistiques: $e');
       return {'termines': 0, 'annules': 0};
@@ -62,13 +67,19 @@ class StatistiqueLaboService {
     String? statutFiltre, // 'Terminé', 'Annulé', ou null pour tous
   }) async {
     try {
-      // Formater les dates au format YYYY-MM-DD
-      final debutStr =
-          '${debut.year}-${debut.month.toString().padLeft(2, '0')}-${debut.day.toString().padLeft(2, '0')}';
-      final finStr =
-          '${fin.year}-${fin.month.toString().padLeft(2, '0')}-${fin.day.toString().padLeft(2, '0')}';
+      // Timestamps complets pour le filtrage
+      final debutTimestamp = DateTime(
+        debut.year,
+        debut.month,
+        debut.day,
+        0,
+        0,
+        0,
+      );
+      final finTimestamp = DateTime(fin.year, fin.month, fin.day, 23, 59, 59);
 
       // Requête pour récupérer les consultations avec examens terminés ou annulés
+      // On filtre par date_enregistrement de l'EXAMEN pour être cohérent avec les stats
       var query = supabase
           .from('Consultation')
           .select('''
@@ -85,11 +96,18 @@ class StatistiqueLaboService {
             examen_a_effectuer!inner(
               id_examen,
               nom_examen,
-              statut_examen
+              statut_examen,
+              date_enregistrement
             )
           ''')
-          .gte('date_enregistrement', debutStr)
-          .lte('date_enregistrement', finStr);
+          .gte(
+            'examen_a_effectuer.date_enregistrement',
+            debutTimestamp.toIso8601String(),
+          )
+          .lte(
+            'examen_a_effectuer.date_enregistrement',
+            finTimestamp.toIso8601String(),
+          );
 
       final response = await query;
 

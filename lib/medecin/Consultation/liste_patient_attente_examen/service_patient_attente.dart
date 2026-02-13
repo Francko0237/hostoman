@@ -9,14 +9,38 @@ class ConsultationService {
   Future<List<Map<String, dynamic>>> getPatientsEnAttente() async {
     final response = await supabase
         .from('Consultation')
-        .select('id_consultation, type_service, id_patient, date_enregistrement,Statut_Consultation, Patient(*)')
-        .or('payer.eq.non,payer.eq.oui')
-        .eq('type_service', 'Consultation')
-        .or('Statut_Consultation.eq.en-attente-examen,Statut_Consultation.eq.examen-effectue')
+        .select('''
+          *,
+          Patient(*),
+          paiement(*),
+          examen_a_effectuer!inner(*)
+        ''')
+        .or(
+          'Statut_Consultation.eq.en-attente-examen,Statut_Consultation.eq.en-attente-resultat,Statut_Consultation.eq.resultat-disponible,Statut_Consultation.eq.Annuler',
+        )
         .order('date_enregistrement', ascending: true);
 
-// structure standard pour ret  ourné les données de la BD récupérer
-    return (response as List<dynamic>).map((e) => e as Map<String, dynamic>).toList();
+    // 🔄 Dédoublonnage robuste par id_consultation
+    final Map<int, Map<String, dynamic>> uniqueConsultations = {};
+
+    for (var item in response as List<dynamic>) {
+      final map = item as Map<String, dynamic>;
+      final id = int.tryParse(map['id_consultation'].toString()) ?? 0;
+
+      // Filtrage métier : Si c'est en attente d'examen, on vérifie le paiement
+      final statut = map['Statut_Consultation'];
+      if (statut == 'en-attente-examen') {
+        final paiements = map['paiement'] as List<dynamic>?;
+        final aPaye =
+            paiements != null &&
+            paiements.any((p) => p['statut_paiement'] == 'payer');
+        if (!aPaye) continue; // On masque si pas encore payé au labo
+      }
+
+      uniqueConsultations[id] = map;
+    }
+
+    return uniqueConsultations.values.toList();
   }
 
   /// ✅ Commencer une consultation (Statut = 'En cours')

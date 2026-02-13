@@ -21,12 +21,15 @@ class EnattenteExam extends StatefulWidget {
 }
 
 class _EnattenteExamState extends State<EnattenteExam> {
-  final ConsultationService consultationService = ConsultationService(Supabase.instance.client);
+  final ConsultationService consultationService = ConsultationService(
+    Supabase.instance.client,
+  );
   List<Map<String, dynamic>> consultations = [];
   List<Map<String, dynamic>> filteredConsultations = [];
   bool isLoading = true;
   String searchQuery = '';
   String sortOption = 'date_desc';
+  String? errorMessage;
 
   @override
   void initState() {
@@ -35,10 +38,23 @@ class _EnattenteExamState extends State<EnattenteExam> {
   }
 
   Future<void> chargerConsultations() async {
-    setState(() => isLoading = true);
-    consultations = await consultationService.getPatientsEnAttente();
-    _applyFilters();
-    setState(() => isLoading = false);
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+    try {
+      consultations = await consultationService.getPatientsEnAttente();
+      _applyFilters();
+    } catch (e) {
+      print('❌ Erreur de chargement: $e');
+      setState(() {
+        errorMessage = 'Erreur lors du chargement des patients : $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
   }
 
   void _applyFilters() {
@@ -55,29 +71,45 @@ class _EnattenteExamState extends State<EnattenteExam> {
     switch (sortOption) {
       case 'name_asc':
         temp.sort((a, b) {
-          final nomA = (a['Patient']['nom_complet'] ?? '').toString().toLowerCase();
-          final nomB = (b['Patient']['nom_complet'] ?? '').toString().toLowerCase();
+          final nomA = (a['Patient']['nom_complet'] ?? '')
+              .toString()
+              .toLowerCase();
+          final nomB = (b['Patient']['nom_complet'] ?? '')
+              .toString()
+              .toLowerCase();
           return nomA.compareTo(nomB);
         });
         break;
       case 'name_desc':
         temp.sort((a, b) {
-          final nomA = (a['Patient']['nom_complet'] ?? '').toString().toLowerCase();
-          final nomB = (b['Patient']['nom_complet'] ?? '').toString().toLowerCase();
+          final nomA = (a['Patient']['nom_complet'] ?? '')
+              .toString()
+              .toLowerCase();
+          final nomB = (b['Patient']['nom_complet'] ?? '')
+              .toString()
+              .toLowerCase();
           return nomB.compareTo(nomA);
         });
         break;
       case 'date_desc':
         temp.sort((a, b) {
-          final dateA = DateTime.tryParse(a['date_enregistrement'] ?? '') ?? DateTime(2000);
-          final dateB = DateTime.tryParse(b['date_enregistrement'] ?? '') ?? DateTime(2000);
+          final dateA =
+              DateTime.tryParse(a['date_enregistrement'] ?? '') ??
+              DateTime(2000);
+          final dateB =
+              DateTime.tryParse(b['date_enregistrement'] ?? '') ??
+              DateTime(2000);
           return dateB.compareTo(dateA);
         });
         break;
       case 'date_asc':
         temp.sort((a, b) {
-          final dateA = DateTime.tryParse(a['date_enregistrement'] ?? '') ?? DateTime(2000);
-          final dateB = DateTime.tryParse(b['date_enregistrement'] ?? '') ?? DateTime(2000);
+          final dateA =
+              DateTime.tryParse(a['date_enregistrement'] ?? '') ??
+              DateTime(2000);
+          final dateB =
+              DateTime.tryParse(b['date_enregistrement'] ?? '') ??
+              DateTime(2000);
           return dateA.compareTo(dateB);
         });
         break;
@@ -88,7 +120,10 @@ class _EnattenteExamState extends State<EnattenteExam> {
     });
   }
 
-  Future<void> _annulerConsultation(String idConsultation, String nomPatient) async {
+  Future<void> _annulerConsultation(
+    String idConsultation,
+    String nomPatient,
+  ) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -100,7 +135,9 @@ class _EnattenteExamState extends State<EnattenteExam> {
             const Text('Confirmer l\'annulation'),
           ],
         ),
-        content: Text('Voulez-vous vraiment annuler la consultation de $nomPatient ?'),
+        content: Text(
+          'Voulez-vous vraiment annuler la consultation de $nomPatient ?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -108,9 +145,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: medErrorColor,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: medErrorColor),
             child: const Text('Oui', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -140,19 +175,34 @@ class _EnattenteExamState extends State<EnattenteExam> {
 
   // Fonction pour déterminer la couleur selon le statut
   Color _getStatutColor(String? statutExamen) {
-    if (statutExamen == 'examen-effectue') {
-      print("Sttut de la consultation $statutExamen");
-      return medSuccessColor;
-    }else{
-    return medOrangeColor;
-  }}
+    switch (statutExamen) {
+      case 'en-attente-examen':
+        return Colors.grey.shade500; // Gris moins foncé (style désactivé)
+      case 'en-attente-resultat':
+        return medOrangeColor; // Orange
+      case 'resultat-disponible':
+        return medSuccessColor; // Vert
+      case 'Annuler':
+        return medErrorColor; // Rouge
+      default:
+        return Colors.grey.shade400;
+    }
+  }
 
   // Fonction pour obtenir le libellé du statut
   String _getStatutLabel(String? statutExamen) {
-    if (statutExamen == 'examen-effectue') {
-      return 'Effectué';
+    switch (statutExamen) {
+      case 'en-attente-examen':
+        return 'En attente d\'examen';
+      case 'en-attente-resultat':
+        return 'En attente de résultat';
+      case 'resultat-disponible':
+        return 'Résultats disponibles';
+      case 'Annuler':
+        return 'Annulée';
+      default:
+        return 'Inconnu';
     }
-    return 'En attente';
   }
 
   @override
@@ -208,12 +258,12 @@ class _EnattenteExamState extends State<EnattenteExam> {
             // Barre de recherche + filtres
             Container(
               padding: EdgeInsets.all(isDesktop ? 20 : 16),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF5F3F3),
-              ),
+              decoration: const BoxDecoration(color: Color(0xFFF5F3F3)),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isDesktop ? 1200 : double.infinity),
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 1200 : double.infinity,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -227,9 +277,15 @@ class _EnattenteExamState extends State<EnattenteExam> {
                             decoration: InputDecoration(
                               hintText: 'Rechercher un patient par nom...',
                               hintStyle: TextStyle(color: Colors.grey.shade500),
-                              prefixIcon: Icon(Icons.search, color: medPrimaryColor),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color: medPrimaryColor,
+                              ),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
                             ),
                             onChanged: (value) {
                               searchQuery = value;
@@ -255,7 +311,11 @@ class _EnattenteExamState extends State<EnattenteExam> {
                           icon: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.filter_list, color: Colors.white, size: 20),
+                              const Icon(
+                                Icons.filter_list,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                               if (isTablet) ...[
                                 const SizedBox(width: 8),
                                 Text(
@@ -272,7 +332,9 @@ class _EnattenteExamState extends State<EnattenteExam> {
                           tooltip: 'Trier',
                           color: Colors.white,
                           elevation: 8,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           onSelected: (value) {
                             setState(() => sortOption = value);
                             _applyFilters();
@@ -318,10 +380,15 @@ class _EnattenteExamState extends State<EnattenteExam> {
             if (!isLoading && filteredConsultations.isNotEmpty)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: isDesktop ? 1200 : double.infinity),
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktop ? 1200 : double.infinity,
+                    ),
                     child: Text(
                       '${filteredConsultations.length} patient${filteredConsultations.length > 1 ? 's' : ''} en attente',
                       style: const TextStyle(
@@ -338,244 +405,349 @@ class _EnattenteExamState extends State<EnattenteExam> {
             Expanded(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isDesktop ? 1200 : double.infinity),
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 1200 : double.infinity,
+                  ),
                   child: isLoading
                       ? Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(color: medPrimaryColor),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Chargement...',
-                            style: TextStyle(
-                              color: medPrimaryColor,
-                              fontWeight: FontWeight.w500,
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(
+                                  color: medPrimaryColor,
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Chargement...',
+                                  style: TextStyle(
+                                    color: medPrimaryColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  )
+                        )
+                      : errorMessage != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: medErrorColor,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(errorMessage!),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: chargerConsultations,
+                                child: const Text('Réessayer'),
+                              ),
+                            ],
+                          ),
+                        )
                       : filteredConsultations.isEmpty
                       ? Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(32),
-                      margin: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
+                          child: Container(
+                            padding: const EdgeInsets.all(32),
+                            margin: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: medPrimaryColor.withOpacity(0.1),
-                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            child: Icon(
-                              Icons.people_outline,
-                              size: 64,
-                              color: medPrimaryColor,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: medPrimaryColor.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.people_outline,
+                                    size: 64,
+                                    color: medPrimaryColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  'Aucun patient en attente',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: medPrimaryColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Les patients ayant payé apparaîtront ici',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Aucun patient en attente',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: medPrimaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Les patients ayant payé apparaîtront ici',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
+                        )
                       : ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.all(isDesktop ? 20 : 16),
-                    itemCount: filteredConsultations.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredConsultations[index];
-                      final patientMap = item['Patient'] as Map<String, dynamic>;
-                      patientMap['id_patient'] = item['id_patient'];
-                      final patient = Patient.fromMap(patientMap);
-                      final idConsultation = item['id_consultation'].toString();
-                      final statutExamen = item['Statut_Consultation'] as String?;
-                      final Color statutColor = _getStatutColor(statutExamen);
-                      final String statutLabel = _getStatutLabel(statutExamen);
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.all(isDesktop ? 20 : 16),
+                          itemCount: filteredConsultations.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredConsultations[index];
+                            final patientMap =
+                                item['Patient'] as Map<String, dynamic>;
+                            patientMap['id_patient'] = item['id_patient'];
+                            final patient = Patient.fromMap(patientMap);
+                            final idConsultation = item['id_consultation']
+                                .toString();
+                            final statutExamen =
+                                item['Statut_Consultation'] as String?;
+                            final Color statutColor = _getStatutColor(
+                              statutExamen,
+                            );
+                            final String statutLabel = _getStatutLabel(
+                              statutExamen,
+                            );
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: statutColor.withOpacity(0.8),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: statutColor.withOpacity(0.2),
-                              blurRadius: 15,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () {
-                              context.push(
-                                  '/Dashboard_Medecin/FicheConsultation/$idConsultation');
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [statutColor, statutColor.withOpacity(0.8)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        patient.nom_complet[0].toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          patient.nom_complet,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            patient.sexe == 'Homme'
-                                                ? Icon(Icons.man, size: 15, color: Colors.grey[600])
-                                                : Icon(Icons.woman, size: 15, color: Colors.grey[600]),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              patient.sexe,
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                color: Colors.grey[700],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Icon(Icons.calendar_today, size: 10, color: Colors.grey[600]),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '${patient.age} ans',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                color: Colors.grey[700],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: statutColor.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          statutExamen == 'examen-effectue'
-                                              ? Icons.check_circle
-                                              : Icons.science,
-                                          size: 14,
-                                          color: statutColor,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          statutLabel,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: statutColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
+                            // Extraire les noms des examens
+                            final List<dynamic> examensData =
+                                item['examen_a_effectuer'] ?? [];
+                            final String examensList = examensData
+                                .map((e) => e['nom_examen'] ?? '')
+                                .where((name) => name.isNotEmpty)
+                                .join(', ');
 
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: medErrorColor.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(30),
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: statutColor.withOpacity(0.8),
+                                  width: 1.5,
                                 ),
-                                child: IconButton(
-                                  onPressed: () {
-                                    _annulerConsultation(idConsultation, patient.nom_complet);
-                                  },
-                                  icon: Icon(
-                                    Icons.close_rounded,
-                                    color: medErrorColor,
-                                    size: 25,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: statutColor.withOpacity(0.2),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 2),
                                   ),
-                                  tooltip: 'Annuler',
-                                ),
-                              ),
                                 ],
                               ),
-                            ),
-                          ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () {
+                                    context.push(
+                                      '/Dashboard_Medecin/FicheConsultation/$idConsultation',
+                                    );
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 50,
+                                          height: 50,
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                statutColor,
+                                                statutColor.withOpacity(0.8),
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              patient.nom_complet[0]
+                                                  .toUpperCase(),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                patient.nom_complet,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  patient.sexe == 'Homme'
+                                                      ? Icon(
+                                                          Icons.man,
+                                                          size: 15,
+                                                          color:
+                                                              Colors.grey[600],
+                                                        )
+                                                      : Icon(
+                                                          Icons.woman,
+                                                          size: 15,
+                                                          color:
+                                                              Colors.grey[600],
+                                                        ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    patient.sexe,
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.grey[700],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Icon(
+                                                    Icons.calendar_today,
+                                                    size: 10,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${patient.age} ans',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.grey[700],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (examensList.isNotEmpty) ...[
+                                                const SizedBox(height: 6),
+                                                Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.biotech,
+                                                      size: 14,
+                                                      color: statutColor
+                                                          .withOpacity(0.7),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Examens: $examensList',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          color:
+                                                              Colors.grey[800],
+                                                          fontStyle:
+                                                              FontStyle.italic,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: statutColor.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                statutExamen ==
+                                                        'resultat-disponible'
+                                                    ? Icons.check_circle
+                                                    : (statutExamen == 'Annuler'
+                                                          ? Icons.cancel
+                                                          : Icons.science),
+                                                size: 14,
+                                                color: statutColor,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                statutLabel,
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: statutColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: medErrorColor.withOpacity(
+                                              0.2,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
+                                          ),
+                                          child: IconButton(
+                                            onPressed: () {
+                                              _annulerConsultation(
+                                                idConsultation,
+                                                patient.nom_complet,
+                                              );
+                                            },
+                                            icon: Icon(
+                                              Icons.close_rounded,
+                                              color: medErrorColor,
+                                              size: 25,
+                                            ),
+                                            tooltip: 'Annuler',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ),
             ),

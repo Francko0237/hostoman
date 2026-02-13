@@ -26,6 +26,7 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
   Medecin? laborantin;
   int totalExamens = 0;
   bool loading = true;
+  String? errorMessage;
 
   @override
   void initState() {
@@ -34,20 +35,34 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
   }
 
   Future<void> _loadLaborantin() async {
+    setState(() {
+      loading = true;
+      errorMessage = null;
+    });
     await Future.delayed(const Duration(milliseconds: 500));
 
-    final result = await service.fetchLaborantinConnecte();
-    if (result != null) {
-      final total = await service.countExamensEnCoursTotal();
-      setState(() {
-        laborantin = result;
-        totalExamens = total;
-        loading = false;
-      });
-    } else {
-      setState(() {
-        loading = false;
-      });
+    try {
+      final result = await service.fetchLaborantinConnecte();
+      if (result != null) {
+        final total = await service.countExamensEnCoursTotal();
+        setState(() {
+          laborantin = result;
+          totalExamens = total;
+          loading = false;
+        });
+      } else {
+        setState(() {
+          loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          loading = false;
+          errorMessage =
+              'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+        });
+      }
     }
   }
 
@@ -156,6 +171,48 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                         ),
                       ],
                     ),
+                  ),
+                )
+              : errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 60,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _loadLaborantin,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Réessayer'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: labPrimaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 )
               : laborantin == null

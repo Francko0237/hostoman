@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -48,31 +49,55 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
   List<Map<String, dynamic>> patientsEnCours = [];
   bool isLoading = true;
   String? errorMessage;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     chargerDonnees();
+    _startRefreshTimer();
   }
 
-  Future<void> chargerDonnees() async {
-    setState(() => isLoading = true);
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (mounted) {
+        chargerDonnees(silent: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> chargerDonnees({bool silent = false}) async {
+    if (!silent) setState(() => isLoading = true);
     try {
       final stats = await dashboardService.getStatistiquesJour();
       final patients = await dashboardService.getPatientsEnAttenteResultat();
 
-      setState(() {
-        patientsEnAttenteExamen = stats['en_attente_examen'] ?? 0;
-        patientsEnAttenteResultat = stats['en_attente_resultat'] ?? 0;
-        patientsEnCours = patients;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          patientsEnAttenteExamen = stats['en_attente_examen'] ?? 0;
+          patientsEnAttenteResultat = stats['en_attente_resultat'] ?? 0;
+          patientsEnCours = patients;
+          isLoading = false;
+          errorMessage = null; // Clear error on success
+        });
+      }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-        errorMessage =
-            'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          if (!silent) {
+            errorMessage =
+                'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+          }
+        });
+      }
     }
   }
 
