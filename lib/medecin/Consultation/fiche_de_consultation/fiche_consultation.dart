@@ -347,7 +347,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
         examensPrescrits: examensPrescrits,
         diagnosticFinal: _diagnosticFinalController.text,
         traitementPrescrit: _traitementPrescritController.text,
-        programmationRdv: _programmationRdv ?? 'pas_programmer',
+        programmationRdv: _programmationRdv == 'programmer'
+            ? 'RDV_programmer'
+            : null,
         rdvDate: finalRdvDate,
       );
 

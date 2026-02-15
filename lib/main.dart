@@ -33,6 +33,9 @@ import 'package:hostoman/medecin/Consultation/historique_consultation/historique
 import 'package:hostoman/medecin/Consultation/historique_consultation/historique_detail.dart';
 import 'package:hostoman/medecin/Consultation/statistiques/statistiques_ui.dart';
 import 'package:hostoman/medecin/Consultation/liste_patient_attente_examen/liste_patient_attente.dart';
+import 'package:hostoman/medecin/RendezVous/liste_rendez_vous.dart';
+import 'package:hostoman/medecin/dashboard/profil_medecin.dart'
+    as doctor_profile;
 
 //Laboratoire
 import 'package:hostoman/Labo/Dashboard/Dashboard.dart';
@@ -177,6 +180,14 @@ final GoRouter _router = GoRouter(
           path:
               'EnattenteExam', // Le chemin complet sera context.push('/Dashboard_Medecin/EnattenteExam')
           builder: (context, state) => const EnattenteExam(),
+        ),
+        GoRoute(
+          path: 'rendez-vous',
+          builder: (context, state) => const ListeRendezVousPage(),
+        ),
+        GoRoute(
+          path: 'Profil',
+          builder: (context, state) => const doctor_profile.ProfilMedecinPage(),
         ),
       ],
     ),

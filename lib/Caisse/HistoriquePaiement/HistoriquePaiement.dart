@@ -322,7 +322,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                             ),
                           ),
                         )
-                      : consultations.isEmpty
+                      : filteredConsultations.isEmpty
                       ? Center(
                           child: Container(
                             padding: const EdgeInsets.all(32),
@@ -341,35 +341,68 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade200,
-                                    shape: BoxShape.circle,
+                                if (searchQuery.isNotEmpty) ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.search_off,
+                                      size: 64,
+                                      color: Colors.orange,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    Icons.history,
-                                    size: 64,
-                                    color: Colors.grey[600],
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    'Aucun résultat trouvé',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  'Aucun historique',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    color: npPrimaryColor,
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Aucun patient ne correspond à "$searchQuery"',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Les paiements effectués apparaîtront ici',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
+                                ] else ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.history,
+                                      size: 64,
+                                      color: Colors.grey[600],
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    'Aucun historique',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: npPrimaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Les paiements effectués apparaîtront ici',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

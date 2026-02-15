@@ -13,6 +13,8 @@ class PaiementService {
             id_consultation, 
             type_service, 
             id_patient, 
+            date_derniere_mise_ajour,
+            date_enregistrement,r
             Patient(*),
             paiement!inner(*)
           ''')

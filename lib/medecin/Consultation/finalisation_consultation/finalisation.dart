@@ -121,7 +121,12 @@ class _FinalisationConsultationPageState
               _consultationData!['diagnostic_final'] ?? '';
           _traitementPrescritController.text =
               _consultationData!['traitement_prescrit'] ?? '';
-          _programmationRdv = _consultationData!['programmation_rdv'];
+
+          // Mapping de la valeur DB vers la valeur interne du Dropdown
+          final dbRdv = _consultationData!['programmation_rdv'];
+          _programmationRdv = (dbRdv == 'RDV_programmer')
+              ? 'programmer'
+              : 'pas_programmer';
 
           // Pré-remplir la date de RDV si elle existe
           if (_consultationData!['date_rdv_prevu'] != null) {
@@ -136,7 +141,15 @@ class _FinalisationConsultationPageState
             _rdvDateController.text =
                 '${rdvDate.day}/${rdvDate.month}/${rdvDate.year}';
             _rdvHeureController.text = _selectedRdvTime!.format(context);
+            // Afficher les champs date/heure seulement si programmé
             _showRdvDateTime = (_programmationRdv == 'programmer');
+          } else {
+            // Si pas de date, s'assurer que les champs sont cachés/vidés
+            _showRdvDateTime = false;
+            _selectedRdvDate = null;
+            _selectedRdvTime = null;
+            _rdvDateController.clear();
+            _rdvHeureController.clear();
           }
         });
       }
@@ -503,8 +516,14 @@ class _FinalisationConsultationPageState
             'diagnostic_initial': _diagnosticInitialController.text,
             'diagnostic_final': _diagnosticFinalController.text,
             'traitement_prescrit': _traitementPrescritController.text,
-            'programmation_rdv': _programmationRdv ?? 'pas_programmer',
-            'date_rdv_prevu': finalRdvDate?.toIso8601String(),
+            // Logique demandée : "RDV_programmer" si programmé, sinon null
+            'programmation_rdv': _programmationRdv == 'programmer'
+                ? 'RDV_programmer'
+                : null,
+            // Date si programmé, sinon explicitement null
+            'date_rdv_prevu': _programmationRdv == 'programmer'
+                ? finalRdvDate?.toIso8601String()
+                : null,
             'Statut_Consultation': 'terminer',
             'date_derniere_mise_ajour': DateTime.now().toIso8601String(),
           })

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dashboard_service.dart';
 
 // Couleurs
 const Color medPrimaryColor = Color(0xFF5A47C9);
@@ -24,9 +25,12 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
   int terminer = 12;
   Timer? _timer;
 
+  late final DashboardService _dashboardService;
+
   @override
   void initState() {
     super.initState();
+    _dashboardService = DashboardService(Supabase.instance.client);
     _chargerStats();
 
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -41,10 +45,12 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
   }
 
   Future<void> _chargerStats() async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    final stats = await _dashboardService.getDailyStats();
     if (mounted) {
       setState(() {
-        // Mettre à jour les données
+        consultationsJour = stats['consultations'] ?? 0;
+        enAttente = stats['en_attente'] ?? 0;
+        terminer = stats['terminer'] ?? 0;
       });
     }
   }
@@ -115,7 +121,7 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
               ),
               onSelected: (value) async {
                 if (value == 'profile') {
-                  context.push('/Dashboard_Caisse/profilcaisse');
+                  context.push('/Dashboard_Medecin/Profil');
                 } else if (value == 'deconnexion') {
                   print('déconnexion sélectionnée');
                   try {

@@ -90,10 +90,18 @@ class _PaiementlistState extends State<Paiementlist> {
       case 'date_desc':
         temp.sort((a, b) {
           final dateA =
-              DateTime.tryParse(a['date_enregistrement'] ?? '') ??
+              DateTime.tryParse(
+                a['date_derniere_mise_ajour']?.toString() ??
+                    a['date_enregistrement']?.toString() ??
+                    '',
+              ) ??
               DateTime(2000);
           final dateB =
-              DateTime.tryParse(b['date_enregistrement'] ?? '') ??
+              DateTime.tryParse(
+                b['date_derniere_mise_ajour']?.toString() ??
+                    b['date_enregistrement']?.toString() ??
+                    '',
+              ) ??
               DateTime(2000);
           return dateB.compareTo(dateA);
         });
@@ -101,10 +109,18 @@ class _PaiementlistState extends State<Paiementlist> {
       case 'date_asc':
         temp.sort((a, b) {
           final dateA =
-              DateTime.tryParse(a['date_enregistrement'] ?? '') ??
+              DateTime.tryParse(
+                a['date_derniere_mise_ajour']?.toString() ??
+                    a['date_enregistrement']?.toString() ??
+                    '',
+              ) ??
               DateTime(2000);
           final dateB =
-              DateTime.tryParse(b['date_enregistrement'] ?? '') ??
+              DateTime.tryParse(
+                b['date_derniere_mise_ajour']?.toString() ??
+                    b['date_enregistrement']?.toString() ??
+                    '',
+              ) ??
               DateTime(2000);
           return dateA.compareTo(dateB);
         });
@@ -515,7 +531,7 @@ class _PaiementlistState extends State<Paiementlist> {
                             ),
                           ),
                         )
-                      : consultations.isEmpty
+                      : filteredConsultations.isEmpty
                       ? Center(
                           child: Container(
                             padding: const EdgeInsets.all(32),
@@ -534,35 +550,68 @@ class _PaiementlistState extends State<Paiementlist> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: npSuccessColor.withOpacity(0.1),
-                                    shape: BoxShape.circle,
+                                if (searchQuery.isNotEmpty) ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.search_off,
+                                      size: 64,
+                                      color: Colors.orange,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    Icons.check_circle_outline,
-                                    size: 64,
-                                    color: npSuccessColor,
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    'Aucun résultat trouvé',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  'Aucun paiement en attente',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    color: npPrimaryColor,
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Aucun patient ne correspond à "$searchQuery"',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Tous les paiements sont à jour',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
+                                ] else ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: npSuccessColor.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.check_circle_outline,
+                                      size: 64,
+                                      color: npSuccessColor,
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 20),
+                                  const Text(
+                                    'Aucun paiement en attente',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: npPrimaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tous les paiements sont à jour',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -570,9 +619,9 @@ class _PaiementlistState extends State<Paiementlist> {
                       : ListView.builder(
                           physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.all(isDesktop ? 20 : 16),
-                          itemCount: consultations.length,
+                          itemCount: filteredConsultations.length,
                           itemBuilder: (context, index) {
-                            final item = consultations[index];
+                            final item = filteredConsultations[index];
                             final patientMap =
                                 item['Patient'] as Map<String, dynamic>;
                             final List<dynamic> paiementsList =

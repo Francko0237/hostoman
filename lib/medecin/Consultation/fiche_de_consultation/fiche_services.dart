@@ -38,7 +38,7 @@ class MedecinServices {
     required List<Map<String, dynamic>> examensPrescrits,
     required String diagnosticFinal,
     required String traitementPrescrit,
-    required String programmationRdv,
+    String? programmationRdv,
     DateTime? rdvDate,
   }) async {
     final now = DateTime.now().toIso8601String();
