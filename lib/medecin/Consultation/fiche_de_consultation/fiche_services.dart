@@ -102,4 +102,19 @@ class MedecinServices {
       });
     }
   }
+
+  /// 🔬 Récupère les examens avec leurs résultats pour une consultation
+  Future<List<Map<String, dynamic>>> getExamensResultats(
+    int idConsultation,
+  ) async {
+    final response = await supabase
+        .from('examen_a_effectuer')
+        .select('*')
+        .eq('id_consultation', idConsultation)
+        .order('id_examen', ascending: true);
+
+    return (response as List<dynamic>)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+  }
 }

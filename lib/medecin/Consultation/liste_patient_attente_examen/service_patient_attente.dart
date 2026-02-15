@@ -24,20 +24,36 @@ class ConsultationService {
     final Map<int, Map<String, dynamic>> uniqueConsultations = {};
 
     for (var item in response as List<dynamic>) {
-      final map = item as Map<String, dynamic>;
+      final map = Map<String, dynamic>.from(item as Map);
       final id = int.tryParse(map['id_consultation'].toString()) ?? 0;
 
-      // Filtrage métier : Si c'est en attente d'examen, on vérifie le paiement
-      final statut = map['Statut_Consultation'];
-      if (statut == 'en-attente-examen') {
-        final paiements = map['paiement'] as List<dynamic>?;
-        final aPaye =
-            paiements != null &&
-            paiements.any((p) => p['statut_paiement'] == 'payer');
-        if (!aPaye) continue; // On masque si pas encore payé au labo
-      }
+      // Extraction sécurisée de l'examen/des examens (Supabase peut renvoyer un Map ou une List)
+      final dynamic rawExam = map['examen_a_effectuer'];
+      final List<dynamic> currentExams = (rawExam is List)
+          ? rawExam
+          : (rawExam is Map ? [rawExam] : []);
 
-      uniqueConsultations[id] = map;
+      if (uniqueConsultations.containsKey(id)) {
+        // Ajouter les nouveaux examens à la liste existante sans créer de couches supplémentaires
+        final List<dynamic> list =
+            uniqueConsultations[id]!['examen_a_effectuer'] as List<dynamic>;
+        list.addAll(currentExams);
+      } else {
+        // Initialiser avec une copie de la liste pour éviter les effets de bord
+        map['examen_a_effectuer'] = [...currentExams];
+
+        // Filtrage métier : Si c'est en attente d'examen, on vérifie le paiement
+        final statut = map['Statut_Consultation'];
+        if (statut == 'en-attente-examen') {
+          final paiements = map['paiement'] as List<dynamic>?;
+          final aPaye =
+              paiements != null &&
+              paiements.any((p) => p['statut_paiement'] == 'payer');
+          if (!aPaye) continue;
+        }
+
+        uniqueConsultations[id] = map;
+      }
     }
 
     return uniqueConsultations.values.toList();

@@ -12,29 +12,33 @@ class DashboardStatsService {
     final finJour = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
     try {
-      // Récupérer toutes les consultations avec paiements validés aujourd'hui
+      // Récupérer tous les paiements validés aujourd'hui (Consultations + Examens)
       final response = await supabase
-          .from('Consultation')
-          .select('id_consultation, date_enregistrement, paiement!inner(*)')
-          .eq('paiement.statut_paiement', 'payer')
-          .gte('date_enregistrement', debutJour.toIso8601String())
-          .lte('date_enregistrement', finJour.toIso8601String());
+          .from('paiement')
+          .select('prix_a_paye, date_paiement, Consultation(id_patient)')
+          .eq('statut_paiement', 'payer')
+          .gte('date_paiement', debutJour.toIso8601String())
+          .lte('date_paiement', finJour.toIso8601String());
 
       final List<dynamic> data = response as List<dynamic>;
-      final nombrePatients = data.length;
 
-      // Calculer le total encaissé à partir des montants réels
+      // Calculer le total encaissé
       double totalEncaisse = 0;
-      for (var consultation in data) {
-        final List<dynamic> paiements = consultation['paiement'] ?? [];
-        if (paiements.isNotEmpty) {
-          // Prendre seulement le premier paiement (il n'y a qu'un paiement par consultation)
-          totalEncaisse += (paiements[0]['prix_a_paye'] as num).toDouble();
+      final Set<String> patientsUniques = {};
+
+      for (var p in data) {
+        totalEncaisse += (p['prix_a_paye'] as num).toDouble();
+
+        // Récupérer l'ID du patient via la consultation
+        final consultation = p['Consultation'];
+        if (consultation != null && consultation['id_patient'] != null) {
+          patientsUniques.add(consultation['id_patient'].toString());
         }
       }
 
       return {
-        'personnes_recues': nombrePatients,
+        'personnes_recues':
+            data.length, // Compte total des paiements (transactions)
         'total_encaisse': totalEncaisse.toInt(),
         'date_recuperation': DateTime.now().toIso8601String(),
       };
@@ -75,27 +79,28 @@ class DashboardStatsService {
   }) async {
     try {
       final response = await supabase
-          .from('Consultation')
-          .select('id_consultation, paiement!inner(*)')
-          .eq('paiement.statut_paiement', 'payer')
-          .gte('date_enregistrement', dateDebut.toIso8601String())
-          .lte('date_enregistrement', dateFin.toIso8601String());
+          .from('paiement')
+          .select('prix_a_paye, date_paiement, Consultation(id_patient)')
+          .eq('statut_paiement', 'payer')
+          .gte('date_paiement', dateDebut.toIso8601String())
+          .lte('date_paiement', dateFin.toIso8601String());
 
       final List<dynamic> data = response as List<dynamic>;
-      final nombrePatients = data.length;
 
-      // Calculer le total encaissé à partir des montants réels
       double totalEncaisse = 0;
-      for (var consultation in data) {
-        final List<dynamic> paiements = consultation['paiement'] ?? [];
-        if (paiements.isNotEmpty) {
-          // Prendre seulement le premier paiement (il n'y a qu'un paiement par consultation)
-          totalEncaisse += (paiements[0]['prix_a_paye'] as num).toDouble();
+      final Set<String> patientsUniques = {};
+
+      for (var p in data) {
+        totalEncaisse += (p['prix_a_paye'] as num).toDouble();
+        final consultation = p['Consultation'];
+        if (consultation != null && consultation['id_patient'] != null) {
+          patientsUniques.add(consultation['id_patient'].toString());
         }
       }
 
       return {
-        'personnes_recues': nombrePatients,
+        'personnes_recues':
+            data.length, // Compte total des paiements (transactions)
         'total_encaisse': totalEncaisse.toInt(),
       };
     } catch (e) {

@@ -16,7 +16,11 @@ class LaboExamensService {
             examen_a_effectuer!inner(id_examen)
           ''')
         .eq('Statut_Consultation', 'en-attente-examen')
-        .eq('paiement.statut_paiement', 'payer') // Filtre sur la table jointe
+        .eq('paiement.statut_paiement', 'payer')
+        .eq(
+          'paiement.motif',
+          'Examens',
+        ) // Filtre sur le motif spécifique aux examens
         // On ne veut que les consultations qui ont au moins un examen "en attente"
         .neq('examen_a_effectuer.statut_examen', 'En cours')
         .neq('examen_a_effectuer.statut_examen', 'Terminé')

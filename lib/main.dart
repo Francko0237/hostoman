@@ -28,6 +28,10 @@ import 'package:hostoman/Caisse/Statistique/Statistique.dart';
 import 'package:hostoman/medecin/dashboard/dashboard.dart';
 import 'package:hostoman/medecin/Consultation/liste_patients_consultation/liste_patients_consultation.dart';
 import 'package:hostoman/medecin/Consultation/fiche_de_consultation/fiche_consultation.dart';
+import 'package:hostoman/medecin/Consultation/finalisation_consultation/finalisation.dart';
+import 'package:hostoman/medecin/Consultation/historique_consultation/historique_liste.dart';
+import 'package:hostoman/medecin/Consultation/historique_consultation/historique_detail.dart';
+import 'package:hostoman/medecin/Consultation/statistiques/statistiques_ui.dart';
 import 'package:hostoman/medecin/Consultation/liste_patient_attente_examen/liste_patient_attente.dart';
 
 //Laboratoire
@@ -144,6 +148,32 @@ final GoRouter _router = GoRouter(
           },
         ),
         GoRoute(
+          path: 'FinalisationConsultation/:idConsultation',
+          builder: (context, state) {
+            final String idConsultationstring =
+                state.pathParameters['idConsultation']!;
+            final int idConsultation = int.parse(idConsultationstring);
+            return FinalisationConsultationPage(idConsultation: idConsultation);
+          },
+        ),
+        GoRoute(
+          path: 'HistoriqueConsultations',
+          builder: (context, state) => const HistoriqueConsultationPage(),
+        ),
+        GoRoute(
+          path: 'HistoriqueDetail/:idConsultation',
+          builder: (context, state) {
+            final String idConsultationstring =
+                state.pathParameters['idConsultation']!;
+            final int idConsultation = int.parse(idConsultationstring);
+            return HistoriqueDetailPage(idConsultation: idConsultation);
+          },
+        ),
+        GoRoute(
+          path: 'Statistiques',
+          builder: (context, state) => const StatistiquesPage(),
+        ),
+        GoRoute(
           path:
               'EnattenteExam', // Le chemin complet sera context.push('/Dashboard_Medecin/EnattenteExam')
           builder: (context, state) => const EnattenteExam(),
@@ -239,7 +269,7 @@ Future<void> main() async {
   await initializeDateFormatting('fr_FR', null);
   await Supabase.initialize(
     url:
-        'http://10.62.167.183:8001', // ⬅️ API URL                   PC " localhost "        Android " 10.61.24.183 "      Emulateur:  " 10.0.2.2 "
+        'http://10.54.115.183:8001', // ⬅️ API URL                   PC " localhost "        Android " 10.61.24.183 "      Emulateur:  " 10.0.2.2 "
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE', // ⬅️ Copiez depuis supabase status
   );

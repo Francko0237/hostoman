@@ -527,11 +527,19 @@ class _EnattenteExamState extends State<EnattenteExam> {
                               statutExamen,
                             );
 
-                            // Extraire les noms des examens
+                            // Extraire les noms des examens (Gestion ultra-sécurisée)
+                            final dynamic rawExamens =
+                                item['examen_a_effectuer'];
                             final List<dynamic> examensData =
-                                item['examen_a_effectuer'] ?? [];
+                                (rawExamens is List)
+                                ? rawExamens
+                                : (rawExamens is Map ? [rawExamens] : []);
+
                             final String examensList = examensData
-                                .map((e) => e['nom_examen'] ?? '')
+                                .map((e) {
+                                  if (e is Map) return e['nom_examen'] ?? '';
+                                  return e.toString(); // Cas imprévu
+                                })
                                 .where((name) => name.isNotEmpty)
                                 .join(', ');
 
@@ -557,8 +565,11 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(16),
                                   onTap: () {
+                                    // Si le patient a des résultats disponibles, aller à la finalisation
+                                    // Sinon, aller à la fiche de consultation
+
                                     context.push(
-                                      '/Dashboard_Medecin/FicheConsultation/$idConsultation',
+                                      '/Dashboard_Medecin/FinalisationConsultation/$idConsultation',
                                     );
                                   },
                                   child: Padding(
@@ -629,19 +640,6 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                                     ),
                                                   ),
                                                   const SizedBox(width: 12),
-                                                  Icon(
-                                                    Icons.calendar_today,
-                                                    size: 10,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${patient.age} ans',
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: Colors.grey[700],
-                                                    ),
-                                                  ),
                                                 ],
                                               ),
                                               if (examensList.isNotEmpty) ...[
@@ -667,7 +665,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                                           fontStyle:
                                                               FontStyle.italic,
                                                         ),
-                                                        maxLines: 1,
+                                                        maxLines: 2,
                                                         overflow: TextOverflow
                                                             .ellipsis,
                                                       ),
