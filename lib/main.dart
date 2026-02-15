@@ -9,6 +9,9 @@ import 'package:intl/date_symbol_data_local.dart'; // ✅ indispensable pour ini
 import 'authentification/authen_personnel.dart';
 import 'authentification/authen_patient.dart';
 
+//Directeur
+import 'Directeur/Dashboard/dashboard_directeur.dart';
+
 //Accuiel
 import 'accueil/dashboard/dashborA.dart';
 import 'accueil/nouveau_patient/nouveau_patient.dart';
@@ -60,6 +63,12 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/Authen_Patient',
       builder: (context, state) => Authen_Patient(),
+    ),
+
+    // Directeur
+    GoRoute(
+      path: '/Dashboard_Directeur',
+      builder: (context, state) => const DirecteurDashboardPage(),
     ),
 
     // Accueil

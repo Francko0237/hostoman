@@ -60,6 +60,8 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
         //Redirection vers les pages correspondante
         if (role == 'Major Accueil') {
           context.go('/Dashboard_Accueil');
+        } else if (role == 'Directeur') {
+          context.go('/Dashboard_Directeur');
         } else if (role == 'Caissier') {
           context.go('/Dashboard_Caisse');
         } else if (role == 'Médecin Généraliste') {

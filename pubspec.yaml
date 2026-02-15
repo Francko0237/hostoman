@@ -44,6 +44,7 @@ dependencies:
 
   flutter_localizations:
     sdk: flutter   # Pour les traductions automatiques (dates, etc.)
+  fl_chart: ^1.1.1
 
 dev_dependencies:
   flutter_test:
