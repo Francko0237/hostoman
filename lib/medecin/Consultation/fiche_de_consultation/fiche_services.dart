@@ -86,11 +86,7 @@ class MedecinServices {
       for (var ex in examensPrescrits) {
         // Conversion sécurisée : gère String ou num
         final prix = ex['prix'];
-        if (prix is String) {
-          totalPrix += double.parse(prix);
-        } else if (prix is num) {
-          totalPrix += prix.toDouble();
-        }
+        totalPrix += prix;
       }
 
       await supabase.from('paiement').insert({

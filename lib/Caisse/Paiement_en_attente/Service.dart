@@ -14,7 +14,7 @@ class PaiementService {
             type_service, 
             id_patient, 
             date_derniere_mise_ajour,
-            date_enregistrement,r
+            date_enregistrement,
             Patient(*),
             paiement!inner(*)
           ''')
