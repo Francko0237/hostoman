@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'Service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'detail/detail_ui.dart';
+import 'package:intl/intl.dart';
+import 'package:hostoman/shared/receipt_pdf_generator.dart';
 
 // Couleurs
 const Color npPrimaryColor = Color(0xFF4CAF50);
@@ -133,17 +136,24 @@ class _PaiementlistState extends State<Paiementlist> {
   }
 
   Future<void> validerPaiement(String idConsultation) async {
+    // Extraire l'item avant de recharger la liste
+    final item = consultations.firstWhere(
+      (element) => element['id_consultation'].toString() == idConsultation,
+      orElse: () => <String, dynamic>{}, // explicit type
+    );
+
     await paiementService.validerPaiement(idConsultation);
     await chargerConsultations();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.check_circle_outline, color: Colors.white),
+            const Icon(Icons.check_circle_outline, color: Colors.white),
             const SizedBox(width: 12),
-            const Text(
-              '✅ Paiement validé',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            Text(
+              'pay_validated'.tr(),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -152,6 +162,162 @@ class _PaiementlistState extends State<Paiementlist> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
         elevation: 6,
+      ),
+    );
+
+    if (item.isNotEmpty) {
+      final printConfirm = await _proposerImpressionRecu();
+      if (printConfirm == true) {
+        await _imprimerRecu(item);
+      }
+    }
+  }
+
+  Future<void> _imprimerRecu(Map<String, dynamic> item) async {
+    final patientMap = item['Patient'] as Map<String, dynamic>;
+    patientMap['id_patient'] = item['id_patient'];
+    final patient = Patient.fromMap(patientMap);
+
+    final List<dynamic> paiementsList = item['paiement'] ?? [];
+    Map<String, dynamic> paiementDataMap = {};
+    if (paiementsList.isNotEmpty) {
+      paiementDataMap = paiementsList.last as Map<String, dynamic>;
+    }
+    final paiement = Paiement.fromMap(paiementDataMap);
+
+    final typeService = item['type_service'] ?? 'Consultation';
+    final motif = paiementDataMap['motif'] ?? 'pay_default_motif'.tr();
+    final currentIdConsultation = item['id_consultation'].toString();
+    final examensList = (item['examen_a_effectuer'] as List<dynamic>?) ?? [];
+
+    final data = ReceiptPdfData(
+      patientNom: patient.nom_complet,
+      patientSexe: patient.sexe,
+      patientAge: patient.age.toString(),
+      patientTelephone: patient.telephone.toString(),
+      idConsultation: currentIdConsultation,
+      serviceName: typeService,
+      motif: motif,
+      montant: (paiement.prix_a_paye ?? 0).toDouble(),
+      datePaiement: DateFormat('dd/MM/yyyy à HH:mm').format(DateTime.now()),
+      statutPaiement: 'Payé',
+      examens: examensList,
+    );
+
+    await ReceiptPdfGenerator.printReceipt(context: context, data: data);
+  }
+
+  Future<bool?> _proposerImpressionRecu() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 8,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: npPrimaryColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.print,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'pay_dlg_print_title'.tr(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'pay_dlg_print_msg'.tr(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15, color: Colors.grey[800]),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(
+                            color: Colors.grey.shade400,
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'pay_dlg_print_later'.tr(),
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.pop(context, true),
+                        icon: const Icon(Icons.print, size: 18),
+                        label: Text('pay_dlg_print_now'.tr()),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: npPrimaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -166,11 +332,11 @@ class _PaiementlistState extends State<Paiementlist> {
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.cancel_outlined, color: Colors.white),
+            const Icon(Icons.cancel_outlined, color: Colors.white),
             const SizedBox(width: 12),
-            const Text(
-              'Paiement annulé',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            Text(
+              'pay_cancelled'.tr(),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -218,10 +384,10 @@ class _PaiementlistState extends State<Paiementlist> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Annuler le paiement',
-                        style: TextStyle(
+                        'pay_dlg_cancel_title'.tr(),
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -234,7 +400,7 @@ class _PaiementlistState extends State<Paiementlist> {
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Êtes-vous sûr de vouloir annuler ce paiement ?',
+                  'pay_dlg_cancel_msg'.tr(),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 15, color: Colors.grey[800]),
                 ),
@@ -264,7 +430,7 @@ class _PaiementlistState extends State<Paiementlist> {
                           ),
                         ),
                         child: Text(
-                          'Non',
+                          'pay_dlg_cancel_no'.tr(),
                           style: TextStyle(
                             color: Colors.grey[700],
                             fontWeight: FontWeight.w600,
@@ -283,8 +449,8 @@ class _PaiementlistState extends State<Paiementlist> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Oui, annuler',
+                        child: Text(
+                          'pay_dlg_cancel_yes'.tr(),
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -320,7 +486,7 @@ class _PaiementlistState extends State<Paiementlist> {
           children: [
             const SizedBox(width: 12),
             Text(
-              'Paiements en attente',
+              'pay_list_title'.tr(),
               style: TextStyle(
                 color: Color(0xFF26AE6C),
                 fontSize: 20,
@@ -343,7 +509,7 @@ class _PaiementlistState extends State<Paiementlist> {
                 child: Icon(Icons.refresh, color: npSuccessColor),
               ),
               onPressed: chargerConsultations,
-              tooltip: 'Actualiser',
+              tooltip: 'pay_refresh'.tr(),
             ),
           ),
         ],
@@ -359,7 +525,7 @@ class _PaiementlistState extends State<Paiementlist> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: Row(
                     children: [
@@ -372,7 +538,7 @@ class _PaiementlistState extends State<Paiementlist> {
                           ),
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Rechercher un patient par nom...',
+                              hintText: 'pay_search_hint'.tr(),
                               hintStyle: TextStyle(color: Colors.grey.shade500),
                               prefixIcon: Icon(
                                 Icons.search,
@@ -426,7 +592,7 @@ class _PaiementlistState extends State<Paiementlist> {
                               ],
                             ],
                           ),
-                          tooltip: 'Trier',
+                          tooltip: 'pay_sort_tooltip'.tr(),
                           color: Colors.white,
                           elevation: 8,
                           shape: RoundedRectangleBorder(
@@ -440,28 +606,28 @@ class _PaiementlistState extends State<Paiementlist> {
                             _buildFilterMenuItem(
                               value: 'name_asc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom A → Z',
+                              label: 'pay_sort_name_asc'.tr(),
                               isSelected: sortOption == 'name_asc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'name_desc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom Z → A',
+                              label: 'pay_sort_name_desc'.tr(),
                               isSelected: sortOption == 'name_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_desc',
                               icon: Icons.access_time,
-                              label: 'Plus récent',
+                              label: 'pay_sort_date_desc'.tr(),
                               isSelected: sortOption == 'date_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_asc',
                               icon: Icons.access_time,
-                              label: 'Plus ancien',
+                              label: 'pay_sort_date_asc'.tr(),
                               isSelected: sortOption == 'date_asc',
                             ),
                           ],
@@ -484,10 +650,17 @@ class _PaiementlistState extends State<Paiementlist> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 1200 : double.infinity,
+                      maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: Text(
-                      '${filteredConsultations.length} patient${filteredConsultations.length > 1 ? 's' : ''} en attente',
+                      (filteredConsultations.length > 1
+                              ? 'pay_count_many'
+                              : 'pay_count_one')
+                          .tr(
+                            namedArgs: {
+                              'count': '${filteredConsultations.length}',
+                            },
+                          ),
                       style: TextStyle(
                         fontSize: 14,
                         color: Color(0xFF4CAF50),
@@ -503,7 +676,7 @@ class _PaiementlistState extends State<Paiementlist> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: isLoading
                       ? Center(
@@ -521,7 +694,7 @@ class _PaiementlistState extends State<Paiementlist> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Chargement...',
+                                  'pay_loading'.tr(),
                                   style: TextStyle(
                                     color: npPrimaryColor,
                                     fontWeight: FontWeight.w500,
@@ -565,7 +738,7 @@ class _PaiementlistState extends State<Paiementlist> {
                                   ),
                                   const SizedBox(height: 20),
                                   Text(
-                                    'Aucun résultat trouvé',
+                                    'pay_no_result_title'.tr(),
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w600,
@@ -574,7 +747,9 @@ class _PaiementlistState extends State<Paiementlist> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Aucun patient ne correspond à "$searchQuery"',
+                                    'pay_no_result_msg'.tr(
+                                      namedArgs: {'query': searchQuery},
+                                    ),
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 14,
@@ -595,9 +770,9 @@ class _PaiementlistState extends State<Paiementlist> {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  const Text(
-                                    'Aucun paiement en attente',
-                                    style: TextStyle(
+                                  Text(
+                                    'pay_empty_title'.tr(),
+                                    style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w600,
                                       color: npPrimaryColor,
@@ -605,7 +780,7 @@ class _PaiementlistState extends State<Paiementlist> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Tous les paiements sont à jour',
+                                    'pay_empty_msg'.tr(),
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey[600],
@@ -641,7 +816,7 @@ class _PaiementlistState extends State<Paiementlist> {
                             // Utiliser le motif du paiement au lieu du type_service
                             final motif =
                                 paiementDataMap['motif'] ??
-                                'Frais de Consultation';
+                                'pay_default_motif'.tr();
                             String Sexe = patient.sexe.toString();
                             String prixAPayer =
                                 finalPaiement.prix_a_paye?.toString() ??
@@ -802,7 +977,11 @@ class _PaiementlistState extends State<Paiementlist> {
                                           //Affichage du paiement a effectuer
                                           Container(
                                             child: Text(
-                                              'Prix : $prixAPayer',
+                                              'pay_price_label'.tr(
+                                                namedArgs: {
+                                                  'value': prixAPayer,
+                                                },
+                                              ),
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w600,
@@ -824,7 +1003,9 @@ class _PaiementlistState extends State<Paiementlist> {
                                                 Icons.cancel,
                                                 size: 20,
                                               ),
-                                              label: const Text('Annuler'),
+                                              label: Text(
+                                                'pay_btn_cancel'.tr(),
+                                              ),
                                               style: OutlinedButton.styleFrom(
                                                 backgroundColor: npErrorColor,
                                                 foregroundColor: Colors.white,
@@ -853,7 +1034,9 @@ class _PaiementlistState extends State<Paiementlist> {
                                                 Icons.check,
                                                 size: 18,
                                               ),
-                                              label: const Text('Valider'),
+                                              label: Text(
+                                                'pay_btn_validate'.tr(),
+                                              ),
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: npSuccessColor,
                                                 foregroundColor: Colors.white,
@@ -885,7 +1068,7 @@ class _PaiementlistState extends State<Paiementlist> {
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(color: Colors.black.withOpacity(0.02)),
               child: Text(
-                '© 2025 Yamgai Mokube Franck Daniel',
+                'cdash_footer'.tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
@@ -904,15 +1087,15 @@ class _PaiementlistState extends State<Paiementlist> {
   String _getSortLabel() {
     switch (sortOption) {
       case 'name_asc':
-        return 'A → Z';
+        return 'pay_sort_short_az'.tr();
       case 'name_desc':
-        return 'Z → A';
+        return 'pay_sort_short_za'.tr();
       case 'date_desc':
-        return 'Récent';
+        return 'pay_sort_short_recent'.tr();
       case 'date_asc':
-        return 'Ancien';
+        return 'pay_sort_short_old'.tr();
       default:
-        return 'Trier';
+        return 'pay_sort_short_default'.tr();
     }
   }
 

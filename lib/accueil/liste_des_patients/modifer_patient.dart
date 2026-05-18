@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:ui'; // <--- Ajoute cette ligne tout en haut
@@ -91,7 +92,7 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Patientez...',
+                  'mod_loading'.tr(),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: npPrimaryColor.withOpacity(0.8),
@@ -134,9 +135,12 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
           content: Row(
             children: [
               const SizedBox(width: 12),
-              const Text(
-                '✅ Patient mis à jour avec succès',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+              Text(
+                'mod_success'.tr(),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -161,7 +165,7 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Erreur: ${e.toString()}',
+                  'mod_error'.tr(namedArgs: {'msg': e.toString()}),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -244,7 +248,7 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
             Icon(Icons.edit, color: npPrimaryColor, size: 24),
             const SizedBox(width: 12),
             Text(
-              'Modifier le patient',
+              'mod_title'.tr(),
               style: TextStyle(
                 color: npPrimaryColor,
                 fontSize: 20,
@@ -337,7 +341,11 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'ID: ${widget.patient.id_patient}',
+                                    'mod_id_label'.tr(
+                                      namedArgs: {
+                                        'id': '${widget.patient.id_patient}',
+                                      },
+                                    ),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.white.withOpacity(0.9),
@@ -387,7 +395,7 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Informations à modifier',
+                                  'mod_section_info'.tr(),
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -400,18 +408,18 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
 
                             _buildTextFormField(
                               controller: nomController,
-                              label: 'Nom complet *',
+                              label: 'mod_field_name'.tr(),
                               icon: Icons.person,
                               validator: (value) =>
                                   value == null || value.isEmpty
-                                  ? 'Champ requis'
+                                  ? 'mod_field_required'.tr()
                                   : null,
                             ),
                             const SizedBox(height: 16),
 
                             _buildTextFormField(
                               controller: ageController,
-                              label: 'Âge',
+                              label: 'mod_field_age'.tr(),
                               icon: Icons.cake,
                               keyboardType: TextInputType.number,
                             ),
@@ -419,7 +427,7 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
 
                             _buildTextFormField(
                               controller: telController,
-                              label: 'Téléphone',
+                              label: 'mod_field_phone'.tr(),
                               icon: Icons.phone,
                               keyboardType: TextInputType.phone,
                             ),
@@ -427,14 +435,14 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
 
                             _buildTextFormField(
                               controller: adresseController,
-                              label: 'Adresse',
+                              label: 'mod_field_address'.tr(),
                               icon: Icons.house,
                             ),
                             const SizedBox(height: 16),
 
                             _buildTextFormField(
                               controller: professionController,
-                              label: 'Profession',
+                              label: 'mod_field_profession'.tr(),
                               icon: Icons.work,
                             ),
                           ],
@@ -456,14 +464,14 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
                           elevation: 4,
                           shadowColor: npSuccessColor.withOpacity(0.4),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.save, size: 22),
-                            SizedBox(width: 12),
+                            const Icon(Icons.save, size: 22),
+                            const SizedBox(width: 12),
                             Text(
-                              'Enregistrer les modifications',
-                              style: TextStyle(
+                              'mod_save_button'.tr(),
+                              style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -475,7 +483,7 @@ class _ModifierPatientPageState extends State<ModifierPatientPage> {
                       const SizedBox(height: 24),
                       Center(
                         child: Text(
-                          '© 2025 Yamgai Mokube Franck Daniel',
+                          'mod_copyright'.tr(),
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.white.withOpacity(0.8),

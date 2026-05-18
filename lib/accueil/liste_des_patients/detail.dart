@@ -1,8 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'service_detail.dart';
 import 'package:hostoman/date_formatter.dart';
+
+// DB-value -> translation key maps. DB stores French values; we localize for display.
+const Map<String, String> _kSexLabels = {
+  'Homme': 'np_sex_male',
+  'Femme': 'np_sex_female',
+};
+const Map<String, String> _kMaritalLabels = {
+  'Marié Monogame': 'np_marital_married_mono',
+  'Concubinage': 'np_marital_concubinage',
+  'Veuve': 'np_marital_widow',
+  'Marié Polygame': 'np_marital_married_poly',
+  'Célibataire': 'np_marital_single',
+  'Divorcé': 'np_marital_divorced',
+};
+const Map<String, String> _kServiceLabels = {
+  'Consultation': 'np_service_consultation',
+  'Consultation prénatale CPN1': 'np_service_cpn1',
+  'Rendez-vous': 'np_service_appointment',
+};
+String _trDbValue(String? value, Map<String, String> map, {String? fallback}) {
+  if (value == null || value.isEmpty) return fallback ?? '';
+  final key = map[value];
+  return key != null ? key.tr() : value;
+}
 
 // Couleurs
 const Color npPrimaryColor = Color(0xFF1565C0);
@@ -51,10 +76,10 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
     final isTablet = size.width > 400;
 
     final double contentWidth = isDesktop
-        ? (1200 - 80) / 2
+        ? (900 - 80) / 2
         : (size.width - (isTablet ? 40 : 32) - 40 - 12) / 2;
 
-    String Sexe = _patient?.sexe ?? 'Non défini';
+    final String Sexe = _patient?.sexe ?? 'det_sex_undefined'.tr();
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -71,7 +96,7 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
             Icon(Icons.person, color: npPrimaryColor, size: 24),
             const SizedBox(width: 12),
             Text(
-              'Détails du Patient',
+              'det_title'.tr(),
               style: TextStyle(
                 color: npPrimaryColor,
                 fontSize: 20,
@@ -93,13 +118,16 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
         child: _isLoading
             ? Center(child: CircularProgressIndicator(color: Colors.white))
             : _patient == null
-            ? const Center(
-                child: Text("Erreur", style: TextStyle(color: Colors.white)),
+            ? Center(
+                child: Text(
+                  'det_error'.tr(),
+                  style: const TextStyle(color: Colors.white),
+                ),
               )
             : Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -129,7 +157,7 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildSectionTitle(
-                                'Informations Personnelles',
+                                'det_section_personal'.tr(),
                                 Icons.person_outline,
                               ),
                               const SizedBox(height: 20),
@@ -139,43 +167,53 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
                                 children: [
                                   _buildInfoTile(
                                     contentWidth,
-                                    'Sexe',
-                                    _patient!.sexe,
+                                    'det_sex'.tr(),
+                                    _trDbValue(
+                                      _patient!.sexe,
+                                      _kSexLabels,
+                                      fallback: _patient!.sexe,
+                                    ),
                                     Sexe == 'Homme' ? Icons.man : Icons.woman_2,
                                   ),
                                   _buildInfoTile(
                                     contentWidth,
-                                    'Âge',
-                                    '${_patient!.age} ans',
+                                    'det_age'.tr(),
+                                    'det_age_value'.tr(
+                                      namedArgs: {'age': '${_patient!.age}'},
+                                    ),
                                     Icons.cake,
                                   ),
                                   _buildInfoTile(
                                     contentWidth,
-                                    'Téléphone',
+                                    'det_phone'.tr(),
                                     '${_patient!.telephone}',
                                     Icons.phone,
                                   ),
                                   _buildInfoTile(
                                     contentWidth,
-                                    'Adresse',
+                                    'det_address'.tr(),
                                     _patient!.adresse,
                                     Icons.house,
                                   ),
                                   _buildInfoTile(
                                     contentWidth,
-                                    'Profession',
+                                    'det_profession'.tr(),
                                     _patient!.profession,
                                     Icons.work,
                                   ),
                                   _buildInfoTile(
                                     contentWidth,
-                                    'Statut',
-                                    _patient!.statut_matrimonial,
+                                    'det_status'.tr(),
+                                    _trDbValue(
+                                      _patient!.statut_matrimonial,
+                                      _kMaritalLabels,
+                                      fallback: _patient!.statut_matrimonial,
+                                    ),
                                     Icons.favorite,
                                   ),
                                   _buildInfoTile(
                                     double.infinity,
-                                    'Enregistrement',
+                                    'det_registration'.tr(),
                                     DateFormatter.formatLong(
                                       _patient!.date_enregistrement,
                                     ),
@@ -208,7 +246,7 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
                               Padding(
                                 padding: const EdgeInsets.all(20),
                                 child: _buildSectionTitle(
-                                  'Historique des Paramètres Vitaux',
+                                  'det_section_history'.tr(),
                                   Icons.monitor_heart,
                                   count: _parametres.length,
                                 ),
@@ -216,11 +254,11 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
 
                               // Contenu : Soit vide, soit le premier élément
                               if (_parametres.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.only(bottom: 20),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 20),
                                   child: Text(
-                                    "Aucun historique disponible",
-                                    style: TextStyle(color: Colors.grey),
+                                    'det_no_history'.tr(),
+                                    style: const TextStyle(color: Colors.grey),
                                   ),
                                 )
                               else ...[
@@ -252,7 +290,7 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
                         const SizedBox(height: 24),
                         Center(
                           child: Text(
-                            '© 2025 Yamgai Mokube Franck Daniel',
+                            'det_copyright'.tr(),
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.white.withOpacity(0.8),
@@ -347,16 +385,18 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
                 children: [
                   Expanded(
                     child: _buildParamItemV2(
-                      'Poids',
-                      '${pv.poid} kg',
+                      'det_weight'.tr(),
+                      'det_weight_value'.tr(namedArgs: {'value': '${pv.poid}'}),
                       Icons.scale,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildParamItemV2(
-                      'Température',
-                      '${pv.temperature} °C',
+                      'det_temperature'.tr(),
+                      'det_temperature_value'.tr(
+                        namedArgs: {'value': '${pv.temperature}'},
+                      ),
                       Icons.thermostat,
                     ),
                   ),
@@ -367,15 +407,20 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
                 children: [
                   Expanded(
                     child: _buildParamItemV2(
-                      'Tension',
-                      '${pv.systolique}/${pv.diastolique} mmHg',
+                      'det_tension'.tr(),
+                      'det_tension_value'.tr(
+                        namedArgs: {
+                          'sys': '${pv.systolique}',
+                          'dia': '${pv.diastolique}',
+                        },
+                      ),
                       Icons.monitor_heart,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildParamItemV2(
-                      'Statut VIH',
+                      'det_hiv_status'.tr(),
                       pv.statut_VIH,
                       Icons.bloodtype,
                     ),
@@ -387,7 +432,7 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
                 children: [
                   Expanded(
                     child: _buildParamItemV2(
-                      'Vaccination',
+                      'det_vaccination'.tr(),
                       pv.vaccination,
                       Icons.vaccines,
                     ),
@@ -395,8 +440,12 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildParamItemV2(
-                      'Service',
-                      pv.type_service ?? 'Non spécifié',
+                      'det_service'.tr(),
+                      _trDbValue(
+                        pv.type_service,
+                        _kServiceLabels,
+                        fallback: 'det_service_unspecified'.tr(),
+                      ),
                       Icons.local_hospital,
                     ),
                   ),
@@ -404,7 +453,7 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
               ),
               const SizedBox(height: 16),
               _buildParamItemV2(
-                'Motif de consultation',
+                'det_motive'.tr(),
                 pv.motif_de_consultation,
                 Icons.medical_information,
                 isFullWidth: true,
@@ -576,7 +625,7 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    'ID: ${widget.idPatient}',
+                    'det_id_label'.tr(namedArgs: {'id': widget.idPatient}),
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.white.withOpacity(0.9),

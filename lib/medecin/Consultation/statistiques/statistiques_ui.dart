@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'statistiques_service.dart';
+import 'package:intl/intl.dart';
+import 'package:hostoman/shared/pdf_generator.dart';
 
 const Color medPrimaryColor = Color(0xFF6A5ACD);
 const Color medSuccessColor = Color(0xFF4CAF50);
@@ -96,11 +98,12 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
           _dateFin!,
         );
       }
-      if (mounted)
+      if (mounted) {
         setState(() {
           _patients = patients;
           _isLoading = false;
         });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -199,12 +202,18 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
               tooltip: 'Actualiser',
             ),
           ),
+          if (_patients.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.print, color: Colors.white),
+              tooltip: 'Imprimer la liste',
+              onPressed: _printPatientList,
+            ),
         ],
       ),
       body: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: isDesktop ? 1200 : double.infinity,
+            maxWidth: isDesktop ? 900 : double.infinity,
           ),
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -540,8 +549,9 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
   Widget _buildPatientList() {
     // Label selon catégorie
     String categoryLabel = 'consultations terminées';
-    if (_selectedCategory == 'annulees')
+    if (_selectedCategory == 'annulees') {
       categoryLabel = 'consultations annulées';
+    }
     if (_selectedCategory == 'rdv') categoryLabel = 'rendez-vous terminés';
 
     if (_patients.isEmpty) {
@@ -821,6 +831,55 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _printPatientList() async {
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final periodeLabel = (_dateDebut != null && _dateFin != null)
+        ? 'Du ${dateFormat.format(_dateDebut!)} au ${dateFormat.format(_dateFin!)}'
+        : 'Toutes dates';
+
+    String categorieLabel;
+    switch (_selectedCategory) {
+      case 'terminees':
+        categorieLabel = 'Terminées';
+        break;
+      case 'annulees':
+        categorieLabel = 'Annulées';
+        break;
+      default:
+        categorieLabel = 'Rendez-vous terminés';
+    }
+
+    final pdfPatients = _patients.map((consultation) {
+      final patient = consultation['Patient'] as Map<String, dynamic>?;
+      final nom = patient?['nom_complet'] ?? 'N/A';
+      final sexe = patient?['sexe'] ?? '';
+      final age = patient?['age']?.toString() ?? '';
+      final telephone = patient?['telephone']?.toString() ?? '';
+      final dateBrute = DateTime.tryParse(
+            consultation['date_derniere_mise_ajour']?.toString() ?? '',
+          ) ??
+          DateTime.now();
+
+      return PatientPdfData(
+        nom: nom,
+        sexe: sexe,
+        age: '$age ans',
+        telephone: telephone,
+        dateEnregistrement: dateFormat.format(dateBrute),
+        categorie: categorieLabel,
+      );
+    }).toList();
+
+    await PatientListPdfGenerator.previewAndPrint(
+      context: context,
+      serviceName: 'Médecin',
+      periodeLabel: periodeLabel,
+      patients: pdfPatients,
+      showCategorie: true,
+      categorieLabel: 'Statut consultation',
     );
   }
 }

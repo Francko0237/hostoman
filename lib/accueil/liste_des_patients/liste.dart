@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'service_liste.dart';
 import 'modifer_patient.dart';
@@ -59,9 +60,12 @@ class _ListePatientsState extends State<ListePatients> {
           content: Row(
             children: [
               const SizedBox(width: 12),
-              const Text(
-                '✅ Patient supprimé avec succès',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+              Text(
+                'list_delete_success'.tr(),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -84,10 +88,13 @@ class _ListePatientsState extends State<ListePatients> {
             children: [
               Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '❌ Erreur lors de la suppression',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                  'list_delete_error'.tr(),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -167,9 +174,9 @@ class _ListePatientsState extends State<ListePatients> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     children: [
-                      const Text(
-                        'Supprimer ce patient ?',
-                        style: TextStyle(
+                      Text(
+                        'list_delete_title'.tr(),
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                           color: Color(
@@ -189,10 +196,7 @@ class _ListePatientsState extends State<ListePatients> {
                             height: 1.5,
                           ),
                           children: [
-                            const TextSpan(
-                              text:
-                                  'Vous êtes sur le point de supprimer définitivement le dossier de ',
-                            ),
+                            TextSpan(text: 'list_delete_intro'.tr()),
                             TextSpan(
                               text: p.nom_complet,
                               style: const TextStyle(
@@ -200,15 +204,17 @@ class _ListePatientsState extends State<ListePatients> {
                                 color: Color(0xFF1E293B),
                               ),
                             ),
-                            const TextSpan(text: '.\nCette action est '),
                             TextSpan(
-                              text: 'irréversible',
+                              text: 'list_delete_irreversible_part'.tr(),
+                            ),
+                            TextSpan(
+                              text: 'list_delete_irreversible'.tr(),
                               style: TextStyle(
                                 color: npErrorColor,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const TextSpan(text: '.'),
+                            TextSpan(text: 'list_delete_dot'.tr()),
                           ],
                         ),
                       ),
@@ -240,7 +246,7 @@ class _ListePatientsState extends State<ListePatients> {
                             ),
                           ),
                           child: Text(
-                            'Annuler',
+                            'list_delete_cancel'.tr(),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -270,7 +276,7 @@ class _ListePatientsState extends State<ListePatients> {
                             ),
                           ),
                           child: Text(
-                            'Supprimer',
+                            'list_delete_confirm'.tr(),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -394,13 +400,13 @@ class _ListePatientsState extends State<ListePatients> {
   String _getSortLabel() {
     switch (_sortOption) {
       case 'name_asc':
-        return 'Nom A → Z';
+        return 'list_sort_name_asc'.tr();
       case 'name_desc':
-        return 'Nom Z → A';
+        return 'list_sort_name_desc'.tr();
       case 'date_desc':
-        return 'Date récente';
+        return 'list_sort_date_desc'.tr();
       default:
-        return 'Trier';
+        return 'list_sort'.tr();
     }
   }
 
@@ -431,7 +437,7 @@ class _ListePatientsState extends State<ListePatients> {
             Icon(Icons.people, color: npPrimaryColor, size: 24),
             const SizedBox(width: 12),
             Text(
-              'Liste des Patients',
+              'list_title'.tr(),
               style: TextStyle(
                 color: npPrimaryColor,
                 fontSize: 20,
@@ -454,7 +460,7 @@ class _ListePatientsState extends State<ListePatients> {
                 child: Icon(Icons.refresh, color: npAccentColor),
               ),
               onPressed: _loadInitialPatients,
-              tooltip: 'Actualiser',
+              tooltip: 'list_refresh'.tr(),
             ),
           ),
         ],
@@ -485,7 +491,7 @@ class _ListePatientsState extends State<ListePatients> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: Row(
                     children: [
@@ -498,7 +504,7 @@ class _ListePatientsState extends State<ListePatients> {
                           ),
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Rechercher un patient par nom...',
+                              hintText: 'list_search_hint'.tr(),
                               hintStyle: TextStyle(color: Colors.grey.shade500),
                               prefixIcon: Icon(
                                 Icons.search,
@@ -552,7 +558,7 @@ class _ListePatientsState extends State<ListePatients> {
                               ],
                             ],
                           ),
-                          tooltip: 'Trier',
+                          tooltip: 'list_sort'.tr(),
                           color: Colors.white,
                           elevation: 8,
                           shape: RoundedRectangleBorder(
@@ -568,21 +574,21 @@ class _ListePatientsState extends State<ListePatients> {
                             _buildPopupMenuItem(
                               value: 'name_asc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom A → Z',
+                              label: 'list_sort_name_asc'.tr(),
                               isSelected: _sortOption == 'name_asc',
                             ),
                             const PopupMenuDivider(),
                             _buildPopupMenuItem(
                               value: 'name_desc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom Z → A',
+                              label: 'list_sort_name_desc'.tr(),
                               isSelected: _sortOption == 'name_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildPopupMenuItem(
                               value: 'date_desc',
                               icon: Icons.access_time,
-                              label: 'Date récente',
+                              label: 'list_sort_date_desc'.tr(),
                               isSelected: _sortOption == 'date_desc',
                             ),
                           ],
@@ -605,10 +611,15 @@ class _ListePatientsState extends State<ListePatients> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 1200 : double.infinity,
+                      maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: Text(
-                      '${_filteredPatients.length} patient${_filteredPatients.length > 1 ? 's' : ''} trouvé${_filteredPatients.length > 1 ? 's' : ''}',
+                      (_filteredPatients.length > 1
+                              ? 'list_count_many'
+                              : 'list_count_one')
+                          .tr(
+                            namedArgs: {'count': '${_filteredPatients.length}'},
+                          ),
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white.withOpacity(0.9),
@@ -624,7 +635,7 @@ class _ListePatientsState extends State<ListePatients> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: _filteredPatients.isEmpty
                       ? Center(
@@ -659,7 +670,7 @@ class _ListePatientsState extends State<ListePatients> {
                                 ),
                                 const SizedBox(height: 20),
                                 Text(
-                                  'Aucun patient trouvé',
+                                  'list_empty_title'.tr(),
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w600,
@@ -668,7 +679,7 @@ class _ListePatientsState extends State<ListePatients> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Essayez de modifier vos critères de recherche',
+                                  'list_empty_subtitle'.tr(),
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey[600],
@@ -705,7 +716,7 @@ class _ListePatientsState extends State<ListePatients> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      '© 2025 Yamgai Mokube Franck Daniel',
+                                      'list_copyright'.tr(),
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Colors.white.withOpacity(0.8),
@@ -859,7 +870,9 @@ class _ListePatientsState extends State<ListePatients> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${p.age} ans',
+                                  'list_age_years'.tr(
+                                    namedArgs: {'age': '${p.age}'},
+                                  ),
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: npAccentColor,
@@ -898,7 +911,7 @@ class _ListePatientsState extends State<ListePatients> {
                   ),
                   child: PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert, color: npPrimaryColor),
-                    tooltip: 'Actions',
+                    tooltip: 'list_actions'.tr(),
                     color: Colors.white,
                     elevation: 8,
                     shape: RoundedRectangleBorder(
@@ -909,14 +922,14 @@ class _ListePatientsState extends State<ListePatients> {
                       _buildActionMenuItem(
                         value: 'edit',
                         icon: Icons.edit_outlined,
-                        label: 'Modifier',
+                        label: 'list_action_edit'.tr(),
                         color: Colors.orange[700]!,
                       ),
                       const PopupMenuDivider(),
                       _buildActionMenuItem(
                         value: 'delete',
                         icon: Icons.delete_outline,
-                        label: 'Supprimer',
+                        label: 'list_action_delete'.tr(),
                         color: npErrorColor,
                       ),
                     ],

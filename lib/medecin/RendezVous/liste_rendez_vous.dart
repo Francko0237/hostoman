@@ -70,18 +70,23 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
           ),
         ],
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryPurple))
-          : _rendezVousList.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: _rendezVousList.length,
-              itemBuilder: (context, index) {
-                final rdv = _rendezVousList[index];
-                return _buildRendezVousCard(rdv);
-              },
-            ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: _isLoading
+              ? Center(child: CircularProgressIndicator(color: primaryPurple))
+              : _rendezVousList.isEmpty
+              ? _buildEmptyState()
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: _rendezVousList.length,
+                  itemBuilder: (context, index) {
+                    final rdv = _rendezVousList[index];
+                    return _buildRendezVousCard(rdv);
+                  },
+                ),
+        ),
+      ),
     );
   }
 

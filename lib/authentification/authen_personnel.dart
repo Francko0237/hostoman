@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class Authen_Personnel extends StatefulWidget {
   const Authen_Personnel({super.key}); // Ajout de la clé (bonne pratique)
@@ -73,10 +74,10 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Connexion réussie !'),
-            backgroundColor: Color(0xFF2E7D32),
-            duration: Duration(seconds: 3),
+          SnackBar(
+            content: Text('auth_login_success'.tr()),
+            backgroundColor: const Color(0xFF2E7D32),
+            duration: const Duration(seconds: 3),
           ),
         );
         print('connexion reussie');
@@ -84,24 +85,24 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
     } on AuthApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Nom d\'utilisateur ou mot de passe incorrect !'),
-            backgroundColor: Color(0xFFC62828),
-            duration: Duration(seconds: 3),
+          SnackBar(
+            content: Text('auth_personnel_invalid'.tr()),
+            backgroundColor: const Color(0xFFC62828),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
       print('Erreur Supabase: ${e.message}');
     } catch (e) {
-      // Gestion de l'erreur de connexion internet ou base de données inaccessible (ajouté)
+      // Gestion de l'erreur
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Erreur de connexion : Veuillez vérifier votre connexion internet.',
+              'auth_error_generic'.tr(namedArgs: {'msg': e.toString()}),
             ),
-            backgroundColor: Color(0xFFC62828),
-            duration: Duration(seconds: 3),
+            backgroundColor: const Color(0xFFC62828),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -120,6 +121,11 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    // Sur PC (>= 700px) : layout 2 colonnes premium
+    if (w >= 700) return _buildPcLoginLayout();
+
+    // Mobile : layout centré existant
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -181,11 +187,10 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const Text(
-                          'Hopital de district de Manjo',
-                          textAlign: TextAlign
-                              .center, // S'assurer que le texte est centré
-                          style: TextStyle(
+                        Text(
+                          'auth_hospital_name'.tr(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
                             fontSize: 30,
                             color: Color(0xFF0D47A1),
                             fontWeight: FontWeight.w600,
@@ -212,9 +217,9 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
                             ),
                             child: Column(
                               children: [
-                                const Text(
-                                  "Connexion du Personnel",
-                                  style: TextStyle(
+                                Text(
+                                  'auth_personnel_title'.tr(),
+                                  style: const TextStyle(
                                     fontSize: 25,
                                     color: Color(0xFF1976D2),
                                     fontWeight: FontWeight.bold,
@@ -224,7 +229,7 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
                                 TextFormField(
                                   controller: email,
                                   decoration: InputDecoration(
-                                    labelText: "Nom d'utilisateur",
+                                    labelText: 'auth_username'.tr(),
                                     labelStyle: const TextStyle(
                                       color: Color(0xFF757575),
                                     ),
@@ -270,7 +275,7 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Veuillez entrer votre nom d\'utilisateur';
+                                      return 'auth_username_required'.tr();
                                     }
                                     return null;
                                   },
@@ -280,7 +285,7 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
                                   controller: password,
                                   obscureText: _obscurePassword,
                                   decoration: InputDecoration(
-                                    labelText: 'Mot de passe',
+                                    labelText: 'auth_password'.tr(),
                                     labelStyle: const TextStyle(
                                       color: Color(0xFF757575),
                                     ),
@@ -339,7 +344,7 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Veuillez entrer votre mot de passe';
+                                      return 'auth_password_required'.tr();
                                     }
                                     return null;
                                   },
@@ -370,9 +375,9 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
                                               strokeWidth: 2,
                                             ),
                                           )
-                                        : const Text(
-                                            'Se Connecter',
-                                            style: TextStyle(
+                                        : Text(
+                                            'auth_login_button'.tr(),
+                                            style: const TextStyle(
                                               fontSize: 17,
                                               color: Colors.white,
                                             ),
@@ -380,19 +385,6 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
                                   ),
                                 ),
                                 const SizedBox(height: 10),
-                                TextButton(
-                                  onPressed: () {
-                                    context.go('/Authen_Patient');
-                                  },
-                                  child: const Text(
-                                    'Connexion Patient',
-                                    style: TextStyle(
-                                      color: Color(0xFF5E35B1),
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -407,6 +399,268 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
         ),
         // **FIN DE L'AJUSTEMENT RESPONSIVE**
       ),
+    );
+  }
+
+  // ===== VERSION PC LAYOUT 2-COLONNES =====
+  Widget _buildPcLoginLayout() {
+    return Scaffold(
+      body: Row(
+        children: [
+          // Panneau gauche — Branding hôpital
+          Expanded(
+            flex: 5,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF0D47A1),
+                    Color(0xFF1565C0),
+                    Color(0xFF1976D2),
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 32,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 130,
+                          height: 130,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 24,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.local_hospital,
+                                size: 64,
+                                color: Color(0xFF1565C0),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      Text(
+                        'auth_hospital_name_pc'.tr(),
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1.2,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: 48,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      const SizedBox(height: 48),
+                      _infoBadge(Icons.security, 'auth_confidentiality'.tr()),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Panneau droit — Formulaire
+          Expanded(
+            flex: 4,
+            child: Container(
+              color: const Color(0xFFF8FAFF),
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 40,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'auth_personnel_title_short'.tr(),
+                          style: const TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'auth_personnel_subtitle'.tr(),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 36),
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              _pcField(
+                                controller: email,
+                                label: 'auth_username'.tr(),
+                                icon: Icons.person_outline,
+                                validator: (v) => v == null || v.isEmpty
+                                    ? 'auth_field_required'.tr()
+                                    : null,
+                              ),
+                              const SizedBox(height: 20),
+                              _pcField(
+                                controller: password,
+                                label: 'auth_password'.tr(),
+                                icon: Icons.lock_outline,
+                                obscure: _obscurePassword,
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: const Color(0xFF9E9E9E),
+                                  ),
+                                  onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
+                                ),
+                                validator: (v) => v == null || v.isEmpty
+                                    ? 'auth_field_required'.tr()
+                                    : null,
+                              ),
+                              const SizedBox(height: 28),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : Authen,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1565C0),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 4,
+                                    shadowColor: const Color(
+                                      0xFF1565C0,
+                                    ).withOpacity(0.4),
+                                  ),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2.5,
+                                          ),
+                                        )
+                                      : Text(
+                                          'auth_login_button'.tr(),
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoBadge(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white70, size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _pcField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscure = false,
+    Widget? suffixIcon,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      style: const TextStyle(fontSize: 15),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: const Color(0xFF1565C0), size: 20),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF1565C0), width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+      validator: validator,
     );
   }
 }

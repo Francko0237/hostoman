@@ -55,10 +55,13 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 900;
     return Scaffold(
-      backgroundColor: darkBackground,
+      backgroundColor: labPrimaryColor,
       appBar: AppBar(
-        backgroundColor: darkBackground,
+        backgroundColor: labPrimaryColor,
+        centerTitle: !isDesktop,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -112,15 +115,23 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
                 style: TextStyle(color: Colors.white),
               ),
             )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildPatientSection(),
-                  const SizedBox(height: 20),
-                  _buildExamensSection(),
-                ],
+          : Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 1000 : double.infinity,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildPatientSection(),
+                      const SizedBox(height: 20),
+                      _buildExamensSection(),
+                    ],
+                  ),
+                ),
               ),
             ),
     );
@@ -247,16 +258,19 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
   Widget _buildExamensSection() {
     final List<dynamic> examensList = detailsData!['examen_a_effectuer'] ?? [];
 
-    // Filtrer uniquement les examens terminés
-    final examensTermines = examensList
-        .where((examen) => examen['statut_examen'] == 'Terminé')
+    // Filtrer uniquement les examens terminés et annulés
+    final examensAffiches = examensList
+        .where((examen) =>
+            examen['statut_examen'] == 'Terminé' ||
+            examen['statut_examen'] == 'Annulé' ||
+            examen['statut_examen'] == 'annuler')
         .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Liste des Examens (${examensTermines.length})',
+          'Liste des Examens (${examensAffiches.length})',
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -264,7 +278,7 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
           ),
         ),
         const SizedBox(height: 16),
-        if (examensTermines.isEmpty)
+        if (examensAffiches.isEmpty)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -273,13 +287,13 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
             ),
             child: const Center(
               child: Text(
-                'Aucun examen terminé',
+                'Aucun examen (Terminé ou Annulé)',
                 style: TextStyle(color: Colors.grey, fontSize: 14),
               ),
             ),
           )
         else
-          ...examensTermines.map((examen) {
+          ...examensAffiches.map((examen) {
             return _buildExamenCard(examen as Map<String, dynamic>);
           }),
       ],
@@ -290,6 +304,9 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
     final nomExamen = examen['nom_examen'] ?? 'Examen';
     final resultat = examen['resultat_examen'] ?? 'N/A';
     final statut = examen['statut_examen'] ?? 'En cours';
+    
+    final bool isAnnule = statut.toString().toLowerCase().contains('annul');
+    final statutColor = isAnnule ? Colors.red : labBlueColor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -355,13 +372,13 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: labBlueColor.withOpacity(0.1),
+                  color: statutColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   statut.toUpperCase(),
-                  style: const TextStyle(
-                    color: labBlueColor,
+                  style: TextStyle(
+                    color: statutColor,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),

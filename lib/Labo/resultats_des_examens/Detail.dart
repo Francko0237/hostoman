@@ -230,10 +230,12 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       backgroundColor: labPrimaryColor,
       appBar: AppBar(
         backgroundColor: labPrimaryColor,
+        centerTitle: !isDesktop,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -245,309 +247,325 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Bandeau Patient
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF33333D),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              widget.nomPatient.isNotEmpty
-                                  ? widget.nomPatient[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: Text(
-                            widget.nomPatient,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: widget.sexe == 'Homme'
-                                ? Colors.blue.shade600
-                                : Colors.pink.shade600,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            widget.sexe,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop ? 1000 : double.infinity,
+            ),
+            child: Column(
+              children: [
+                // Bandeau Patient
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF33333D),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 10,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    const Divider(
-                      color: Colors.grey,
-                      height: 1,
-                      thickness: 0.5,
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildInfoItem(
-                          icon: Icons.assignment_ind_outlined,
-                          label: 'Consultation ID:',
-                          value: widget.idConsultation.toString(),
-                        ),
-                        const SizedBox(width: 8),
-                        _buildInfoItem(
-                          icon: Icons.calendar_today_outlined,
-                          label: 'Âge:',
-                          value: '${widget.age} ans',
-                        ),
-                        const SizedBox(width: 8),
-                        _buildInfoItem(
-                          icon: Icons.phone_outlined,
-                          label: 'Tél:',
-                          value: widget.telephone,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Message d'instruction
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: labBlueColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: labBlueColor.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: labBlueColor, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Cliquez sur un examen pour saisir son résultat',
-                        style: TextStyle(
-                          color: Colors.grey[300],
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Liste des examens (cliquables)
-            Expanded(
-              child: isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : errorMessage != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 60,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Text(
-                              errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 16,
+                        Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                shape: BoxShape.circle,
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            onPressed: chargerExamens,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Réessayer'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: labPrimaryColor,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : examens.isEmpty
-                  ? Center(
-                      child: Text(
-                        "Aucun examen disponible",
-                        style: TextStyle(color: Colors.grey[400]),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      itemCount: examens.length,
-                      itemBuilder: (context, index) {
-                        final examen = examens[index];
-                        final nomExamen =
-                            examen['nom_examen']?.toString() ?? 'Examen';
-                        final statutExamen =
-                            examen['statut_examen']?.toString() ?? 'En cours';
-                        final isTermine = statutExamen == 'Terminé';
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: Material(
-                            color: isTermine
-                                ? labSuccessColor.withOpacity(0.1)
-                                : const Color(0xFF33333D),
-                            borderRadius: BorderRadius.circular(12),
-                            elevation: isTermine ? 0 : 2,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: isTermine
-                                  ? null
-                                  : () => _ouvrirExamen(examen),
-                              child: Container(
-                                padding: const EdgeInsets.all(16.0),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isTermine
-                                        ? labSuccessColor.withOpacity(0.3)
-                                        : Colors.transparent,
-                                    width: 1.5,
+                              child: Center(
+                                child: Text(
+                                  widget.nomPatient.isNotEmpty
+                                      ? widget.nomPatient[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.white,
                                   ),
                                 ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: isTermine
-                                            ? labSuccessColor
-                                            : labBlueColor.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        isTermine ? Icons.check : Icons.science,
-                                        color: isTermine
-                                            ? Colors.white
-                                            : labBlueColor,
-                                        size: 22,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            nomExamen,
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              color: isTermine
-                                                  ? labSuccessColor
-                                                  : Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                              decoration: isTermine
-                                                  ? TextDecoration.lineThrough
-                                                  : null,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            isTermine
-                                                ? 'Résultat saisi ✓'
-                                                : 'En attente de résultat',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: isTermine
-                                                  ? labSuccessColor.withOpacity(
-                                                      0.8,
-                                                    )
-                                                  : Colors.grey.shade500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (!isTermine)
-                                      Icon(
-                                        Icons.arrow_forward_ios,
-                                        size: 16,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                  ],
+                              ),
+                            ),
+                            const SizedBox(width: 15),
+                            Expanded(
+                              child: Text(
+                                widget.nomPatient,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: widget.sexe == 'Homme'
+                                    ? Colors.blue.shade600
+                                    : Colors.pink.shade600,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                widget.sexe,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Divider(
+                          color: Colors.grey,
+                          height: 1,
+                          thickness: 0.5,
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildInfoItem(
+                              icon: Icons.assignment_ind_outlined,
+                              label: 'Consultation ID:',
+                              value: widget.idConsultation.toString(),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildInfoItem(
+                              icon: Icons.calendar_today_outlined,
+                              label: 'Âge:',
+                              value: '${widget.age} ans',
+                            ),
+                            const SizedBox(width: 8),
+                            _buildInfoItem(
+                              icon: Icons.phone_outlined,
+                              label: 'Tél:',
+                              value: widget.telephone,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
+                  ),
+                ),
+
+                // Message d'instruction
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: labBlueColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: labBlueColor.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: labBlueColor, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Cliquez sur un examen pour saisir son résultat',
+                            style: TextStyle(
+                              color: Colors.grey[300],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Liste des examens (cliquables)
+                Expanded(
+                  child: isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : errorMessage != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 60,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                ),
+                                child: Text(
+                                  errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                onPressed: chargerExamens,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Réessayer'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: labPrimaryColor,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : examens.isEmpty
+                      ? Center(
+                          child: Text(
+                            "Aucun examen disponible",
+                            style: TextStyle(color: Colors.grey[400]),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          itemCount: examens.length,
+                          itemBuilder: (context, index) {
+                            final examen = examens[index];
+                            final nomExamen =
+                                examen['nom_examen']?.toString() ?? 'Examen';
+                            final statutExamen =
+                                examen['statut_examen']?.toString() ??
+                                'En cours';
+                            final isTermine = statutExamen == 'Terminé';
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: Material(
+                                color: isTermine
+                                    ? labSuccessColor.withOpacity(0.1)
+                                    : const Color(0xFF33333D),
+                                borderRadius: BorderRadius.circular(12),
+                                elevation: isTermine ? 0 : 2,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: isTermine
+                                      ? null
+                                      : () => _ouvrirExamen(examen),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16.0),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isTermine
+                                            ? labSuccessColor.withOpacity(0.3)
+                                            : Colors.transparent,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: isTermine
+                                                ? labSuccessColor
+                                                : labBlueColor.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            isTermine
+                                                ? Icons.check
+                                                : Icons.science,
+                                            color: isTermine
+                                                ? Colors.white
+                                                : labBlueColor,
+                                            size: 22,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                nomExamen,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: isTermine
+                                                      ? labSuccessColor
+                                                      : Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                  decoration: isTermine
+                                                      ? TextDecoration
+                                                            .lineThrough
+                                                      : null,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                isTermine
+                                                    ? 'Résultat saisi ✓'
+                                                    : 'En attente de résultat',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: isTermine
+                                                      ? labSuccessColor
+                                                            .withOpacity(0.8)
+                                                      : Colors.grey.shade500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (!isTermine)
+                                          Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 16,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

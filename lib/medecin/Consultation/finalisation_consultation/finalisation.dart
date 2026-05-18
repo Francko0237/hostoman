@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../fiche_de_consultation/fiche_services.dart';
@@ -20,7 +21,8 @@ class _FinalisationConsultationPageState
   late TabController _tabController;
 
   // --- Données Patient ---
-  String _patientName = "Chargement...";
+  String _patientName = '';
+  bool _patientNameLoaded = false;
   Map<String, dynamic>? _patientData;
   Map<String, dynamic>? _parametresVitaux;
   Map<String, dynamic>? _consultationData;
@@ -87,15 +89,18 @@ class _FinalisationConsultationPageState
         final patient = data[0]['Patient'] as Map<String, dynamic>;
         final vitaux = data[0]['Parametres_vitaux'] as Map<String, dynamic>?;
         setState(() {
-          _patientName =
-              patient['nom_complet']?.toString() ?? 'Patient Inconnu';
+          _patientName = patient['nom_complet']?.toString() ?? '';
+          _patientNameLoaded = true;
           _patientData = patient;
           _parametresVitaux = vitaux;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _patientName = "Erreur de chargement");
+        setState(() {
+          _patientName = 'fiche_loading_error'.tr();
+          _patientNameLoaded = true;
+        });
       }
     }
   }
@@ -196,52 +201,79 @@ class _FinalisationConsultationPageState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Informations du Patient",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  Text(
+                    'fiche_modal_title'.tr(),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 15),
-                  const Text(
-                    "Infos Administratives",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Text(
+                    'fiche_modal_admin_section'.tr(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   const Divider(),
-                  _buildInfoRow("Nom Complet", _patientData!['nom_complet']),
-                  _buildInfoRow("Sexe", _patientData!['sexe']),
-                  _buildInfoRow("Âge", "${_patientData!['age']} ans"),
-                  _buildInfoRow("Téléphone", _patientData!['telephone']),
-                  _buildInfoRow("Profession", _patientData!['profession']),
                   _buildInfoRow(
-                    "Statut Matrimonial",
+                    'fiche_modal_full_name_label',
+                    _patientData!['nom_complet'],
+                  ),
+                  _buildInfoRow('fiche_modal_sex_label', _patientData!['sexe']),
+                  _buildInfoRow(
+                    'fiche_modal_age_label',
+                    '${_patientData!['age']} ${_yearsSuffix()}',
+                  ),
+                  _buildInfoRow(
+                    'fiche_modal_phone_label',
+                    _patientData!['telephone'],
+                  ),
+                  _buildInfoRow(
+                    'fiche_modal_profession_label',
+                    _patientData!['profession'],
+                  ),
+                  _buildInfoRow(
+                    'fiche_modal_marital_label',
                     _patientData!['statut_matrimonial'],
                   ),
-                  _buildInfoRow("Adress", _patientData!['adresse']),
+                  _buildInfoRow(
+                    'fiche_modal_address_label',
+                    _patientData!['adresse'],
+                  ),
                   const SizedBox(height: 15),
-                  const Text(
-                    "Paramètres Vitaux",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Text(
+                    'fiche_modal_vitals_section'.tr(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   const Divider(),
                   if (_parametresVitaux != null) ...[
                     _buildInfoRow(
-                      "Temperature",
+                      'fiche_modal_temperature_label',
                       _parametresVitaux!['temperature'],
                     ),
                     _buildInfoRow(
-                      "Tension",
-                      "${_parametresVitaux!['systolique']}/${_parametresVitaux!['diastolique']}",
+                      'fiche_modal_tension_label',
+                      '${_parametresVitaux!['systolique']}/${_parametresVitaux!['diastolique']}',
                     ),
-                    _buildInfoRow("Poids", _parametresVitaux!['poid']),
                     _buildInfoRow(
-                      "Statut VIH",
+                      'fiche_modal_weight_label',
+                      _parametresVitaux!['poid'],
+                    ),
+                    _buildInfoRow(
+                      'fiche_modal_hiv_label',
                       _parametresVitaux!['statut_VIH'],
                     ),
                     _buildInfoRow(
-                      "Vaccination",
+                      'fiche_modal_vaccination_label',
                       _parametresVitaux!['vaccination'],
                     ),
                     _buildInfoRow(
-                      "Motif de la consultation",
+                      'fiche_modal_motif_label',
                       _parametresVitaux!['motif_de_consultation'],
                     ),
                   ],
@@ -251,7 +283,7 @@ class _FinalisationConsultationPageState
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(
-                        "Fermer",
+                        'fiche_modal_close'.tr(),
                         style: TextStyle(color: primaryPurple, fontSize: 16),
                       ),
                     ),
@@ -265,11 +297,89 @@ class _FinalisationConsultationPageState
     );
   }
 
-  Widget _buildInfoRow(String label, dynamic value) {
+  String _localizeExamStatus(String raw) {
+    switch (raw.toLowerCase()) {
+      case 'en cours':
+        return 'final_exam_status_in_progress'.tr();
+      case 'terminé':
+        return 'final_exam_status_done'.tr();
+      case 'annuler':
+        return 'final_exam_status_cancelled'.tr();
+      case 'en attente':
+        return 'final_exam_status_pending'.tr();
+      default:
+        return raw;
+    }
+  }
+
+  String _yearsSuffix() {
+    final s = 'pay_field_age_value'.tr(namedArgs: {'age': ''});
+    return s.trim();
+  }
+
+  Widget _buildInfoRow(String labelKey, dynamic value) {
+    final label = _modalRowLabel(labelKey);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Text("$label : ${value ?? 'N/A'}"),
+      child: Text('$label : ${value ?? 'fiche_value_na'.tr()}'),
     );
+  }
+
+  String _modalRowLabel(String key) {
+    switch (key) {
+      case 'fiche_modal_full_name_label':
+        return 'pdf_col_name'.tr();
+      case 'fiche_modal_sex_label':
+        return 'pay_field_sex'.tr();
+      case 'fiche_modal_age_label':
+        return 'pay_field_age'.tr();
+      case 'fiche_modal_phone_label':
+        return 'pay_field_phone'.tr();
+      case 'fiche_modal_profession_label':
+        return 'pay_field_profession'.tr();
+      case 'fiche_modal_marital_label':
+        return 'pay_field_marital'.tr();
+      case 'fiche_modal_address_label':
+        return 'pay_field_address'.tr();
+      case 'fiche_modal_temperature_label':
+        return 'fiche_modal_temperature'
+            .tr(namedArgs: {'value': ''})
+            .split(':')
+            .first
+            .trim();
+      case 'fiche_modal_tension_label':
+        return 'fiche_modal_tension'
+            .tr(namedArgs: {'value': ''})
+            .split(':')
+            .first
+            .trim();
+      case 'fiche_modal_weight_label':
+        return 'fiche_modal_weight'
+            .tr(namedArgs: {'value': ''})
+            .split(':')
+            .first
+            .trim();
+      case 'fiche_modal_hiv_label':
+        return 'fiche_modal_hiv'
+            .tr(namedArgs: {'value': ''})
+            .split(':')
+            .first
+            .trim();
+      case 'fiche_modal_vaccination_label':
+        return 'fiche_modal_vaccination'
+            .tr(namedArgs: {'value': ''})
+            .split(':')
+            .first
+            .trim();
+      case 'fiche_modal_motif_label':
+        return 'fiche_modal_motif'
+            .tr(namedArgs: {'value': ''})
+            .split(':')
+            .first
+            .trim();
+      default:
+        return key;
+    }
   }
 
   // --- WIDGETS DE FORMULAIRE ---
@@ -338,17 +448,18 @@ class _FinalisationConsultationPageState
           ),
           errorStyle: const TextStyle(height: 0.5),
         ),
-        hint: const Text("Programmation de rendez-vous *"),
-        value: _programmationRdv,
-        validator: (value) => value == null ? 'Sélection obligatoire' : null,
-        items: const [
+        hint: Text('fiche_dd_rdv_hint'.tr()),
+        initialValue: _programmationRdv,
+        validator: (value) =>
+            value == null ? 'fiche_select_required'.tr() : null,
+        items: [
           DropdownMenuItem(
             value: 'programmer',
-            child: Text("Rendez-vous à effectuer"),
+            child: Text('fiche_dd_rdv_yes'.tr()),
           ),
           DropdownMenuItem(
             value: 'pas_programmer',
-            child: Text("Pas de nouveau rendez-vous"),
+            child: Text('fiche_dd_rdv_no'.tr()),
           ),
         ],
         onChanged: (String? newValue) {
@@ -371,7 +482,7 @@ class _FinalisationConsultationPageState
     String? rdvValidator(String? value) {
       if (_programmationRdv == 'programmer' &&
           (value == null || value.isEmpty)) {
-        return 'Date/Heure obligatoire';
+        return 'fiche_datetime_required'.tr();
       }
       return null;
     }
@@ -381,9 +492,9 @@ class _FinalisationConsultationPageState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Choisir la date et l'heure :",
-            style: TextStyle(
+          Text(
+            'fiche_pick_datetime'.tr(),
+            style: const TextStyle(
               fontWeight: FontWeight.w500,
               color: Colors.black87,
             ),
@@ -396,7 +507,7 @@ class _FinalisationConsultationPageState
                   controller: _rdvDateController,
                   validator: rdvValidator,
                   decoration: InputDecoration(
-                    hintText: 'Date *',
+                    hintText: 'fiche_hint_date'.tr(),
                     errorStyle: const TextStyle(height: 0.5),
                     filled: true,
                     fillColor: fieldBackgroundColor,
@@ -440,7 +551,7 @@ class _FinalisationConsultationPageState
                   controller: _rdvHeureController,
                   validator: rdvValidator,
                   decoration: InputDecoration(
-                    hintText: 'Heure *',
+                    hintText: 'fiche_hint_time'.tr(),
                     errorStyle: const TextStyle(height: 0.5),
                     filled: true,
                     fillColor: fieldBackgroundColor,
@@ -485,8 +596,8 @@ class _FinalisationConsultationPageState
   Future<void> _finalizeConsultation() async {
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez remplir tous les champs obligatoires.'),
+        SnackBar(
+          content: Text('final_validation_error'.tr()),
           backgroundColor: Colors.orange,
         ),
       );
@@ -532,8 +643,8 @@ class _FinalisationConsultationPageState
       if (mounted) {
         context.go('/Dashboard_Medecin/ConsultationList');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Consultation finalisée avec succès. ✅'),
+          SnackBar(
+            content: Text('final_save_success'.tr()),
             backgroundColor: Colors.green,
           ),
         );
@@ -542,7 +653,7 @@ class _FinalisationConsultationPageState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de la finalisation: $e'),
+            content: Text('final_save_error'.tr(namedArgs: {'msg': '$e'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -574,46 +685,57 @@ class _FinalisationConsultationPageState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Diagnostic Initial",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                'final_section_initial'.tr(),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 10),
               _buildFormField(
-                hint: "Antécédent *",
+                hint: 'final_hint_antecedent'.tr(),
                 controller: _antecedentsController,
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Champ obligatoire' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'fiche_field_required'.tr()
+                    : null,
               ),
               _buildFormField(
-                hint: "Signe et symptomes *",
+                hint: 'final_hint_signs'.tr(),
                 controller: _signesSymptomesController,
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Champ obligatoire' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'fiche_field_required'.tr()
+                    : null,
               ),
               _buildFormField(
-                hint: "Diagnostic initial *",
+                hint: 'fiche_hint_diag_initial'.tr(),
                 controller: _diagnosticInitialController,
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Champ obligatoire' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'fiche_field_required'.tr()
+                    : null,
               ),
               const SizedBox(height: 20),
-              const Text(
-                "Diagnostic Final et Traitement",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                'final_section_final'.tr(),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 10),
               _buildFormField(
-                hint: "Diagnostic final *",
+                hint: 'fiche_hint_diag_final'.tr(),
                 controller: _diagnosticFinalController,
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Champ obligatoire' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'fiche_field_required'.tr()
+                    : null,
               ),
               _buildFormField(
-                hint: "Traitement prescrit *",
+                hint: 'fiche_hint_treatment'.tr(),
                 controller: _traitementPrescritController,
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Champ obligatoire' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'fiche_field_required'.tr()
+                    : null,
               ),
               const SizedBox(height: 20),
               _buildRdvDropdown(),
@@ -630,9 +752,9 @@ class _FinalisationConsultationPageState
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text(
-                    "Terminer la Consultation",
-                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  child: Text(
+                    'final_btn_terminate'.tr(),
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
               ),
@@ -649,10 +771,10 @@ class _FinalisationConsultationPageState
     }
 
     if (_examensResultats.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          "Aucun examen prescrit pour cette consultation.",
-          style: TextStyle(fontSize: 16, color: Colors.grey),
+          'final_no_exams'.tr(),
+          style: const TextStyle(fontSize: 16, color: Colors.grey),
         ),
       );
     }
@@ -662,19 +784,21 @@ class _FinalisationConsultationPageState
       itemCount: _examensResultats.length,
       itemBuilder: (context, index) {
         final examen = _examensResultats[index];
-        final String nomExamen = examen['nom_examen'] ?? 'Examen inconnu';
-        final String statutExamen = examen['statut_examen'] ?? 'en attente';
+        final String nomExamen =
+            examen['nom_examen'] ?? 'final_exam_unknown'.tr();
+        final String statutExamenRaw = examen['statut_examen'] ?? 'en attente';
+        final String statutExamen = _localizeExamStatus(statutExamenRaw);
         final String? resultatExamen = examen['resultat_examen'];
 
-        // Couleur du statut selon les règles utilisateur
-        Color statutColor = Colors.grey; // Gris par défaut ("en attente")
-        final String statutLower = statutExamen.toLowerCase();
+        // Couleur du statut basée sur la valeur DB (FR) pour rester correcte en EN aussi
+        Color statutColor = Colors.grey;
+        final String statutLowerRaw = statutExamenRaw.toLowerCase();
 
-        if (statutLower == 'en cours') {
+        if (statutLowerRaw == 'en cours') {
           statutColor = Colors.orange;
-        } else if (statutLower == 'terminé') {
+        } else if (statutLowerRaw == 'terminé') {
           statutColor = Colors.green;
-        } else if (statutLower == 'annuler') {
+        } else if (statutLowerRaw == 'annuler') {
           statutColor = Colors.red;
         }
 
@@ -699,9 +823,9 @@ class _FinalisationConsultationPageState
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Text(
-                      "Statut : ",
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    Text(
+                      'final_exam_status_label'.tr(),
+                      style: const TextStyle(color: Colors.grey, fontSize: 14),
                     ),
                     Text(
                       statutExamen,
@@ -714,13 +838,13 @@ class _FinalisationConsultationPageState
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  "Résultats :",
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                Text(
+                  'final_exam_results_label'.tr(),
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  resultatExamen ?? "N/A",
+                  resultatExamen ?? 'fiche_value_na'.tr(),
                   style: const TextStyle(fontSize: 14),
                 ),
               ],
@@ -735,6 +859,9 @@ class _FinalisationConsultationPageState
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > 900;
+
     return Scaffold(
       backgroundColor: primaryPurple,
       appBar: AppBar(
@@ -744,7 +871,7 @@ class _FinalisationConsultationPageState
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          _patientName,
+          _patientNameLoaded ? _patientName : 'fiche_loading_name'.tr(),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -761,15 +888,22 @@ class _FinalisationConsultationPageState
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(text: "Finaliser"),
-            Tab(text: "Résultats Examens"),
+          tabs: [
+            Tab(text: 'final_tab_finalize'.tr()),
+            Tab(text: 'final_tab_results'.tr()),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildFinaliserTab(), _buildResultatsTab()],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop ? 1000 : double.infinity,
+          ),
+          child: TabBarView(
+            controller: _tabController,
+            children: [_buildFinaliserTab(), _buildResultatsTab()],
+          ),
+        ),
       ),
     );
   }

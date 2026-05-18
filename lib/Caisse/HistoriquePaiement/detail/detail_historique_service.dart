@@ -18,7 +18,8 @@ class DetailHistoriqueService {
             Statut_Consultation,
             id_patient,
             Patient(*),
-            paiement!inner(*)
+            paiement!inner(*),
+            examen_a_effectuer(nom_examen, prix_examen, statut_examen)
           ''')
           .eq('id_consultation', idConsultation)
           .single();
@@ -47,7 +48,8 @@ class DetailHistoriqueService {
               type_service,
               date_enregistrement,
               id_patient,
-              Patient(*)
+              Patient(*),
+              examen_a_effectuer(nom_examen, prix_examen, statut_examen)
             )
           ''')
           .eq('id_paiement', idPaiement)

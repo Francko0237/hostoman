@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:hostoman/model_unifier.dart'; // Assure-toi que le chemin est correct
-import 'Service.dart'; // Assure-toi que le chemin vers ton service est correct
-import '../HistoriquePaiement/detail/detail_historique_ui.dart'; // Import pour la navigation
+import 'package:hostoman/model_unifier.dart';
+import 'Service.dart';
+import '../HistoriquePaiement/detail/detail_historique_ui.dart';
+import 'package:hostoman/shared/pdf_generator.dart';
 
 // Couleurs (Tes couleurs d'origine)
 const Color npPrimaryColor = Color(0xFF4CAF50);
@@ -104,9 +106,9 @@ class _StatsPageState extends State<StatsPage> {
           icon: const Icon(Icons.arrow_back, color: npPrimaryColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Statistiques',
-          style: TextStyle(
+        title: Text(
+          'cstat_title'.tr(),
+          style: const TextStyle(
             color: Color(0xFF26AE6C),
             fontWeight: FontWeight.bold,
           ),
@@ -116,6 +118,12 @@ class _StatsPageState extends State<StatsPage> {
             icon: const Icon(Icons.refresh, color: npSuccessColor),
             onPressed: chargerStats,
           ),
+          if (filteredConsultations.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.print, color: npSuccessColor),
+              tooltip: 'cstat_print_tooltip'.tr(),
+              onPressed: _printPatientList,
+            ),
         ],
       ),
       body: isLoading
@@ -126,7 +134,7 @@ class _StatsPageState extends State<StatsPage> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: Column(
                     children: [
@@ -145,6 +153,78 @@ class _StatsPageState extends State<StatsPage> {
 
   // --- Widgets de construction ---
 
+  Future<void> _printPatientList() async {
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final monthLocale = context.locale.toString().replaceAll('-', '_');
+    String periodeLabel;
+    switch (periodeSelectorionnee) {
+      case 'today':
+        periodeLabel = 'cstat_period_today_value'.tr(
+          namedArgs: {'date': dateFormat.format(DateTime.now())},
+        );
+        break;
+      case 'week':
+        periodeLabel = 'cstat_period_this_week'.tr();
+        break;
+      case 'month':
+        periodeLabel = 'cstat_period_month_value'.tr(
+          namedArgs: {
+            'date': DateFormat('MMMM yyyy', monthLocale).format(DateTime.now()),
+          },
+        );
+        break;
+      case 'custom':
+        periodeLabel =
+            dateDebutPersonnalisee != null && dateFinPersonnalisee != null
+            ? 'cstat_period_custom_value'.tr(
+                namedArgs: {
+                  'start': dateFormat.format(dateDebutPersonnalisee!),
+                  'end': dateFormat.format(dateFinPersonnalisee!),
+                },
+              )
+            : 'cstat_period_custom_label'.tr();
+        break;
+      default:
+        periodeLabel = 'cstat_period_all'.tr();
+    }
+
+    final pdfPatients = filteredConsultations.map((item) {
+      final patientMap = item['Patient'] as Map<String, dynamic>;
+      final patient = Patient.fromMap(patientMap);
+      final date = DateTime.parse(item['date_enregistrement']);
+      final listPaiements = item['paiement'] as List;
+      final montant = listPaiements.isNotEmpty
+          ? listPaiements[0]['prix_a_paye']
+          : 0;
+
+      return PatientPdfData(
+        nom: patient.nom_complet,
+        sexe: patient.sexe,
+        age: 'pay_field_age_value'.tr(namedArgs: {'age': '${patient.age}'}),
+        telephone: patient.telephone.toString(),
+        dateEnregistrement: dateFormat.format(date),
+        categorie: typePaiement == 'payer'
+            ? 'hist_badge_paid'.tr()
+            : 'hist_badge_cancelled'.tr(),
+        montant: 'cstat_amount_fcfa'.tr(
+          namedArgs: {
+            'value': _formatNumber(montant is int ? montant : montant.toInt()),
+          },
+        ),
+      );
+    }).toList();
+
+    await PatientListPdfGenerator.previewAndPrint(
+      context: context,
+      serviceName: 'cstat_pdf_service'.tr(),
+      periodeLabel: periodeLabel,
+      patients: pdfPatients,
+      showCategorie: true,
+      categorieLabel: 'cstat_pdf_cat_label'.tr(),
+      showMontant: true,
+    );
+  }
+
   Widget _buildPeriodSelector() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -154,15 +234,27 @@ class _StatsPageState extends State<StatsPage> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildPeriodButton('today', 'Aujourd\'hui', Icons.today),
-              _buildPeriodButton('week', 'Semaine', Icons.calendar_view_week),
-              _buildPeriodButton('month', 'Mois', Icons.calendar_month),
+              _buildPeriodButton(
+                'today',
+                'cstat_period_today'.tr(),
+                Icons.today,
+              ),
+              _buildPeriodButton(
+                'week',
+                'cstat_period_week'.tr(),
+                Icons.calendar_view_week,
+              ),
+              _buildPeriodButton(
+                'month',
+                'cstat_period_month'.tr(),
+                Icons.calendar_month,
+              ),
               _buildCustomButton(),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            'Période : ${_getPeriodeLabel()}',
+            'cstat_period_label'.tr(namedArgs: {'value': _getPeriodeLabel()}),
             style: const TextStyle(
               color: npAccentColor,
               fontWeight: FontWeight.bold,
@@ -185,7 +277,7 @@ class _StatsPageState extends State<StatsPage> {
                 chargerStats();
               },
               icon: const Icon(Icons.check_circle, size: 20),
-              label: const Text('Paiements Validés'),
+              label: Text('cstat_btn_paid'.tr()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: typePaiement == 'payer'
                     ? npSuccessColor
@@ -208,7 +300,7 @@ class _StatsPageState extends State<StatsPage> {
                 chargerStats();
               },
               icon: const Icon(Icons.cancel, size: 20),
-              label: const Text('Paiements Annulés'),
+              label: Text('cstat_btn_cancelled'.tr()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: typePaiement == 'annuler'
                     ? npErrorColor
@@ -237,7 +329,7 @@ class _StatsPageState extends State<StatsPage> {
             children: [
               Expanded(
                 child: _buildStatCard(
-                  'Patients',
+                  'cstat_card_patients'.tr(),
                   '${statsData?['nombre_patients']}',
                   Icons.people,
                   npBlueColor,
@@ -246,8 +338,12 @@ class _StatsPageState extends State<StatsPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildStatCard(
-                  'Revenus',
-                  '${_formatNumber(statsData?['somme_generee'] ?? 0)} FCFA',
+                  'cstat_card_revenue'.tr(),
+                  'cstat_amount_fcfa'.tr(
+                    namedArgs: {
+                      'value': _formatNumber(statsData?['somme_generee'] ?? 0),
+                    },
+                  ),
                   Icons.payments,
                   npSuccessColor,
                 ),
@@ -266,12 +362,16 @@ class _StatsPageState extends State<StatsPage> {
               children: [
                 _buildSmallInfo(
                   Icons.male,
-                  "Hommes: ${statsData?['hommes']}",
+                  'cstat_men'.tr(
+                    namedArgs: {'count': '${statsData?['hommes']}'},
+                  ),
                   Colors.blue,
                 ),
                 _buildSmallInfo(
                   Icons.female,
-                  "Femmes: ${statsData?['femmes']}",
+                  'cstat_women'.tr(
+                    namedArgs: {'count': '${statsData?['femmes']}'},
+                  ),
                   Colors.pink,
                 ),
               ],
@@ -288,9 +388,9 @@ class _StatsPageState extends State<StatsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Liste des patients',
-            style: TextStyle(
+          Text(
+            'cstat_patient_list'.tr(),
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: npAccentColor,
@@ -360,7 +460,9 @@ class _StatsPageState extends State<StatsPage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              '${_formatNumber(montant.toInt())} FCFA',
+              'cstat_amount_fcfa'.tr(
+                namedArgs: {'value': _formatNumber(montant.toInt())},
+              ),
               style: const TextStyle(
                 color: npSuccessColor,
                 fontWeight: FontWeight.bold,
@@ -393,7 +495,7 @@ class _StatsPageState extends State<StatsPage> {
   Widget _buildSearchBar() {
     return TextField(
       decoration: InputDecoration(
-        hintText: 'Rechercher un patient...',
+        hintText: 'cstat_search_hint'.tr(),
         prefixIcon: const Icon(Icons.search, color: npAccentColor),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
@@ -406,8 +508,10 @@ class _StatsPageState extends State<StatsPage> {
     );
   }
 
-  String _formatNumber(int n) =>
-      NumberFormat('#,###', 'fr_FR').format(n).replaceAll(',', ' ');
+  String _formatNumber(int n) {
+    final loc = context.locale.toString().replaceAll('-', '_');
+    return NumberFormat('#,###', loc).format(n).replaceAll(',', ' ');
+  }
 
   void _showErrorSnackBar(String msg) {
     ScaffoldMessenger.of(
@@ -455,7 +559,7 @@ class _StatsPageState extends State<StatsPage> {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Text(
-        '© 2026 Yamgai Mokube Franck Daniel',
+        'cstat_footer'.tr(),
         style: TextStyle(color: Colors.grey[600], fontSize: 12),
       ),
     );
@@ -480,19 +584,19 @@ class _StatsPageState extends State<StatsPage> {
         }
       },
       icon: const Icon(Icons.date_range),
-      label: const Text('Calendrier'),
+      label: Text('cstat_period_calendar'.tr()),
     );
   }
 
-  Widget _buildEmptyState() => const Padding(
-    padding: EdgeInsets.all(40),
-    child: Text("Aucun patient trouvé."),
+  Widget _buildEmptyState() => Padding(
+    padding: const EdgeInsets.all(40),
+    child: Text('cstat_empty'.tr()),
   );
 
   String _getPeriodeLabel() {
-    if (periodeSelectorionnee == 'today') return "Aujourd'hui";
-    if (periodeSelectorionnee == 'week') return "Cette semaine";
-    if (periodeSelectorionnee == 'month') return "Ce mois";
-    return "Personnalisé";
+    if (periodeSelectorionnee == 'today') return 'cstat_period_today'.tr();
+    if (periodeSelectorionnee == 'week') return 'cstat_period_this_week'.tr();
+    if (periodeSelectorionnee == 'month') return 'cstat_period_this_month'.tr();
+    return 'cstat_period_custom'.tr();
   }
 }

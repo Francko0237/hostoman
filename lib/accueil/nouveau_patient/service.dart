@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'nouveau_patient.dart';
 
@@ -31,32 +32,20 @@ class PatientService {
   }) async {
     // 🔒 Validation des champs obligatoires
     if (sexe == null || sexe!.isEmpty) {
-      showMessage(context, 'Le sexe doit être sélectionné', isError: true);
+      showMessage(context, 'np_field_sex_required'.tr(), isError: true);
       return;
     }
     if (StatutMatrimonial == null || StatutMatrimonial!.isEmpty) {
-      showMessage(
-        context,
-        'Le statut matrimonial doit être sélectionné',
-        isError: true,
-      );
+      showMessage(context, 'np_field_marital_required'.tr(), isError: true);
       return;
     }
     if (type_service == null || type_service!.isEmpty) {
-      showMessage(
-        context,
-        'Le type de service doit être sélectionné',
-        isError: true,
-      );
+      showMessage(context, 'np_field_service_required'.tr(), isError: true);
       return;
     }
     if ((type_service == 'Consultation' || type_service == 'Rendez-vous') &&
         idMedecin == null) {
-      showMessage(
-        context,
-        'Un médecin doit être sélectionné pour ce type de service',
-        isError: true,
-      );
+      showMessage(context, 'np_field_doctor_required'.tr(), isError: true);
       return;
     }
 
@@ -129,8 +118,8 @@ class PatientService {
                             children: [
                               Text(
                                 patientsExistants.length == 1
-                                    ? 'Patient déjà enregistré'
-                                    : 'Plusieurs patients trouvés',
+                                    ? 'np_dlg_dup_one'.tr()
+                                    : 'np_dlg_dup_many'.tr(),
                                 style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w700,
@@ -140,8 +129,13 @@ class PatientService {
                               const SizedBox(height: 4),
                               Text(
                                 patientsExistants.length == 1
-                                    ? '1 correspondance trouvée'
-                                    : '${patientsExistants.length} correspondances trouvées',
+                                    ? 'np_dlg_match_one'.tr()
+                                    : 'np_dlg_match_many'.tr(
+                                        namedArgs: {
+                                          'count':
+                                              '${patientsExistants.length}',
+                                        },
+                                      ),
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.white.withOpacity(0.9),
@@ -176,25 +170,29 @@ class PatientService {
                                 children: [
                                   _buildInfoRow(
                                     Icons.person,
-                                    "Nom",
+                                    'np_dlg_name'.tr(),
                                     patientsExistants[0]['nom_complet'],
                                   ),
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
                                     Icons.cake,
-                                    "Âge",
-                                    "${patientsExistants[0]['age']} ans",
+                                    'acc_profil_age'.tr(),
+                                    'np_dlg_age_value'.tr(
+                                      namedArgs: {
+                                        'age': '${patientsExistants[0]['age']}',
+                                      },
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
                                     Icons.phone,
-                                    "Téléphone",
+                                    'np_dlg_phone'.tr(),
                                     "${patientsExistants[0]['telephone']}",
                                   ),
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
                                     Icons.wc,
-                                    "Sexe",
+                                    'np_dlg_sex'.tr(),
                                     patientsExistants[0]['sexe'],
                                   ),
                                 ],
@@ -202,7 +200,7 @@ class PatientService {
                             ),
                           ] else ...[
                             Text(
-                              "Patients correspondants :",
+                              'np_dlg_matching'.tr(),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -252,7 +250,11 @@ class PatientService {
                                               ),
                                               const SizedBox(width: 6),
                                               Text(
-                                                "${p['age']} ans",
+                                                'np_dlg_age_value'.tr(
+                                                  namedArgs: {
+                                                    'age': '${p['age']}',
+                                                  },
+                                                ),
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   color: Colors.grey[700],
@@ -311,7 +313,7 @@ class PatientService {
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Text(
-                                                  'Mettre à jour ce patient',
+                                                  'np_btn_update_this'.tr(),
                                                   style: TextStyle(
                                                     color: npAccentColor,
                                                     fontWeight: FontWeight.w600,
@@ -346,7 +348,7 @@ class PatientService {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    "Que souhaitez-vous faire ?",
+                                    'np_dlg_what_to_do'.tr(),
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
@@ -386,7 +388,7 @@ class PatientService {
                             ),
                           ),
                           child: Text(
-                            'Annuler',
+                            'np_btn_cancel'.tr(),
                             style: TextStyle(
                               color: Colors.grey[700],
                               fontWeight: FontWeight.w600,
@@ -407,7 +409,7 @@ class PatientService {
                             ),
                           ),
                           child: Text(
-                            'Créer nouveau',
+                            'np_btn_new'.tr(),
                             style: TextStyle(
                               color: npPrimaryColor,
                               fontWeight: FontWeight.w600,
@@ -432,13 +434,15 @@ class PatientService {
                             ),
                             elevation: 2,
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
-                              Icon(Icons.edit, size: 16),
-                              SizedBox(width: 6),
+                              const Icon(Icons.edit, size: 16),
+                              const SizedBox(width: 6),
                               Text(
-                                'Mettre à jour',
-                                style: TextStyle(fontWeight: FontWeight.w600),
+                                'np_btn_update'.tr(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
@@ -455,17 +459,13 @@ class PatientService {
 
       // 🚫 Annulation
       if (choix == 'cancel') {
-        showMessage(context, 'Opération annulée', isWarning: true);
+        showMessage(context, 'np_msg_cancelled'.tr(), isWarning: true);
         return;
       }
 
       // 🆕 Création d'un nouveau patient malgré doublon
       if (choix == 'new') {
-        showMessage(
-          context,
-          "Création d'un nouveau dossier patient",
-          isSuccess: true,
-        );
+        showMessage(context, 'np_msg_new_creating'.tr(), isSuccess: true);
       }
 
       // 🔄 Mise à jour d'un patient existant
@@ -487,7 +487,7 @@ class PatientService {
             )
             .eq('id_patient', id);
         patientId = id;
-        showMessage(context, 'Patient mis à jour avec succès', isSuccess: true);
+        showMessage(context, 'np_msg_updated'.tr(), isSuccess: true);
         print('✅ Patient mis à jour - ID: $patientId');
       }
     }
@@ -511,7 +511,7 @@ class PatientService {
           .select()
           .single();
       patientId = response['id_patient'];
-      showMessage(context, 'Patient enregistré avec succès', isSuccess: true);
+      showMessage(context, 'np_msg_saved'.tr(), isSuccess: true);
       print('✅ Nouveau patient créé - ID: $patientId');
     }
 
@@ -561,11 +561,7 @@ class PatientService {
     print(
       '✅ Consultation créée - ID: ${consultationResponse['id_consultation']}',
     );
-    showMessage(
-      context,
-      'Consultation enregistrée avec succès',
-      isSuccess: true,
-    );
+    showMessage(context, 'np_msg_consultation_saved'.tr(), isSuccess: true);
     print('=== ENREGISTREMENT TERMINÉ AVEC SUCCÈS ===');
 
     // 💰 Création automatique du paiement pour la consultation

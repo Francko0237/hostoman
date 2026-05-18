@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:intl/date_symbol_data_local.dart'; // ✅ indispensable pour initializeDateFormatting
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 //Import de toutes les pages classer par ordre
 
@@ -19,10 +20,12 @@ import 'accueil/liste_des_patients/liste.dart';
 import 'accueil/liste_des_patients/detail.dart';
 import 'accueil/Statistique/statistique.dart';
 import 'accueil/dashboard/Profil.dart';
+import 'accueil/dashboard/Parametre.dart';
 
 // Caisse
 import 'package:hostoman/Caisse/Dashboard/Dashboard.dart';
 import 'package:hostoman/Caisse/Dashboard/Profil.dart';
+import 'package:hostoman/Caisse/Dashboard/Parametre.dart';
 import 'package:hostoman/Caisse/Paiement_en_attente/paiementList.dart';
 import 'package:hostoman/Caisse/HistoriquePaiement/HistoriquePaiement.dart';
 import 'package:hostoman/Caisse/Statistique/Statistique.dart';
@@ -39,6 +42,7 @@ import 'package:hostoman/medecin/Consultation/liste_patient_attente_examen/liste
 import 'package:hostoman/medecin/RendezVous/liste_rendez_vous.dart';
 import 'package:hostoman/medecin/dashboard/profil_medecin.dart'
     as doctor_profile;
+import 'package:hostoman/medecin/dashboard/Parametre.dart';
 
 //Laboratoire
 import 'package:hostoman/Labo/Dashboard/Dashboard.dart';
@@ -106,6 +110,11 @@ final GoRouter _router = GoRouter(
           builder: (context, state) => const ProfilMedecinPage(),
         ),
 
+        GoRoute(
+          path: 'parametre',
+          builder: (context, state) => const ParametrePage(),
+        ),
+
         // Ajoute d'autres sous-routes ici
       ],
     ),
@@ -119,6 +128,10 @@ final GoRouter _router = GoRouter(
           path:
               'profilcaisse', // Le chemin complet sera context.push('/Dashboard_Caisse/profilcaisse');
           builder: (context, state) => const ProfilCaissier(),
+        ),
+        GoRoute(
+          path: 'parametrecaisse',
+          builder: (context, state) => const ParametreCaissePage(),
         ),
         GoRoute(
           path:
@@ -197,6 +210,10 @@ final GoRouter _router = GoRouter(
         GoRoute(
           path: 'Profil',
           builder: (context, state) => const doctor_profile.ProfilMedecinPage(),
+        ),
+        GoRoute(
+          path: 'parametremedecin',
+          builder: (context, state) => const ParametreMedecinPage(),
         ),
       ],
     ),
@@ -286,14 +303,23 @@ final GoRouter _router = GoRouter(
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
   await initializeDateFormatting('fr_FR', null);
+  await initializeDateFormatting('en_US', null);
   await Supabase.initialize(
-    url:
-        'http://10.54.115.183:8001', // ⬅️ API URL                   PC " localhost "        Android " 10.61.24.183 "      Emulateur:  " 10.0.2.2 "
+    url: 'https://mzgyccyaywncafocmdnd.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE', // ⬅️ Copiez depuis supabase status
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Z3ljY3lheXduY2Fmb2NtZG5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDQyNDIsImV4cCI6MjA5MTQyMDI0Mn0.qPO38QBVOZL-5lJx-nItTZVNRJcXpbm2Hk_WOylkjPI',
   );
-  runApp(const MyApp());
+  runApp(
+    EasyLocalization(
+      supportedLocales: const [Locale('fr', 'FR'), Locale('en', 'US')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('fr', 'FR'),
+      startLocale: const Locale('fr', 'FR'),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -302,18 +328,37 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'Hopital de Manjo',
+      themeMode: ThemeMode.light,
       theme: ThemeData(
+        brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        scaffoldBackgroundColor: const Color(0xFFF5F6FA),
+        // Force le texte saisi dans les TextField à du noir solide
+        // (sinon Material 3 dérive une teinte rosée/violette de la seed).
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Color(0xFF1A237E),
+          selectionColor: Color(0x331A237E),
+          selectionHandleColor: Color(0xFF1A237E),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+        ),
+        textTheme: ThemeData.light().textTheme.apply(
+          bodyColor: const Color(0xFF0F172A),
+          displayColor: const Color(0xFF0F172A),
+        ),
       ),
-      localizationsDelegates: const [
+      localizationsDelegates: [
+        ...context.localizationDelegates,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('fr', 'FR'), Locale('en', 'US')],
-      locale: const Locale('fr', 'FR'),
-      routerConfig: _router, // ⬅️ ici tu mets ton GoRouter
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
+      routerConfig: _router,
     );
   }
 }

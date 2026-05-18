@@ -45,6 +45,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter   # Pour les traductions automatiques (dates, etc.)
   fl_chart: ^1.1.1
+  http: ^1.6.0
+  easy_localization: ^3.0.7
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +71,7 @@ flutter:
   uses-material-design: true
   assets:
     -  assets/images/
+    - assets/translations/
     - assets/fonts/Noto_Sans/NotoSans-VariableFont_wdth,wght.ttf
   # To add assets to your application, add an assets section, like this:
   # assets:

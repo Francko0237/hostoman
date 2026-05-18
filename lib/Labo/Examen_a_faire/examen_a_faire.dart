@@ -217,7 +217,7 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: Row(
                     children: [
@@ -342,7 +342,7 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 1200 : double.infinity,
+                      maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: Text(
                       '${filteredExamens.length} examen${filteredExamens.length > 1 ? 's' : ''} en attente',
@@ -361,7 +361,7 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: isLoading
                       ? Center(

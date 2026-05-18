@@ -262,7 +262,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: Row(
                     children: [
@@ -387,7 +387,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 1200 : double.infinity,
+                      maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: Text(
                       '${filteredConsultations.length} patient${filteredConsultations.length > 1 ? 's' : ''} en attente',
@@ -406,7 +406,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: isLoading
                       ? Center(

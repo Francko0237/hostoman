@@ -1,9 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'service.dart';
 import 'validators.dart';
 import 'dart:ui';
+
+// Map: valeur stockée en DB (en français) -> clé de traduction
+// On garde la valeur en FR pour ne pas casser les données Supabase
+const Map<String, String> _kMaritalLabels = {
+  'Marié Monogame': 'np_marital_married_mono',
+  'Concubinage': 'np_marital_concubinage',
+  'Veuve': 'np_marital_widow',
+  'Marié Polygame': 'np_marital_married_poly',
+  'Célibataire': 'np_marital_single',
+  'Divorcé': 'np_marital_divorced',
+};
+const Map<String, String> _kServiceLabels = {
+  'Consultation': 'np_service_consultation',
+  'Consultation prénatale CPN1': 'np_service_cpn1',
+  'Rendez-vous': 'np_service_appointment',
+};
 
 /// ---------------------------
 /// Variables globales (remises)
@@ -31,25 +48,14 @@ String? sexe = '';
 String? type_service = '';
 String? _idMedecinSelectionne;
 
-// Listes globales
-final List<String> _services = [
-  'Consultation',
-  'Consultation prénatale CPN1',
-  'Rendez-vous',
-];
+// Listes globales (valeurs stockées en DB en FR)
+final List<String> _services = _kServiceLabels.keys.toList();
 String? _typeServiceSelectionne;
 List<Medecin> _medecins = [];
 
 String? _value = '';
 String? _statutMatrimonialSelectionne;
-final List<String> _statutsMatrimoniaux = [
-  'Marié Monogame',
-  'Concubinage',
-  'Veuve',
-  'Marié Polygame',
-  'Célibataire',
-  'Divorcé',
-];
+final List<String> _statutsMatrimoniaux = _kMaritalLabels.keys.toList();
 
 // Couleurs
 const Color npPrimaryColor = Color(0xFF1565C0);
@@ -148,7 +154,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
           ),
         ),
         subtitle: Text(
-          med.specialite ?? 'Spécialité non trouver',
+          med.specialite ?? 'np_doctor_specialty_unknown'.tr(),
           style: TextStyle(
             fontSize: 13,
             color: isSelected ? npAccentColor : Colors.grey[600],
@@ -167,15 +173,15 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
     String? errorMessage;
     if (_value == null || _value!.isEmpty) {
-      errorMessage = 'Veuillez sélectionner le sexe';
+      errorMessage = 'np_select_sex'.tr();
     } else if (_statutMatrimonialSelectionne == null) {
-      errorMessage = 'Veuillez sélectionner le statut matrimonial';
+      errorMessage = 'np_select_marital'.tr();
     } else if (_typeServiceSelectionne == null) {
-      errorMessage = 'Veuillez sélectionner le type de service';
+      errorMessage = 'np_select_service'.tr();
     } else if ((_typeServiceSelectionne == 'Consultation' ||
             _typeServiceSelectionne == 'Rendez-vous') &&
         _idMedecinSelectionne == null) {
-      errorMessage = 'Veuillez sélectionner un médecin';
+      errorMessage = 'np_select_doctor'.tr();
     }
 
     if (errorMessage != null) {
@@ -225,7 +231,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Patientez...',
+                  'np_loading'.tr(),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: npPrimaryColor.withOpacity(0.8),
@@ -250,10 +256,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
       );
 
       Navigator.pop(context);
-      _showMessage(
-        'Patient enregistré avec succès !',
-        background: npSuccessColor,
-      );
+      _showMessage('np_saved_success'.tr(), background: npSuccessColor);
 
       setState(() {
         _value = '';
@@ -280,7 +283,10 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
       type_service = null;
     } catch (e) {
       Navigator.pop(context);
-      _showMessage('Erreur : ${e.toString()}', background: npErrorColor);
+      _showMessage(
+        'np_error_generic'.tr(namedArgs: {'msg': e.toString()}),
+        background: npErrorColor,
+      );
     }
   }
 
@@ -292,15 +298,25 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     int maxLines = 1,
+    int? maxLength,
+    String? prefixText,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      maxLength: maxLength,
       keyboardType: keyboardType,
       style: const TextStyle(fontSize: 15),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        prefixText: prefixText,
+        counterText: '',
+        prefixStyle: const TextStyle(
+          color: Colors.black87,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
         prefixIcon: icon != null ? Icon(icon, color: npPrimaryColor) : null,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -401,8 +417,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
             Icon(Icons.person_add, color: npPrimaryColor, size: 24),
             const SizedBox(width: 12),
             Text(
-              '  Nouveau Patient',
-              style: TextStyle(
+              '  ${'np_title'.tr()}',
+              style: const TextStyle(
                 color: npPrimaryColor,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -493,8 +509,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Veuillez remplir tous les champs requis',
-                              style: TextStyle(
+                              'np_info_message'.tr(),
+                              style: const TextStyle(
                                 fontSize: 15,
                                 color: npErrorColor,
                                 fontWeight: FontWeight.w500,
@@ -513,21 +529,21 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                         children: [
                           // Section Informations personnelles
                           _buildSectionCard(
-                            title: 'Informations Personnelles',
+                            title: 'np_section_personal'.tr(),
                             children: [
                               _buildTextFormField(
                                 controller: nom_completController,
-                                label: 'Nom Complet *',
-                                hint: 'Ex: Yamga Mokube Francko Daniel',
+                                label: 'np_full_name'.tr(),
+                                hint: 'np_full_name_hint'.tr(),
                                 icon: Icons.person,
                                 validator:
                                     PatientFormConfig.nomComplet.validator,
                               ),
                               const SizedBox(height: 16),
 
-                              const Text(
-                                'Sexe *',
-                                style: TextStyle(
+                              Text(
+                                'np_sex'.tr(),
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -551,9 +567,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       ),
                                       child: RadioListTile<String>(
                                         value: 'Homme',
-                                        title: const Text(
-                                          'Homme',
-                                          style: TextStyle(fontSize: 15),
+                                        title: Text(
+                                          'np_sex_male'.tr(),
+                                          style: const TextStyle(fontSize: 15),
                                         ),
                                         groupValue: _value,
                                         onChanged: (v) =>
@@ -580,9 +596,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       ),
                                       child: RadioListTile<String>(
                                         value: 'Femme',
-                                        title: const Text(
-                                          'Femme',
-                                          style: TextStyle(fontSize: 15),
+                                        title: Text(
+                                          'np_sex_female'.tr(),
+                                          style: const TextStyle(fontSize: 15),
                                         ),
                                         groupValue: _value,
                                         onChanged: (v) =>
@@ -601,8 +617,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                   Expanded(
                                     child: _buildTextFormField(
                                       controller: age,
-                                      label: 'Âge *',
-                                      hint: 'Ex: 25',
+                                      label: 'np_age_field'.tr(),
+                                      hint: 'np_age_hint'.tr(),
                                       icon: Icons.cake,
                                       keyboardType: TextInputType.number,
                                       validator:
@@ -613,10 +629,12 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                   Expanded(
                                     child: _buildTextFormField(
                                       controller: telephone,
-                                      label: 'Téléphone *',
-                                      hint: 'Ex: 670619582',
+                                      label: 'np_phone'.tr(),
+                                      hint: 'np_phone_hint'.tr(),
                                       icon: Icons.phone,
                                       keyboardType: TextInputType.phone,
+                                      prefixText: '+237 ',
+                                      maxLength: 9,
                                       validator:
                                           PatientFormConfig.telephone.validator,
                                     ),
@@ -627,8 +645,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
                               _buildTextFormField(
                                 controller: adresse,
-                                label: 'Adresse *',
-                                hint: 'Ex: Pk-14',
+                                label: 'np_address'.tr(),
+                                hint: 'np_address_hint'.tr(),
                                 icon: Icons.house,
                                 validator: PatientFormConfig.adresse.validator,
                               ),
@@ -636,17 +654,17 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
                               _buildTextFormField(
                                 controller: profession,
-                                label: 'Profession *',
-                                hint: 'Ex: Etudiant',
+                                label: 'np_profession'.tr(),
+                                hint: 'np_profession_hint'.tr(),
                                 icon: Icons.work,
                                 validator:
                                     PatientFormConfig.profession.validator,
                               ),
                               const SizedBox(height: 16),
 
-                              const Text(
-                                'Statut Matrimonial *',
-                                style: TextStyle(
+                              Text(
+                                'np_marital'.tr(),
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -664,11 +682,11 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                   child: DropdownButton<String>(
                                     value: _statutMatrimonialSelectionne,
                                     isExpanded: true,
-                                    hint: const Padding(
-                                      padding: EdgeInsets.symmetric(
+                                    hint: Padding(
+                                      padding: const EdgeInsets.symmetric(
                                         horizontal: 16,
                                       ),
-                                      child: Text('Sélectionner un statut'),
+                                      child: Text('np_marital_select'.tr()),
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 16,
@@ -678,7 +696,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                         .map(
                                           (s) => DropdownMenuItem(
                                             value: s,
-                                            child: Text(s),
+                                            child: Text(
+                                              (_kMaritalLabels[s] ?? s).tr(),
+                                            ),
                                           ),
                                         )
                                         .toList(),
@@ -694,14 +714,14 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
                           // Section Données médicales
                           _buildSectionCard(
-                            title: 'Données Médicales',
+                            title: 'np_section_medical'.tr(),
                             children: [
                               Row(
                                 children: [
                                   Expanded(
                                     child: _buildTextFormField(
                                       controller: temperature,
-                                      label: 'Température (°C)',
+                                      label: 'np_temperature'.tr(),
                                       hint: '37.2',
                                       icon: Icons.thermostat,
                                       keyboardType:
@@ -717,7 +737,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                   Expanded(
                                     child: _buildTextFormField(
                                       controller: poid,
-                                      label: 'Poids (kg)',
+                                      label: 'np_weight'.tr(),
                                       hint: '70.5',
                                       icon: Icons.scale,
                                       keyboardType:
@@ -732,9 +752,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                               ),
                               const SizedBox(height: 16),
 
-                              const Text(
-                                'Tension Artérielle *',
-                                style: TextStyle(
+                              Text(
+                                'np_blood_pressure'.tr(),
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -745,7 +765,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                   Expanded(
                                     child: _buildTextFormField(
                                       controller: systolique,
-                                      label: 'Systolique',
+                                      label: 'np_systolic'.tr(),
                                       hint: '120',
                                       icon: Icons.monitor_heart_outlined,
                                       keyboardType: TextInputType.number,
@@ -758,7 +778,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                   Expanded(
                                     child: _buildTextFormField(
                                       controller: diastolique,
-                                      label: 'Diastolique',
+                                      label: 'np_diastolic'.tr(),
                                       hint: '80',
                                       icon: Icons.monitor_heart_outlined,
                                       keyboardType: TextInputType.number,
@@ -773,7 +793,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
                               _buildTextFormField(
                                 controller: test_VIH,
-                                label: 'Statut Test VIH *',
+                                label: 'np_test_hiv'.tr(),
                                 icon: Icons.bloodtype,
                                 validator: PatientFormConfig.testVIH.validator,
                               ),
@@ -781,7 +801,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
                               _buildTextFormField(
                                 controller: vaccination,
-                                label: 'Vaccination *',
+                                label: 'np_vaccination'.tr(),
                                 icon: Icons.vaccines,
                                 validator:
                                     PatientFormConfig.vaccination.validator,
@@ -790,7 +810,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
                               _buildTextFormField(
                                 controller: motif_consultation,
-                                label: 'Motif de la Consultation *',
+                                label: 'np_consultation_motive'.tr(),
                                 icon: Icons.medical_information,
                                 keyboardType: TextInputType.multiline,
                                 maxLines: 4,
@@ -803,11 +823,11 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
                           // Section Service
                           _buildSectionCard(
-                            title: 'Service et Attribution',
+                            title: 'np_section_service'.tr(),
                             children: [
-                              const Text(
-                                'Type de Service *',
-                                style: TextStyle(
+                              Text(
+                                'np_service_type'.tr(),
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -825,11 +845,11 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                   child: DropdownButton<String>(
                                     value: _typeServiceSelectionne,
                                     isExpanded: true,
-                                    hint: const Padding(
-                                      padding: EdgeInsets.symmetric(
+                                    hint: Padding(
+                                      padding: const EdgeInsets.symmetric(
                                         horizontal: 16,
                                       ),
-                                      child: Text('Sélectionner un service'),
+                                      child: Text('np_service_select'.tr()),
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 16,
@@ -839,7 +859,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                         .map(
                                           (s) => DropdownMenuItem(
                                             value: s,
-                                            child: Text(s),
+                                            child: Text(
+                                              (_kServiceLabels[s] ?? s).tr(),
+                                            ),
                                           ),
                                         )
                                         .toList(),
@@ -862,9 +884,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
                               if (_typeServiceSelectionne == 'Consultation' ||
                                   _typeServiceSelectionne == 'Rendez-vous') ...[
-                                const Text(
-                                  'Médecin Responsable *',
-                                  style: TextStyle(
+                                Text(
+                                  'np_doctor_responsible'.tr(),
+                                  style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -889,7 +911,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Text(
-                                            'Aucun médecin disponible.',
+                                            'np_doctor_none'.tr(),
                                             style: TextStyle(
                                               fontStyle: FontStyle.italic,
                                               color: Colors.orange.shade700,
@@ -920,14 +942,14 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                               elevation: 4,
                               shadowColor: npSuccessColor.withOpacity(0.4),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.save, size: 22),
-                                SizedBox(width: 12),
+                                const Icon(Icons.save, size: 22),
+                                const SizedBox(width: 12),
                                 Text(
-                                  'Enregistrer le Patient',
-                                  style: TextStyle(
+                                  'np_save_button'.tr(),
+                                  style: const TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -939,8 +961,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                           const SizedBox(height: 24),
                           Center(
                             child: Text(
-                              '© 2025 Yamgai Mokube Franck Daniel',
-                              style: TextStyle(
+                              'acc_footer_copyright'.tr(),
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w500,

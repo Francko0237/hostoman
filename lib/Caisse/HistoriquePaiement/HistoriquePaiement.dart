@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'ServiceHistorique.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -106,15 +107,15 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
   String _getSortLabel() {
     switch (sortOption) {
       case 'name_asc':
-        return 'A → Z';
+        return 'pay_sort_short_az'.tr();
       case 'name_desc':
-        return 'Z → A';
+        return 'pay_sort_short_za'.tr();
       case 'date_desc':
-        return 'Récent';
+        return 'pay_sort_short_recent'.tr();
       case 'date_asc':
-        return 'Ancien';
+        return 'pay_sort_short_old'.tr();
       default:
-        return 'Trier';
+        return 'pay_sort_short_default'.tr();
     }
   }
 
@@ -136,7 +137,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
           children: [
             const SizedBox(width: 12),
             Text(
-              'Historique des Paiements',
+              'hist_title'.tr(),
               style: TextStyle(
                 color: Color(0xFF26AE6C),
                 fontSize: 20,
@@ -159,7 +160,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                 child: Icon(Icons.refresh, color: npSuccessColor),
               ),
               onPressed: chargerConsultations,
-              tooltip: 'Actualiser',
+              tooltip: 'pay_refresh'.tr(),
             ),
           ),
         ],
@@ -175,7 +176,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: Row(
                     children: [
@@ -188,7 +189,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                           ),
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Rechercher un patient par nom...',
+                              hintText: 'pay_search_hint'.tr(),
                               hintStyle: TextStyle(color: Colors.grey.shade500),
                               prefixIcon: Icon(
                                 Icons.search,
@@ -242,7 +243,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                               ],
                             ],
                           ),
-                          tooltip: 'Trier',
+                          tooltip: 'pay_sort_tooltip'.tr(),
                           color: Colors.white,
                           elevation: 8,
                           shape: RoundedRectangleBorder(
@@ -256,28 +257,28 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                             _buildFilterMenuItem(
                               value: 'name_asc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom A → Z',
+                              label: 'pay_sort_name_asc'.tr(),
                               isSelected: sortOption == 'name_asc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'name_desc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom Z → A',
+                              label: 'pay_sort_name_desc'.tr(),
                               isSelected: sortOption == 'name_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_desc',
                               icon: Icons.access_time,
-                              label: 'Plus récent',
+                              label: 'pay_sort_date_desc'.tr(),
                               isSelected: sortOption == 'date_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_asc',
                               icon: Icons.access_time,
-                              label: 'Plus ancien',
+                              label: 'pay_sort_date_asc'.tr(),
                               isSelected: sortOption == 'date_asc',
                             ),
                           ],
@@ -294,7 +295,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: isLoading
                       ? Center(
@@ -312,7 +313,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Chargement...',
+                                  'pay_loading'.tr(),
                                   style: TextStyle(
                                     color: npPrimaryColor,
                                     fontWeight: FontWeight.w500,
@@ -356,7 +357,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                                   ),
                                   const SizedBox(height: 20),
                                   Text(
-                                    'Aucun résultat trouvé',
+                                    'pay_no_result_title'.tr(),
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w600,
@@ -365,7 +366,9 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Aucun patient ne correspond à "$searchQuery"',
+                                    'pay_no_result_msg'.tr(
+                                      namedArgs: {'query': searchQuery},
+                                    ),
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 14,
@@ -387,7 +390,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                                   ),
                                   const SizedBox(height: 20),
                                   Text(
-                                    'Aucun historique',
+                                    'hist_empty_title'.tr(),
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w600,
@@ -396,7 +399,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Les paiements effectués apparaîtront ici',
+                                    'hist_empty_msg'.tr(),
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey[600],
@@ -425,7 +428,8 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                             final patient = Patient.fromMap(patientMap);
 
                             // Récupération du motif et statut depuis le paiement (top level)
-                            String motif = item['motif'] ?? 'Consultation';
+                            String motif =
+                                item['motif'] ?? 'hist_default_motif'.tr();
                             String statutPaiement =
                                 item['statut_paiement'] ?? 'en_attente';
 
@@ -592,7 +596,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    'Payé',
+                                                    'hist_badge_paid'.tr(),
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       fontWeight:
@@ -632,7 +636,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    'Annuler',
+                                                    'hist_badge_cancelled'.tr(),
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       fontWeight:
@@ -657,7 +661,7 @@ class _PaiementHistoriqueState extends State<PaiementHistorique> {
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(color: Colors.black.withOpacity(0.02)),
               child: Text(
-                '© 2025 Yamgai Mokube Franck Daniel',
+                'cdash_footer'.tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,

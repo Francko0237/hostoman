@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'historique_service.dart';
@@ -46,7 +47,10 @@ class _HistoriqueConsultationPageState
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('hclist_error_snack'.tr(namedArgs: {'msg': '$e'})),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -92,11 +96,11 @@ class _HistoriqueConsultationPageState
   String _getSortLabel() {
     switch (_sortOrder) {
       case 'a-z':
-        return 'A → Z';
+        return 'pay_sort_short_az'.tr();
       case 'z-a':
-        return 'Z → A';
+        return 'pay_sort_short_za'.tr();
       default:
-        return 'Récent';
+        return 'pay_sort_short_recent'.tr();
     }
   }
 
@@ -146,9 +150,9 @@ class _HistoriqueConsultationPageState
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Historique',
-          style: TextStyle(
+        title: Text(
+          'hclist_title'.tr(),
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -168,7 +172,7 @@ class _HistoriqueConsultationPageState
                 child: const Icon(Icons.refresh, color: Colors.white),
               ),
               onPressed: _loadConsultations,
-              tooltip: 'Actualiser',
+              tooltip: 'pay_refresh'.tr(),
             ),
           ),
         ],
@@ -184,7 +188,7 @@ class _HistoriqueConsultationPageState
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: Row(
                     children: [
@@ -197,7 +201,7 @@ class _HistoriqueConsultationPageState
                           ),
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Rechercher un patient par nom...',
+                              hintText: 'pay_search_hint'.tr(),
                               hintStyle: TextStyle(color: Colors.grey.shade500),
                               prefixIcon: const Icon(
                                 Icons.search,
@@ -251,7 +255,7 @@ class _HistoriqueConsultationPageState
                               ],
                             ],
                           ),
-                          tooltip: 'Trier',
+                          tooltip: 'pay_sort_tooltip'.tr(),
                           color: Colors.white,
                           elevation: 8,
                           shape: RoundedRectangleBorder(
@@ -265,21 +269,21 @@ class _HistoriqueConsultationPageState
                             _buildFilterMenuItem(
                               value: 'date',
                               icon: Icons.access_time,
-                              label: 'Plus récent',
+                              label: 'pay_sort_date_desc'.tr(),
                               isSelected: _sortOrder == 'date',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'a-z',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom A → Z',
+                              label: 'pay_sort_name_asc'.tr(),
                               isSelected: _sortOrder == 'a-z',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'z-a',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom Z → A',
+                              label: 'pay_sort_name_desc'.tr(),
                               isSelected: _sortOrder == 'z-a',
                             ),
                           ],
@@ -302,10 +306,17 @@ class _HistoriqueConsultationPageState
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 1200 : double.infinity,
+                      maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: Text(
-                      '${_filteredConsultations.length} consultation${_filteredConsultations.length > 1 ? 's' : ''}',
+                      (_filteredConsultations.length > 1
+                              ? 'hclist_count_many'
+                              : 'hclist_count_one')
+                          .tr(
+                            namedArgs: {
+                              'count': '${_filteredConsultations.length}',
+                            },
+                          ),
                       style: const TextStyle(
                         fontSize: 14,
                         color: medPrimaryColor,
@@ -321,7 +332,7 @@ class _HistoriqueConsultationPageState
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: _isLoading
                       ? const Center(
@@ -349,7 +360,7 @@ class _HistoriqueConsultationPageState
 
   Widget _buildPatientCard(Map<String, dynamic> consultation) {
     final patient = consultation['Patient'] as Map<String, dynamic>?;
-    final nom = patient?['nom_complet'] ?? 'N/A';
+    final nom = patient?['nom_complet'] ?? 'pay_value_na'.tr();
     final sexe = patient?['sexe'] ?? '';
     final age = patient?['age']?.toString() ?? '';
     final id = consultation['id_consultation'];
@@ -424,28 +435,28 @@ class _HistoriqueConsultationPageState
                         children: [
                           Icon(
                             sexe == 'Homme' ? Icons.man : Icons.woman,
-                            size: 15,
+                            size: 16,
                             color: Colors.grey[600],
                           ),
                           const SizedBox(width: 4),
                           Text(
                             sexe,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               color: Colors.grey[700],
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 16),
                           Icon(
-                            Icons.calendar_today,
-                            size: 10,
+                            Icons.cake_outlined,
+                            size: 14,
                             color: Colors.grey[600],
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Text(
-                            '$age ans',
+                            'clist_age_value'.tr(namedArgs: {'age': age}),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               color: Colors.grey[700],
                             ),
                           ),
@@ -536,9 +547,9 @@ class _HistoriqueConsultationPageState
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Aucun historique trouvé',
-              style: TextStyle(
+            Text(
+              'hclist_empty_title'.tr(),
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: medPrimaryColor,
@@ -546,7 +557,7 @@ class _HistoriqueConsultationPageState
             ),
             const SizedBox(height: 8),
             Text(
-              'Aucune consultation terminée pour le moment',
+              'hclist_empty_msg'.tr(),
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
@@ -557,7 +568,7 @@ class _HistoriqueConsultationPageState
   }
 
   String _formatDate(String? d) {
-    if (d == null) return 'N/A';
+    if (d == null) return 'pay_value_na'.tr();
     final date = DateTime.parse(d);
     return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
   }

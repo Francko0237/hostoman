@@ -2,8 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// Assurez-vous que l'import de votre service est correct
+import 'package:easy_localization/easy_localization.dart';
 import 'Nbr_patient_service.dart';
+import 'package:hostoman/shared/responsive_wrapper.dart';
 
 const Color npPrimaryColor = Color(0xFF1565C0);
 const Color npAccentColor = Color(0xFF2196F3);
@@ -60,6 +61,13 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
 
   @override
   Widget build(BuildContext context) {
+    return ResponsiveLayout(
+      mobile: _buildMobileLayout(context),
+      pc: _buildPcLayout(context),
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isTablet = size.width > 600;
     final isDesktop = size.width > 900;
@@ -92,7 +100,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
           ),
         ),
         title: Text(
-          'Hopital de District de Manjo',
+          'auth_hospital_name'.tr(),
           style: TextStyle(
             color: npPrimaryColor,
             fontSize: isDesktop ? 20 : 20,
@@ -118,16 +126,18 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
               onSelected: (value) async {
                 if (value == 'profile') {
                   context.push('/Dashboard_Accueil/profil');
+                } else if (value == 'parametre') {
+                  context.push('/Dashboard_Accueil/parametre');
                 } else if (value == 'deconnexion') {
                   print('déconnexion sélectionnée');
 
                   try {
                     await Supabase.instance.client.auth.signOut();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Déconnexion réussie !'),
+                      SnackBar(
+                        content: Text('acc_logout_success'.tr()),
                         backgroundColor: npSuccessColor,
-                        duration: Duration(seconds: 3),
+                        duration: const Duration(seconds: 3),
                       ),
                     );
                     if (context.mounted) {
@@ -137,7 +147,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                     print('❌ Erreur de déconnexion : $e');
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text('Erreur lors de la déconnexion'),
+                        content: Text('acc_logout_error'.tr()),
                         backgroundColor: Colors.red.shade700,
                       ),
                     );
@@ -148,14 +158,21 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                 _buildPopupMenuItem(
                   value: 'profile',
                   icon: Icons.person_outline,
-                  label: 'Profile',
+                  label: 'acc_profile_menu'.tr(),
+                  color: npPrimaryColor,
+                ),
+
+                _buildPopupMenuItem(
+                  value: 'parametre',
+                  icon: Icons.settings_outlined,
+                  label: 'acc_settings_menu'.tr(),
                   color: npPrimaryColor,
                 ),
 
                 _buildPopupMenuItem(
                   value: 'deconnexion',
                   icon: Icons.logout_outlined,
-                  label: 'Déconnexion',
+                  label: 'acc_logout_menu'.tr(),
                   color: Colors.red[700]!,
                 ),
               ],
@@ -178,7 +195,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 1200 : double.infinity,
+                      maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
@@ -190,7 +207,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // En-tête "Actions Rapides"
-                          _buildSectionHeader('Dashboard Accueil'),
+                          _buildSectionHeader('acc_dashboard_title'.tr()),
                           SizedBox(height: isDesktop ? 70 : 80),
 
                           // Grille des actions
@@ -201,7 +218,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                                       child: _buildActionButton(
                                         context,
                                         icon: Icons.person_add_outlined,
-                                        label: 'Nouveau Patient',
+                                        label: 'acc_new_patient'.tr(),
                                         action:
                                             '/Dashboard_Accueil/nouveau-patient',
                                         color: npSuccessColor,
@@ -213,7 +230,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                                       child: _buildActionButton(
                                         context,
                                         icon: Icons.history_outlined,
-                                        label: 'Liste & Historique',
+                                        label: 'acc_patients_list'.tr(),
                                         action:
                                             '/Dashboard_Accueil/liste-patient',
                                         color: npAccentColor,
@@ -225,7 +242,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                                       child: _buildActionButton(
                                         context,
                                         icon: Icons.bar_chart_outlined,
-                                        label: 'Statistiques',
+                                        label: 'acc_statistics'.tr(),
                                         action:
                                             '/Dashboard_Accueil/statistique',
                                         color: npPurpleColor,
@@ -244,7 +261,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                                           child: _buildActionButton(
                                             context,
                                             icon: Icons.person_add_outlined,
-                                            label: 'Nouveau Patient',
+                                            label: 'acc_new_patient'.tr(),
                                             action:
                                                 '/Dashboard_Accueil/nouveau-patient',
                                             color: npSuccessColor,
@@ -256,7 +273,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                                           child: _buildActionButton(
                                             context,
                                             icon: Icons.history_outlined,
-                                            label: 'Liste & Historique',
+                                            label: 'acc_patients_list'.tr(),
                                             action:
                                                 '/Dashboard_Accueil/liste-patient',
                                             color: npAccentColor,
@@ -270,7 +287,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                                     _buildActionButton(
                                       context,
                                       icon: Icons.bar_chart_outlined,
-                                      label: 'Statistiques',
+                                      label: 'acc_statistics'.tr(),
                                       action: '/Dashboard_Accueil/statistique',
                                       color: npPurpleColor,
                                       onTap: _handleTap,
@@ -298,9 +315,9 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                   color: Colors.black.withOpacity(0.03),
                 ),
                 child: Text(
-                  '© 2025 Yamgai Mokube Franck Daniel',
+                  'acc_footer_copyright'.tr(),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.white,
                     fontWeight: FontWeight.w500,
@@ -313,7 +330,506 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
         ),
       ),
     );
+  } // end _buildMobileLayout
+
+  // ========== LAYOUT PC ==========
+  Widget _buildPcLayout(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0F4F8),
+      body: Row(
+        children: [
+          // ── SIDEBAR ──
+          _buildPcSidebar(context),
+          // ── CONTENU ──
+          Expanded(child: _buildPcContent(context)),
+        ],
+      ),
+    );
   }
+
+  Widget _buildPcSidebar(BuildContext context) {
+    return Container(
+      width: 240,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF0D47A1), Color(0xFF1565C0)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 16,
+            offset: Offset(4, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Logo + Titre
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'acc_module_label'.tr(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  'auth_hospital_name'.tr(),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.65),
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Navigation
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                _pcNavItem(
+                  context,
+                  Icons.dashboard,
+                  'acc_nav_dashboard'.tr(),
+                  null,
+                  active: true,
+                ),
+                _pcNavItem(
+                  context,
+                  Icons.person_add,
+                  'acc_new_patient'.tr(),
+                  '/Dashboard_Accueil/nouveau-patient',
+                ),
+                _pcNavItem(
+                  context,
+                  Icons.people,
+                  'acc_nav_patients_list'.tr(),
+                  '/Dashboard_Accueil/liste-patient',
+                ),
+                _pcNavItem(
+                  context,
+                  Icons.bar_chart,
+                  'acc_statistics'.tr(),
+                  '/Dashboard_Accueil/statistique',
+                ),
+                const SizedBox(height: 16),
+                Divider(color: Colors.white.withValues(alpha: 0.15)),
+                _pcNavItem(
+                  context,
+                  Icons.person_outline,
+                  'acc_nav_profil'.tr(),
+                  '/Dashboard_Accueil/profil',
+                ),
+              ],
+            ),
+          ),
+          // Déconnexion
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await Supabase.instance.client.auth.signOut();
+                if (context.mounted) context.go('/Authen_Personnel');
+              },
+              icon: const Icon(Icons.logout, color: Colors.white70, size: 18),
+              label: Text(
+                'acc_logout_menu'.tr(),
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pcNavItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String? route, {
+    bool active = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: active
+            ? Colors.white.withValues(alpha: 0.18)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: active
+            ? Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1)
+            : null,
+      ),
+      child: ListTile(
+        dense: true,
+        leading: Icon(
+          icon,
+          color: active ? Colors.white : Colors.white.withValues(alpha: 0.65),
+          size: 20,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: active ? Colors.white : Colors.white.withValues(alpha: 0.75),
+            fontSize: 13.5,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+          ),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        onTap: route != null ? () => context.push(route) : null,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      ),
+    );
+  }
+
+  Widget _buildPcContent(BuildContext context) {
+    return Column(
+      children: [
+        // TopBar
+        Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x10000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.home_outlined,
+                size: 16,
+                color: Color(0xFF9E9E9E),
+              ),
+              const SizedBox(width: 6),
+              const Text('/', style: TextStyle(color: Color(0xFF9E9E9E))),
+              const SizedBox(width: 6),
+              Text(
+                'acc_dashboard_title'.tr(),
+                style: const TextStyle(
+                  color: npPrimaryColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: npPrimaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'auth_hospital_name'.tr(),
+                      style: const TextStyle(
+                        color: npPrimaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Corps
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Titre section
+                Text(
+                  'acc_dashboard_topbar'.tr(),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'acc_dashboard_welcome'.tr(),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 28),
+
+                // Carte patients du jour (grande)
+                _buildPcStatsCard(),
+                const SizedBox(height: 28),
+
+                // Grille actions
+                Text(
+                  'acc_actions_rapides'.tr(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildPcActionCard(
+                        context,
+                        icon: Icons.person_add_outlined,
+                        label: 'acc_new_patient'.tr(),
+                        subtitle: 'acc_new_patient_sub'.tr(),
+                        color: npSuccessColor,
+                        route: '/Dashboard_Accueil/nouveau-patient',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildPcActionCard(
+                        context,
+                        icon: Icons.people_outline,
+                        label: 'acc_patients_list'.tr(),
+                        subtitle: 'acc_patients_list_sub'.tr(),
+                        color: npAccentColor,
+                        route: '/Dashboard_Accueil/liste-patient',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildPcActionCard(
+                        context,
+                        icon: Icons.bar_chart_outlined,
+                        label: 'acc_statistics'.tr(),
+                        subtitle: 'acc_statistics_sub'.tr(),
+                        color: npPurpleColor,
+                        route: '/Dashboard_Accueil/statistique',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPcStatsCard() {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [npPrimaryColor, npAccentColor],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: npPrimaryColor.withValues(alpha: 0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.people_alt, color: Colors.white, size: 40),
+          ),
+          const SizedBox(width: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                loadingStats ? '...' : '$patientsDuJour',
+                style: const TextStyle(
+                  fontSize: 52,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'acc_today_patients_short'.tr(),
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.today, color: Colors.white70, size: 20),
+                const SizedBox(height: 4),
+                Text(
+                  _todayDate(),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _todayDate() {
+    final now = DateTime.now();
+    // Format localisé selon la langue active (FR ou EN)
+    final locale = context.locale.toString();
+    return DateFormat('d MMM yyyy', locale).format(now);
+  }
+
+  Widget _buildPcActionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required Color color,
+    required String route,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push(route),
+        child: Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Text(
+                    'acc_open_action'.tr(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward, size: 14, color: color),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ===== FIN LAYOUT PC =====
 
   // Fonctions de construction existantes (PopupMenu, Header, ActionButton) ...
   PopupMenuEntry<String> _buildPopupMenuItem({
@@ -461,8 +977,8 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
             CircularProgressIndicator(color: npPrimaryColor),
             const SizedBox(width: 16),
             Text(
-              'Chargement des statistiques...',
-              style: TextStyle(
+              'acc_stats_loading'.tr(),
+              style: const TextStyle(
                 color: npPrimaryColor,
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
@@ -540,7 +1056,7 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Patients Aujourd\'hui',
+                      'acc_today_patients_caps'.tr(),
                       style: TextStyle(
                         fontSize: isDesktop ? 20 : 18,
                         fontWeight: FontWeight.w600,

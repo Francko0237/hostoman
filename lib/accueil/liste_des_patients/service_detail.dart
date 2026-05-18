@@ -13,10 +13,8 @@ class DetailPatientService {
         .eq('id_patient', idPatient)
         .single();
 
-    if (response is Map<String, dynamic>) {
-      return Patient.fromMap(response);
-    }
-    return null;
+    return Patient.fromMap(response);
+      return null;
   }
 
   /// 📊 Récupère les paramètres vitaux du patient

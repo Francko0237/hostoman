@@ -214,7 +214,7 @@ class _ResultatsListeState extends State<ResultatsListe> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: Row(
                     children: [
@@ -339,7 +339,7 @@ class _ResultatsListeState extends State<ResultatsListe> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 1200 : double.infinity,
+                      maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: Text(
                       '${filteredPatients.length} patient${filteredPatients.length > 1 ? 's' : ''} en attente de résultat',
@@ -358,7 +358,7 @@ class _ResultatsListeState extends State<ResultatsListe> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1200 : double.infinity,
+                    maxWidth: isDesktop ? 900 : double.infinity,
                   ),
                   child: isLoading
                       ? Center(

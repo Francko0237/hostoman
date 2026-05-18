@@ -16,7 +16,8 @@ class PaiementService {
             date_derniere_mise_ajour,
             date_enregistrement,
             Patient(*),
-            paiement!inner(*)
+            paiement!inner(*),
+            examen_a_effectuer(nom_examen, prix_examen, statut_examen)
           ''')
           .eq('paiement.statut_paiement', 'en_attente');
 

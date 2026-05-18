@@ -134,9 +134,7 @@ class DashboardLaboService {
             )
           ''')
           .eq('Statut_Consultation', 'en-attente-resultat')
-          .eq('examen_a_effectuer.statut_examen', 'En cours')
-          .gte('date_enregistrement', debutJour.toIso8601String())
-          .lte('date_enregistrement', finJour.toIso8601String());
+          .eq('examen_a_effectuer.statut_examen', 'En cours');
 
       print(
         '📋 Patients en attente résultat (filtrés): ${(data as List).length} consultations',

@@ -132,9 +132,27 @@ class StatistiqueLaboService {
         if (examens is List) {
           for (var examen in examens) {
             if (examen is Map<String, dynamic>) {
-              // Filtrer par statut si spécifié
-              if (statutFiltre == null ||
-                  examen['statut_examen'] == statutFiltre) {
+              // Vérifier si l'examen est dans la bonne plage de dates (car la requête ramène tous les examens de la consultation)
+              final dateExamenStr = examen['date_enregistrement'];
+              if (dateExamenStr == null) continue;
+              final dateExamen = DateTime.tryParse(dateExamenStr);
+              if (dateExamen == null) continue;
+              
+              if (dateExamen.isBefore(debutTimestamp) || dateExamen.isAfter(finTimestamp)) {
+                continue;
+              }
+
+              // Filtrer par statut
+              final statut = examen['statut_examen'];
+              bool matchStatut = false;
+              if (statutFiltre != null) {
+                matchStatut = (statut == statutFiltre);
+              } else {
+                // Par défaut, on ne compte que les Terminés et Annulés dans cette vue statistique
+                matchStatut = (statut == 'Terminé' || statut == 'Annulé');
+              }
+
+              if (matchStatut) {
                 consultationsMap[idConsultation]!['examens'].add(examen);
               }
             }

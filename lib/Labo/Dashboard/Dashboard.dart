@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dashboard_service.dart';
-import '../resultats_des_examens/resultat_des_examens.dart'; // Pour PatientResultatData
+import '../resultats_des_examens/resultat_des_examens.dart';
+import 'package:hostoman/shared/responsive_wrapper.dart';
 
 // ============================================================================
 // CONSTANTES
@@ -103,6 +104,13 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
 
   @override
   Widget build(BuildContext context) {
+    return ResponsiveLayout(
+      mobile: _buildMobileScaffold(context),
+      pc: _buildPcLayout(context),
+    );
+  }
+
+  Widget _buildMobileScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: LabTheme.primaryColor,
       appBar: _CustomAppBar(onMenuSelected: _handleMenuSelection),
@@ -112,43 +120,537 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
               child: CircularProgressIndicator(color: LabTheme.primaryColor),
             )
           : errorMessage != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red, fontSize: 16),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: chargerDonnees,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Réessayer'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: LabTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
+          ? _buildError()
           : _buildBody(),
     );
   }
+
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 60, color: Colors.red),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red, fontSize: 16),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: chargerDonnees,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Réessayer'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: LabTheme.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== LAYOUT PC LABO =====
+  Widget _buildPcLayout(BuildContext context) {
+    const darkNavy = Color(0xFF1A1A2E);
+    const labColor = Color(0xFF212031);
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F2F7),
+      body: Row(
+        children: [
+          // Sidebar
+          Container(
+            width: 240,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF0F0E1A), darkNavy],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x60000000),
+                  blurRadius: 16,
+                  offset: Offset(4, 0),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Laboratoire',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'Hôpital de District de Manjo',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(width: 40, height: 2, color: Colors.white24),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: [
+                      _labPcNavItem(
+                        context,
+                        Icons.dashboard,
+                        'Dashboard',
+                        null,
+                        active: true,
+                      ),
+                      _labPcNavItem(
+                        context,
+                        Icons.science_outlined,
+                        'Examens à faire',
+                        '/Dashboard_Laboratoire/ExamensAFaire',
+                      ),
+                      _labPcNavItem(
+                        context,
+                        Icons.check_circle_outline,
+                        'Résultats',
+                        '/Dashboard_Laboratoire/Resultats',
+                      ),
+                      _labPcNavItem(
+                        context,
+                        Icons.bar_chart,
+                        'Statistiques',
+                        '/Dashboard_Laboratoire/Statistiques',
+                      ),
+                      _labPcNavItem(
+                        context,
+                        Icons.history,
+                        'Historique',
+                        '/Dashboard_Laboratoire/Historique',
+                      ),
+                      Divider(color: Colors.white.withValues(alpha: 0.1)),
+                      _labPcNavItem(
+                        context,
+                        Icons.person_outline,
+                        'Profil',
+                        '/Dashboard_Laboratoire/Profil',
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await Supabase.instance.client.auth.signOut();
+                      if (context.mounted) context.go('/Authen_Personnel');
+                    },
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Colors.white54,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'Déconnexion',
+                      style: TextStyle(color: Colors.white54, fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Content
+          Expanded(
+            child: Column(
+              children: [
+                // TopBar
+                Container(
+                  height: 60,
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x10000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.home_outlined,
+                        size: 16,
+                        color: Color(0xFF9E9E9E),
+                      ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        '/',
+                        style: TextStyle(color: Color(0xFF9E9E9E)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Dashboard Laboratoire',
+                        style: TextStyle(
+                          color: labColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: labColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.local_hospital,
+                              size: 14,
+                              color: labColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Hôpital de District de Manjo',
+                              style: TextStyle(
+                                color: labColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Body
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tableau de bord',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Module Laboratoire',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // KPIs
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _labKpiCard(
+                                'En attente (Examen)',
+                                '$patientsEnAttenteExamen',
+                                Icons.science_outlined,
+                                Colors.orange.shade700,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _labKpiCard(
+                                'En attente (Résultat)',
+                                '$patientsEnAttenteResultat',
+                                Icons.hourglass_empty,
+                                labColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        const Text(
+                          'Actions rapides',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _labPcActionCard(
+                                context,
+                                icon: Icons.science_outlined,
+                                label: 'Examens à faire',
+                                subtitle: 'Traiter les examens',
+                                color: labColor,
+                                route: '/Dashboard_Laboratoire/ExamensAFaire',
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _labPcActionCard(
+                                context,
+                                icon: Icons.check_circle_outline,
+                                label: 'Résultats',
+                                subtitle: 'Saisir les résultats',
+                                color: LabTheme.successColor,
+                                route: '/Dashboard_Laboratoire/Resultats',
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _labPcActionCard(
+                                context,
+                                icon: Icons.bar_chart,
+                                label: 'Statistiques',
+                                subtitle: 'Rapports journaliers',
+                                color: Colors.blue,
+                                route: '/Dashboard_Laboratoire/Statistiques',
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (patientsEnCours.isNotEmpty) ...[
+                          const SizedBox(height: 28),
+                          Text(
+                            '🔬 Examens en cours',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: labColor,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...patientsEnCours.map((patient) {
+                            final patientMap =
+                                patient['Patient'] as Map<String, dynamic>;
+                            final nom = patientMap['nom_complet'] ?? 'Inconnu';
+                            final examens = patient['examens_details'] ?? '';
+                            return _ExamenListItem(
+                              patientName: nom,
+                              examDetails: examens,
+                              onFinalize: () => _handleFinalizeExamen(patient),
+                            );
+                          }),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _labPcNavItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String? route, {
+    bool active = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: active
+            ? Colors.white.withValues(alpha: 0.1)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: active
+            ? Border.all(color: Colors.white.withValues(alpha: 0.2))
+            : null,
+      ),
+      child: ListTile(
+        dense: true,
+        leading: Icon(
+          icon,
+          color: active ? Colors.white : Colors.white54,
+          size: 20,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: active ? Colors.white : Colors.white60,
+            fontSize: 13.5,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+          ),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        onTap: route != null ? () => context.push(route) : null,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      ),
+    );
+  }
+
+  Widget _labKpiCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 26),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _labPcActionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required Color color,
+    required String route,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push(route),
+        child: Container(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Text(
+                    'Accéder',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward, size: 14, color: color),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  // ===== FIN PC LABO =====
 
   // Construction du corps
   Widget _buildBody() {

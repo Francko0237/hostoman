@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dashboard_service.dart';
+import 'package:hostoman/shared/responsive_wrapper.dart';
 
 // Couleurs
 const Color medPrimaryColor = Color(0xFF5A47C9);
@@ -62,9 +64,15 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
 
   @override
   Widget build(BuildContext context) {
+    return ResponsiveLayout(
+      mobile: _buildMobileLayout(context),
+      pc: _buildPcLayout(context),
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width > 900;
-    final isTablet = size.width > 600;
 
     return Scaffold(
       appBar: AppBar(
@@ -96,7 +104,7 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
           ),
         ),
         title: Text(
-          'Hopital de District de Manjo',
+          'auth_hospital_name'.tr(),
           style: TextStyle(
             color: Colors.white,
             fontSize: isDesktop ? 20 : 18,
@@ -122,15 +130,17 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
               onSelected: (value) async {
                 if (value == 'profile') {
                   context.push('/Dashboard_Medecin/Profil');
+                } else if (value == 'parametre') {
+                  context.push('/Dashboard_Medecin/parametremedecin');
                 } else if (value == 'deconnexion') {
                   print('déconnexion sélectionnée');
                   try {
                     await Supabase.instance.client.auth.signOut();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Déconnexion réussie !'),
+                      SnackBar(
+                        content: Text('mdash_logout_success'.tr()),
                         backgroundColor: successColor,
-                        duration: Duration(seconds: 3),
+                        duration: const Duration(seconds: 3),
                       ),
                     );
                     if (context.mounted) {
@@ -140,7 +150,7 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                     print('❌ Erreur de déconnexion : $e');
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text('Erreur lors de la déconnexion'),
+                        content: Text('mdash_logout_error'.tr()),
                         backgroundColor: Colors.red.shade700,
                       ),
                     );
@@ -151,14 +161,21 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                 _buildPopupMenuItem(
                   value: 'profile',
                   icon: Icons.person_outline,
-                  label: 'Profile',
+                  label: 'mdash_menu_profile'.tr(),
+                  color: medPrimaryColor,
+                ),
+
+                _buildPopupMenuItem(
+                  value: 'parametre',
+                  icon: Icons.settings_outlined,
+                  label: 'acc_settings_menu'.tr(),
                   color: medPrimaryColor,
                 ),
 
                 _buildPopupMenuItem(
                   value: 'deconnexion',
                   icon: Icons.logout_outlined,
-                  label: 'Déconnexion',
+                  label: 'mdash_menu_logout'.tr(),
                   color: Colors.red[700]!,
                 ),
               ],
@@ -200,21 +217,21 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                         Expanded(
                           child: _buildStatCard(
                             count: consultationsJour,
-                            label: 'Consultation',
+                            label: 'mdash_stat_consultations_short'.tr(),
                             color: successColor,
                           ),
                         ),
                         Expanded(
                           child: _buildStatCard(
                             count: enAttente,
-                            label: 'En Attente',
+                            label: 'mdash_stat_pending_short'.tr(),
                             color: attentionColor,
                           ),
                         ),
                         Expanded(
                           child: _buildStatCard(
                             count: terminer,
-                            label: 'Terminer',
+                            label: 'mdash_stat_done_short'.tr(),
                             color: warningColor,
                           ),
                         ),
@@ -235,9 +252,9 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                         color: medPrimaryColor.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Text(
-                        'Dashboard Médecin',
-                        style: TextStyle(
+                      child: Text(
+                        'mdash_title'.tr(),
+                        style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -259,7 +276,7 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                               child: _buildActionCard(
                                 context: context,
                                 icon: Icons.person_add,
-                                label: 'Consultations',
+                                label: 'mdash_action_consultations'.tr(),
                                 action: 'ConsultationList',
                                 color: Colors.blue,
                                 onTap: _handleTap,
@@ -270,7 +287,7 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                               child: _buildActionCard(
                                 context: context,
                                 icon: Icons.history,
-                                label: 'Historique',
+                                label: 'mdash_action_history'.tr(),
                                 action: 'HistoriqueConsultations',
                                 color: Colors.green,
                                 onTap: _handleTap,
@@ -285,7 +302,7 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                               child: _buildActionCard(
                                 context: context,
                                 icon: Icons.timer,
-                                label: 'En-Attente',
+                                label: 'mdash_action_pending'.tr(),
                                 action: 'EnattenteExam',
                                 color: Colors.redAccent,
                                 onTap: _handleTap,
@@ -296,7 +313,7 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                               child: _buildActionCard(
                                 context: context,
                                 icon: Icons.calendar_month,
-                                label: 'Statistiques',
+                                label: 'mdash_action_stats'.tr(),
                                 action: 'Statistiques',
                                 color: Colors.teal,
                                 onTap: _handleTap,
@@ -319,11 +336,11 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                   const SizedBox(height: 58),
 
                   // Footer
-                  const Center(
+                  Center(
                     child: Padding(
-                      padding: EdgeInsets.only(bottom: 8.0),
+                      padding: const EdgeInsets.only(bottom: 8.0),
                       child: Text(
-                        '© 2025 Yamgai Mokube Franck Daniel',
+                        'mdash_footer'.tr(),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,
@@ -340,7 +357,501 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
         ],
       ),
     );
+  } // end _buildMobileLayout
+
+  // ===== LAYOUT PC =====
+  Widget _buildPcLayout(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F4FC),
+      body: Row(
+        children: [
+          _buildMedPcSidebar(context),
+          Expanded(child: _buildMedPcContent(context)),
+        ],
+      ),
+    );
   }
+
+  Widget _buildMedPcSidebar(BuildContext context) {
+    return Container(
+      width: 240,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF311B92), Color(0xFF5A47C9)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 16,
+            offset: Offset(4, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'mdash_title_short'.tr(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  'auth_hospital_name'.tr(),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.65),
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                _medPcNavItem(
+                  context,
+                  Icons.dashboard,
+                  'mdash_nav_dashboard'.tr(),
+                  null,
+                  active: true,
+                ),
+                _medPcNavItem(
+                  context,
+                  Icons.person_add,
+                  'mdash_action_consultations'.tr(),
+                  '/Dashboard_Medecin/ConsultationList',
+                ),
+                _medPcNavItem(
+                  context,
+                  Icons.history,
+                  'mdash_action_history'.tr(),
+                  '/Dashboard_Medecin/HistoriqueConsultations',
+                ),
+                _medPcNavItem(
+                  context,
+                  Icons.timer,
+                  'mdash_action_pending_full'.tr(),
+                  '/Dashboard_Medecin/EnattenteExam',
+                ),
+                _medPcNavItem(
+                  context,
+                  Icons.calendar_today,
+                  'mdash_action_rdv'.tr(),
+                  '/Dashboard_Medecin/rendez-vous',
+                ),
+                _medPcNavItem(
+                  context,
+                  Icons.bar_chart,
+                  'mdash_action_stats'.tr(),
+                  '/Dashboard_Medecin/Statistiques',
+                ),
+                Divider(color: Colors.white.withValues(alpha: 0.15)),
+                _medPcNavItem(
+                  context,
+                  Icons.person_outline,
+                  'mdash_nav_profile'.tr(),
+                  '/Dashboard_Medecin/Profil',
+                ),
+                _medPcNavItem(
+                  context,
+                  Icons.settings_outlined,
+                  'acc_settings_menu'.tr(),
+                  '/Dashboard_Medecin/parametremedecin',
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await Supabase.instance.client.auth.signOut();
+                if (context.mounted) context.go('/Authen_Personnel');
+              },
+              icon: const Icon(Icons.logout, color: Colors.white70, size: 18),
+              label: Text(
+                'mdash_menu_logout'.tr(),
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _medPcNavItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String? route, {
+    bool active = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: active
+            ? Colors.white.withValues(alpha: 0.18)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: active
+            ? Border.all(color: Colors.white.withValues(alpha: 0.3))
+            : null,
+      ),
+      child: ListTile(
+        dense: true,
+        leading: Icon(
+          icon,
+          color: active ? Colors.white : Colors.white.withValues(alpha: 0.65),
+          size: 20,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: active ? Colors.white : Colors.white.withValues(alpha: 0.75),
+            fontSize: 13.5,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+          ),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        onTap: route != null ? () => context.push(route) : null,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      ),
+    );
+  }
+
+  Widget _buildMedPcContent(BuildContext context) {
+    const purple = Color(0xFF5A47C9);
+    return Column(
+      children: [
+        Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x10000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.home_outlined,
+                size: 16,
+                color: Color(0xFF9E9E9E),
+              ),
+              const SizedBox(width: 6),
+              const Text('/', style: TextStyle(color: Color(0xFF9E9E9E))),
+              const SizedBox(width: 6),
+              Text(
+                'mdash_breadcrumb'.tr(),
+                style: const TextStyle(
+                  color: purple,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: purple.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_hospital, size: 14, color: purple),
+                    const SizedBox(width: 6),
+                    Text(
+                      'auth_hospital_name'.tr(),
+                      style: const TextStyle(
+                        color: purple,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'mdash_section_dashboard'.tr(),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'mdash_section_subtitle'.tr(),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 24),
+                // Stats KPI
+                Row(
+                  children: [
+                    Expanded(
+                      child: _medKpiCard(
+                        'mdash_stat_consultations_short'.tr(),
+                        '$consultationsJour',
+                        Icons.assignment,
+                        Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _medKpiCard(
+                        'mdash_action_pending_full'.tr(),
+                        '$enAttente',
+                        Icons.timer,
+                        Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _medKpiCard(
+                        'mdash_stat_done_full'.tr(),
+                        '$terminer',
+                        Icons.check_circle,
+                        Colors.amber,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'mdash_quick_actions'.tr(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _medPcActionCard(
+                        context,
+                        icon: Icons.person_add,
+                        label: 'mdash_action_consultations'.tr(),
+                        subtitle: 'mdash_action_consultations_sub'.tr(),
+                        color: Colors.blue,
+                        route: '/Dashboard_Medecin/ConsultationList',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _medPcActionCard(
+                        context,
+                        icon: Icons.history,
+                        label: 'mdash_action_history'.tr(),
+                        subtitle: 'mdash_action_history_sub'.tr(),
+                        color: Colors.green,
+                        route: '/Dashboard_Medecin/HistoriqueConsultations',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _medPcActionCard(
+                        context,
+                        icon: Icons.calendar_today,
+                        label: 'mdash_action_rdv'.tr(),
+                        subtitle: 'mdash_action_rdv_sub'.tr(),
+                        color: purple,
+                        route: '/Dashboard_Medecin/rendez-vous',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _medPcActionCard(
+                        context,
+                        icon: Icons.bar_chart,
+                        label: 'mdash_action_stats'.tr(),
+                        subtitle: 'mdash_action_stats_sub'.tr(),
+                        color: Colors.teal,
+                        route: '/Dashboard_Medecin/Statistiques',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _medKpiCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _medPcActionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required Color color,
+    required String route,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push(route),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 26),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Text(
+                    'mdash_open'.tr(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward, size: 12, color: color),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  // ===== FIN PC =====
 
   // pour les bouton du haut ou on se deconnect et on a les parametre et profil
 
@@ -374,7 +885,7 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
     required String label,
     required Color color,
   }) {
-    final bool isPending = label == 'En Attente';
+    final bool isPending = label == 'mdash_stat_pending_short'.tr();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8.0),
       padding: const EdgeInsets.all(12),
@@ -403,12 +914,17 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -490,21 +1006,24 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         elevation: 5,
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.calendar_today, size: 30),
-          SizedBox(width: 20),
+          const Icon(Icons.calendar_today, size: 30),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Gestion des Rendez-vous',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  'mdash_main_btn_title'.tr(),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
-                  'Programmer et gérer les rendez-vous Futurs',
-                  style: TextStyle(fontSize: 14),
+                  'mdash_main_btn_subtitle'.tr(),
+                  style: const TextStyle(fontSize: 14),
                 ),
               ],
             ),

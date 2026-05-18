@@ -1,3 +1,5 @@
+import 'package:easy_localization/easy_localization.dart';
+
 /// Classe de configuration pour les validateurs de champs
 class FieldValidator {
   final String? Function(String?) validator;
@@ -12,7 +14,7 @@ class Validators {
   static String? Function(String?) required({String? customMessage}) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return customMessage ?? 'Requis';
+        return customMessage ?? 'val_required'.tr();
       }
       return null;
     };
@@ -22,10 +24,10 @@ class Validators {
   static String? Function(String?) nomComplet({int minLength = 3}) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Veuillez entrer le nom complet.';
+        return 'val_full_name_required'.tr();
       }
       if (value.trim().length < minLength) {
-        return 'Le nom doit faire au moins $minLength caractères.';
+        return 'val_min_length_name'.tr(namedArgs: {'n': '$minLength'});
       }
       return null;
     };
@@ -35,14 +37,14 @@ class Validators {
   static String? Function(String?) age({int min = 1, int max = 120}) {
     return (String? value) {
       if (value == null || value.isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
       final n = int.tryParse(value);
       if (n == null) {
-        return 'Invalide';
+        return 'val_invalid'.tr();
       }
       if (n < min || n > max) {
-        return '$min-$max ans';
+        return 'val_age_range'.tr(namedArgs: {'min': '$min', 'max': '$max'});
       }
       return null;
     };
@@ -55,18 +57,18 @@ class Validators {
   }) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
       final cleanValue = value.trim().replaceAll(RegExp(r'[^\d.,]'), '');
       if (cleanValue.isEmpty) {
-        return 'Chiffres uniquement';
+        return 'val_digits_only'.tr();
       }
       final temp = double.tryParse(cleanValue.replaceAll(',', '.'));
       if (temp == null) {
-        return 'Invalide';
+        return 'val_invalid'.tr();
       }
       if (temp < min || temp > max) {
-        return '$min-$max°C';
+        return 'val_temp_range'.tr(namedArgs: {'min': '$min', 'max': '$max'});
       }
       return null;
     };
@@ -79,14 +81,14 @@ class Validators {
   }) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
       final poidsVal = double.tryParse(value.replaceAll(',', '.'));
       if (poidsVal == null) {
-        return 'Invalide';
+        return 'val_invalid'.tr();
       }
       if (poidsVal < min || poidsVal > max) {
-        return '$min-${max}kg';
+        return 'val_weight_range'.tr(namedArgs: {'min': '$min', 'max': '$max'});
       }
       return null;
     };
@@ -99,14 +101,14 @@ class Validators {
   }) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
       final val = int.tryParse(value);
       if (val == null) {
-        return 'Nombre';
+        return 'val_number'.tr();
       }
       if (val < min || val > max) {
-        return '$min-$max';
+        return 'val_range'.tr(namedArgs: {'min': '$min', 'max': '$max'});
       }
       return null;
     };
@@ -119,14 +121,14 @@ class Validators {
   }) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
       final val = int.tryParse(value);
       if (val == null) {
-        return 'Nombre';
+        return 'val_number'.tr();
       }
       if (val < min || val > max) {
-        return '$min-$max';
+        return 'val_range'.tr(namedArgs: {'min': '$min', 'max': '$max'});
       }
       return null;
     };
@@ -140,14 +142,15 @@ class Validators {
   }) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
       final val = int.tryParse(value);
       if (val == null) {
-        return 'Nombre invalide';
+        return 'val_invalid_number'.tr();
       }
       if (val < min || val > max) {
-        return customMessage ?? '$min-$max';
+        return customMessage ??
+            'val_range'.tr(namedArgs: {'min': '$min', 'max': '$max'});
       }
       return null;
     };
@@ -162,14 +165,15 @@ class Validators {
   }) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
       final val = double.tryParse(value.replaceAll(',', '.'));
       if (val == null) {
-        return 'Nombre invalide';
+        return 'val_invalid_number'.tr();
       }
       if (val < min || val > max) {
-        return customMessage ?? '$min-$max${unit ?? ''}';
+        return customMessage ??
+            '${'val_range'.tr(namedArgs: {'min': '$min', 'max': '$max'})}${unit ?? ''}';
       }
       return null;
     };
@@ -183,19 +187,19 @@ class Validators {
   }) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
 
       if (minLength != null && value.length < minLength) {
-        return 'Minimum $minLength caractères';
+        return 'val_min_chars'.tr(namedArgs: {'n': '$minLength'});
       }
 
       if (maxLength != null && value.length > maxLength) {
-        return 'Maximum $maxLength caractères';
+        return 'val_max_chars'.tr(namedArgs: {'n': '$maxLength'});
       }
 
       if (pattern != null && !RegExp(pattern).hasMatch(value)) {
-        return 'Format invalide';
+        return 'val_invalid_format'.tr();
       }
 
       return null;
@@ -206,7 +210,7 @@ class Validators {
   static String? Function(String?) email() {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
 
       final emailRegex = RegExp(
@@ -214,7 +218,7 @@ class Validators {
       );
 
       if (!emailRegex.hasMatch(value)) {
-        return 'Email invalide';
+        return 'val_email_invalid'.tr();
       }
 
       return null;
@@ -253,10 +257,10 @@ class Validators {
   static String? Function(String?) minLength(int length) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
       if (value.trim().length < length) {
-        return 'Minimum $length caractères';
+        return 'val_min_chars'.tr(namedArgs: {'n': '$length'});
       }
       return null;
     };
@@ -266,7 +270,7 @@ class Validators {
   static String? Function(String?) maxLength(int length) {
     return (String? value) {
       if (value != null && value.length > length) {
-        return 'Maximum $length caractères';
+        return 'val_max_chars'.tr(namedArgs: {'n': '$length'});
       }
       return null;
     };
@@ -279,7 +283,7 @@ class Validators {
   }) {
     return (String? value) {
       if (value == null || value.trim().isEmpty) {
-        return 'Requis';
+        return 'val_required'.tr();
       }
       if (!RegExp(pattern).hasMatch(value)) {
         return errorMessage;
@@ -304,8 +308,10 @@ class PatientFormConfig {
   );
 
   /// Configuration pour le téléphone
-  static FieldValidator get telephone =>
-      FieldValidator(fieldName: 'Téléphone', validator: Validators.required());
+  static FieldValidator get telephone => FieldValidator(
+    fieldName: 'Téléphone',
+    validator: Validators.telephone(minLength: 9, maxLength: 9),
+  );
 
   /// Configuration pour l'adresse
   static FieldValidator get adresse =>

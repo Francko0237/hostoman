@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'profil_medecin_service.dart';
@@ -108,9 +109,9 @@ class _ProfilMedecinPageState extends State<ProfilMedecinPage> {
           icon: const Icon(Icons.arrow_back, color: medPrimaryColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Mon Profil',
-          style: TextStyle(
+        title: Text(
+          'mprof_title'.tr(),
+          style: const TextStyle(
             color: medPrimaryColor,
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -138,7 +139,7 @@ class _ProfilMedecinPageState extends State<ProfilMedecinPage> {
                         _buildStatsCard(),
                         const SizedBox(height: 40),
                         Text(
-                          '© 2025 Yamgai Mokube Franck Daniel',
+                          'mdash_footer'.tr(),
                           style: TextStyle(
                             fontSize: 12,
                             color: medLightTextColor.withOpacity(0.7),
@@ -163,7 +164,7 @@ class _ProfilMedecinPageState extends State<ProfilMedecinPage> {
           Icon(Icons.person_off, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'Impossible de charger le profil',
+            'mprof_load_error'.tr(),
             style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
         ],
@@ -215,7 +216,7 @@ class _ProfilMedecinPageState extends State<ProfilMedecinPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Dr. ${medecin!.prenom} ${medecin!.nom}',
+            '${'mprof_dr_prefix'.tr()} ${medecin!.prenom} ${medecin!.nom}',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 24,
@@ -262,13 +263,13 @@ class _ProfilMedecinPageState extends State<ProfilMedecinPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.contact_mail_outlined, color: medPrimaryColor),
-              SizedBox(width: 12),
+              const Icon(Icons.contact_mail_outlined, color: medPrimaryColor),
+              const SizedBox(width: 12),
               Text(
-                'Information de contact',
-                style: TextStyle(
+                'mprof_contact_info'.tr(),
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: medTextColor,
@@ -279,20 +280,28 @@ class _ProfilMedecinPageState extends State<ProfilMedecinPage> {
           const Divider(height: 30),
           _buildInfoCardRow(
             Icons.phone,
-            'Téléphone',
+            'acc_profil_phone'.tr(),
             medecin!.telephone.toString(),
           ),
           _buildInfoCardRow(
             Icons.email,
-            'Email',
-            medecin!.email ?? 'Non renseigné',
+            'acc_profil_email'.tr(),
+            medecin!.email ?? 'acc_profil_not_provided'.tr(),
           ),
           _buildInfoCardRow(
             Icons.location_on,
-            'Adresse',
-            medecin!.adresse ?? 'Non renseigné',
+            'acc_profil_address'.tr(),
+            medecin!.adresse ?? 'acc_profil_not_provided'.tr(),
           ),
-          _buildInfoCardRow(Icons.cake, 'Âge', '${medecin!.age ?? 'N/A'} ans'),
+          _buildInfoCardRow(
+            Icons.cake,
+            'acc_profil_age'.tr(),
+            'acc_profil_age_value'.tr(
+              namedArgs: {
+                'age': '${medecin!.age ?? 'acc_profil_age_unknown'.tr()}',
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -335,9 +344,9 @@ class _ProfilMedecinPageState extends State<ProfilMedecinPage> {
               color: medPrimaryColor,
             ),
           ),
-          const Text(
-            'Consultations Terminées',
-            style: TextStyle(
+          Text(
+            'mprof_consultations_done'.tr(),
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: medLightTextColor,

@@ -67,16 +67,15 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3F3),
       appBar: AppBar(
         backgroundColor: labPrimaryColor,
+        centerTitle: !isDesktop,
         leading: IconButton(
-          icon: const Icon(
-            Icons.history,
-            color: Color.fromARGB(255, 255, 255, 255),
-          ),
-          onPressed: () {},
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Historique',
@@ -131,7 +130,12 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
                 // Barre de recherche
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: TextField(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: isDesktop ? 900 : double.infinity,
+                      ),
+                      child: TextField(
                     decoration: InputDecoration(
                       hintText: 'Rechercher un patient...',
                       prefixIcon: const Icon(
@@ -151,21 +155,35 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
                     },
                   ),
                 ),
+                ),
+              ),
 
                 // Compteur
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: isDesktop ? 900 : double.infinity,
+                      ),
+                      child: Text(
                     '${filteredConsultations.length} dossier${filteredConsultations.length > 1 ? 's' : ''} archivé${filteredConsultations.length > 1 ? 's' : ''}',
                     style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                 ),
+                ),
+              ),
 
                 const SizedBox(height: 16),
 
                 // Liste des patients
                 Expanded(
-                  child: filteredConsultations.isEmpty
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: isDesktop ? 900 : double.infinity,
+                      ),
+                      child: filteredConsultations.isEmpty
                       ? Center(
                           child: Text(
                             'Aucun dossier archivé',
@@ -193,10 +211,12 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
                             );
                           },
                         ),
+                        ),
+                      ),
                 ),
               ],
             ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: isDesktop ? null : _buildBottomNav(),
     );
   }
 

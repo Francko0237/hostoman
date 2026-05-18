@@ -254,6 +254,7 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 900;
     final bool isAllSelected =
         examens.isNotEmpty && selectedExamensIds.length == examens.length;
 
@@ -261,6 +262,7 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
       backgroundColor: labPrimaryColor,
       appBar: AppBar(
         backgroundColor: labPrimaryColor,
+        centerTitle: !isDesktop,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -272,8 +274,13 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop ? 1000 : double.infinity,
+            ),
+            child: Column(
+              children: [
             // Bandeau Patient
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -396,8 +403,9 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
                     activeColor: labSuccessColor,
                     checkColor: Colors.white,
                     fillColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected))
+                      if (states.contains(WidgetState.selected)) {
                         return labSuccessColor;
+                      }
                       return Colors.grey.shade700;
                     }),
                   ),
@@ -505,8 +513,9 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
                                           ) {
                                             if (states.contains(
                                               WidgetState.selected,
-                                            ))
+                                            )) {
                                               return labSuccessColor;
+                                            }
                                             return Colors.grey.shade700;
                                           }),
                                     ),
@@ -588,6 +597,8 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
           ],
         ),
       ),
+    ),
+    ),
     );
   }
 }

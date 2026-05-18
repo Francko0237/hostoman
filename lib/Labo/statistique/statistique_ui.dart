@@ -4,6 +4,7 @@ import 'package:hostoman/model_unifier.dart';
 import 'package:intl/intl.dart';
 import 'statistique_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hostoman/shared/pdf_generator.dart';
 
 // Couleurs - Thème Laboratoire
 const Color labPrimaryColor = Color(0xFF212031);
@@ -97,11 +98,16 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3F3),
       appBar: AppBar(
         backgroundColor: labPrimaryColor,
-        leading: const Icon(Icons.bar_chart, color: Colors.white),
+        centerTitle: !isDesktop,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'Statistiques Laboratoire',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -111,6 +117,12 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: chargerDonnees,
           ),
+          if (patients.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.print, color: Colors.white),
+              tooltip: 'Imprimer la liste',
+              onPressed: _printPatientList,
+            ),
         ],
       ),
       body: isLoading
@@ -150,22 +162,29 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
                 ],
               ),
             )
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  _buildPeriodeSection(),
-                  const SizedBox(height: 16),
-                  _buildFiltresSection(),
-                  const SizedBox(height: 16),
-                  _buildStatistiquesCards(),
-                  const SizedBox(height: 24),
-                  _buildPatientsSection(),
-                ],
+          : Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 900 : double.infinity,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildPeriodeSection(),
+                      const SizedBox(height: 16),
+                      _buildFiltresSection(),
+                      const SizedBox(height: 16),
+                      _buildStatistiquesCards(),
+                      const SizedBox(height: 24),
+                      _buildPatientsSection(),
+                    ],
+                  ),
+                ),
               ),
             ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: isDesktop ? null : _buildBottomNav(),
     );
   }
 
@@ -449,11 +468,13 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
               final patient = Patient.fromMap(patientMap);
               final nombreExamens = item['nombre_examens'] ?? 0;
               final dateEnregistrement = item['date_enregistrement'];
+              final idConsultation = item['id_consultation'] as int;
 
               return _buildPatientCard(
                 patient: patient,
                 nombreExamens: nombreExamens,
                 dateEnregistrement: dateEnregistrement,
+                idConsultation: idConsultation,
               );
             }),
           const SizedBox(height: 80), // Space for bottom nav
@@ -466,12 +487,17 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
     required Patient patient,
     required int nombreExamens,
     required String dateEnregistrement,
+    required int idConsultation,
   }) {
     final date = DateTime.parse(dateEnregistrement);
     final dateFormatted = DateFormat('dd/MM/yyyy').format(date);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+    return InkWell(
+      onTap: () {
+        context.push('/Dashboard_Laboratoire/HistoriqueDetail/$idConsultation');
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -561,6 +587,46 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
           ),
         ],
       ),
+    ));
+  }
+
+  Future<void> _printPatientList() async {
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final periodeLabel =
+        'Du ${dateFormat.format(dateDebut)} au ${dateFormat.format(dateFin)}';
+
+    final pdfPatients = patients.map((item) {
+      final patientMap = Map<String, dynamic>.from(
+          item['Patient'] as Map<String, dynamic>);
+      patientMap['id_patient'] = item['id_patient'];
+      if (!patientMap.containsKey('date_enregistrement') ||
+          patientMap['date_enregistrement'] == null) {
+        patientMap['date_enregistrement'] =
+            item['date_enregistrement'] ?? DateTime.now().toIso8601String();
+      }
+      final patient = Patient.fromMap(patientMap);
+      final nombreExamens = item['nombre_examens'] ?? 0;
+      final dateConsult = DateTime.tryParse(
+              item['date_enregistrement'] ?? '') ??
+          DateTime.now();
+
+      return PatientPdfData(
+        nom: patient.nom_complet,
+        sexe: patient.sexe,
+        age: '${patient.age} ans',
+        telephone: patient.telephone.toString(),
+        dateEnregistrement: dateFormat.format(dateConsult),
+        categorie: '$nombreExamens examen(s) — ${statutFiltre ?? "Tous"}',
+      );
+    }).toList();
+
+    await PatientListPdfGenerator.previewAndPrint(
+      context: context,
+      serviceName: 'Laboratoire',
+      periodeLabel: periodeLabel,
+      patients: pdfPatients,
+      showCategorie: true,
+      categorieLabel: 'Statut / Examens',
     );
   }
 

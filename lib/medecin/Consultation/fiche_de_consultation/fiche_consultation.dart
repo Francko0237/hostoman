@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'fiche_services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -17,7 +18,8 @@ class _ConsultationPageState extends State<ConsultationPage> {
   final _formKey = GlobalKey<FormState>();
 
   late final MedecinServices medecinService;
-  String _patientName = "Chargement...";
+  String _patientName = '';
+  bool _patientNameLoaded = false;
 
   // --- Contrôleurs ---
   final TextEditingController _antecedentsController = TextEditingController();
@@ -74,23 +76,23 @@ class _ConsultationPageState extends State<ConsultationPage> {
   // --- LOGIQUE DE CHARGEMENT ET D'AFFICHAGE ---
 
   Future<void> _loadPatientName() async {
-    // ... (Logique inchangée pour le chargement du nom)
     try {
       final data = await medecinService.infosPatient(widget.idConsultation);
       if (data.isNotEmpty) {
         final patient = data[0]['Patient'] as Map<String, dynamic>;
-        final String nomComplet =
-            (patient['nom_complet']?.toString() ?? 'Patient Inconnu');
+        final String nomComplet = (patient['nom_complet']?.toString() ?? '');
         if (mounted) {
           setState(() {
             _patientName = nomComplet;
+            _patientNameLoaded = true;
           });
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _patientName = "Erreur de chargement";
+          _patientName = 'fiche_loading_error'.tr();
+          _patientNameLoaded = true;
         });
       }
       print('Erreur de chargement du nom: $e');
@@ -132,7 +134,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
           ),
-          title: const Text("Informations du Patient "),
+          title: Text('fiche_modal_title'.tr()),
           content: SingleChildScrollView(
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: medecinService.infosPatient(widget.idConsultation),
@@ -142,13 +144,15 @@ class _ConsultationPageState extends State<ConsultationPage> {
                 }
                 if (snapshot.hasError) {
                   return Center(
-                    child: Text('Erreur de chargement: ${snapshot.error}'),
+                    child: Text(
+                      'fiche_modal_load_error'.tr(
+                        namedArgs: {'msg': '${snapshot.error}'},
+                      ),
+                    ),
                   );
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                    child: Text('Aucune information patient trouvée.'),
-                  );
+                  return Center(child: Text('fiche_modal_no_info'.tr()));
                 }
 
                 final consultationData = snapshot.data![0];
@@ -160,14 +164,19 @@ class _ConsultationPageState extends State<ConsultationPage> {
                     {};
 
                 final String nomComplet =
-                    (patient['nom_complet']?.toString() ?? 'N/A');
-                final String sexe = (patient['sexe']?.toString() ?? 'INE');
+                    (patient['nom_complet']?.toString() ??
+                    'fiche_value_na'.tr());
+                final String sexe =
+                    (patient['sexe']?.toString() ?? 'fiche_value_unknown'.tr());
                 final String telephone =
-                    (patient['telephone']?.toString() ?? 'INE');
+                    (patient['telephone']?.toString() ??
+                    'fiche_value_unknown'.tr());
                 final String adresse =
-                    (patient['adresse']?.toString() ?? 'INE');
+                    (patient['adresse']?.toString() ??
+                    'fiche_value_unknown'.tr());
                 final int? age = patient['age'] as int?;
-                final profesion = patient['profession'] ?? 'INE';
+                final profesion =
+                    patient['profession'] ?? 'fiche_value_unknown'.tr();
                 final StatutMatrimonial = patient['statut_matrimonial'];
                 final temperature = parametresVitaux['temperature'] ?? 0;
                 final poid = parametresVitaux['poid'] ?? 0;
@@ -181,30 +190,71 @@ class _ConsultationPageState extends State<ConsultationPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      "Infos Administratives",
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Text(
+                      'fiche_modal_admin_section'.tr(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const Divider(),
-                    Text("Nom Complet: $nomComplet"),
-                    Text("Sexe : $sexe"),
-                    Text("Âge : ${age?.toString() ?? 'INE'} ans"),
-                    Text("Téléphone : $telephone"),
-                    Text("Profession : $profesion"),
-                    Text("Statut Matrimonial : $StatutMatrimonial"),
-                    Text("Adress : $adresse"),
+                    Text(
+                      'fiche_modal_full_name'.tr(
+                        namedArgs: {'value': nomComplet},
+                      ),
+                    ),
+                    Text('fiche_modal_sex'.tr(namedArgs: {'value': sexe})),
+                    Text(
+                      'fiche_modal_age'.tr(
+                        namedArgs: {
+                          'value':
+                              age?.toString() ?? 'fiche_value_unknown'.tr(),
+                        },
+                      ),
+                    ),
+                    Text(
+                      'fiche_modal_phone'.tr(namedArgs: {'value': telephone}),
+                    ),
+                    Text(
+                      'fiche_modal_profession'.tr(
+                        namedArgs: {'value': '$profesion'},
+                      ),
+                    ),
+                    Text(
+                      'fiche_modal_marital'.tr(
+                        namedArgs: {'value': '$StatutMatrimonial'},
+                      ),
+                    ),
+                    Text(
+                      'fiche_modal_address'.tr(namedArgs: {'value': adresse}),
+                    ),
                     const SizedBox(height: 20),
-                    const Text(
-                      "Paramètres Vitaux",
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Text(
+                      'fiche_modal_vitals_section'.tr(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const Divider(),
-                    Text("Temperature : $temperature"),
-                    Text("Tension : $systolique/$diastolique"),
-                    Text("Poids : $poid"),
-                    Text('Statut VIH : $statutVih'),
-                    Text('Vaccination : $vaccination'),
-                    Text("Motif de la consultation : $motif"),
+                    Text(
+                      'fiche_modal_temperature'.tr(
+                        namedArgs: {'value': '$temperature'},
+                      ),
+                    ),
+                    Text(
+                      'fiche_modal_tension'.tr(
+                        namedArgs: {'value': '$systolique/$diastolique'},
+                      ),
+                    ),
+                    Text(
+                      'fiche_modal_weight'.tr(namedArgs: {'value': '$poid'}),
+                    ),
+                    Text(
+                      'fiche_modal_hiv'.tr(namedArgs: {'value': '$statutVih'}),
+                    ),
+                    Text(
+                      'fiche_modal_vaccination'.tr(
+                        namedArgs: {'value': '$vaccination'},
+                      ),
+                    ),
+                    Text(
+                      'fiche_modal_motif'.tr(namedArgs: {'value': '$motif'}),
+                    ),
                   ],
                 );
               },
@@ -213,7 +263,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Fermer"),
+              child: Text('fiche_modal_close'.tr()),
             ),
           ],
         );
@@ -279,7 +329,12 @@ class _ConsultationPageState extends State<ConsultationPage> {
   }) {
     return CheckboxListTile(
       title: Text(
-        '${examen['nom_examen']} (Prix: ${examen['prix_examen']} FCFA)',
+        'fiche_exam_label'.tr(
+          namedArgs: {
+            'name': '${examen['nom_examen']}',
+            'price': '${examen['prix_examen']}',
+          },
+        ),
         style: const TextStyle(fontSize: 14),
       ),
       value: examen['selected'] as bool,
@@ -301,10 +356,8 @@ class _ConsultationPageState extends State<ConsultationPage> {
     if (!_formKey.currentState!.validate()) {
       // Si la validation échoue (champs obligatoires vides), arrêter l'exécution
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Veuillez remplir tous les champs obligatoires du formulaire.',
-          ),
+        SnackBar(
+          content: Text('fiche_form_validation_error'.tr()),
           backgroundColor: Colors.orange,
         ),
       );
@@ -358,10 +411,8 @@ class _ConsultationPageState extends State<ConsultationPage> {
         // Cela évite de revenir à la fiche de consultation lors du retour
         context.go('/Dashboard_Medecin/ConsultationList');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Consultation finalisée et enregistrée avec succès. ✅',
-            ),
+          SnackBar(
+            content: Text('fiche_save_success'.tr()),
             backgroundColor: Colors.green,
           ),
         );
@@ -370,7 +421,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur de la base de données: ${e.message} ❌'),
+            content: Text(
+              'fiche_db_error'.tr(namedArgs: {'msg': '${e.message}'}),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -379,7 +432,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur inattendue lors de l\'enregistrement: $e 💥'),
+            content: Text(
+              'fiche_unexpected_error'.tr(namedArgs: {'msg': '$e'}),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -395,22 +450,25 @@ class _ConsultationPageState extends State<ConsultationPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildFormField(
-          hint: "Antécédents *",
+          hint: 'fiche_hint_antecedents'.tr(),
           controller: _antecedentsController,
-          validator: (value) =>
-              value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) => value == null || value.isEmpty
+              ? 'fiche_field_required'.tr()
+              : null,
         ),
         _buildFormField(
-          hint: "Signes et symptomes *",
+          hint: 'fiche_hint_signs'.tr(),
           controller: _signesSymptomesController,
-          validator: (value) =>
-              value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) => value == null || value.isEmpty
+              ? 'fiche_field_required'.tr()
+              : null,
         ),
         _buildFormField(
-          hint: "Diagnostic initial *",
+          hint: 'fiche_hint_diag_initial'.tr(),
           controller: _diagnosticInitialController,
-          validator: (value) =>
-              value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) => value == null || value.isEmpty
+              ? 'fiche_field_required'.tr()
+              : null,
         ),
       ],
     );
@@ -438,16 +496,19 @@ class _ConsultationPageState extends State<ConsultationPage> {
           ),
           errorStyle: const TextStyle(height: 0.5),
         ),
-        hint: const Text("Statut Consultation *"),
+        hint: Text('fiche_dd_status_hint'.tr()),
         initialValue: _statutConsultation,
-        // 🛑 VALIDATION: Statut consultation est obligatoire
-        validator: (value) => value == null ? 'Sélection obligatoire' : null,
-        items: const [
-          DropdownMenuItem(value: 'examen', child: Text("Examen à effectuer")),
+        validator: (value) =>
+            value == null ? 'fiche_select_required'.tr() : null,
+        items: [
+          DropdownMenuItem(
+            value: 'examen',
+            child: Text('fiche_dd_status_exam'.tr()),
+          ),
           DropdownMenuItem(
             value: 'pas_examen',
-            child: Text("Pas d'examen à effectuer"),
-          ), // ⬅️ Corrigé
+            child: Text('fiche_dd_status_no_exam'.tr()),
+          ),
         ],
         onChanged: (String? newValue) {
           setState(() {
@@ -464,9 +525,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Finalisation de la consultation",
-          style: TextStyle(
+        Text(
+          'fiche_finalization_section'.tr(),
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
@@ -474,16 +535,18 @@ class _ConsultationPageState extends State<ConsultationPage> {
         ),
         const SizedBox(height: 15),
         _buildFormField(
-          hint: "Diagnostic final *",
+          hint: 'fiche_hint_diag_final'.tr(),
           controller: _diagnosticFinalController,
-          validator: (value) =>
-              value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) => value == null || value.isEmpty
+              ? 'fiche_field_required'.tr()
+              : null,
         ),
         _buildFormField(
-          hint: "Traitement prescrit *",
+          hint: 'fiche_hint_treatment'.tr(),
           controller: _traitementPrescritController,
-          validator: (value) =>
-              value == null || value.isEmpty ? 'Champ obligatoire' : null,
+          validator: (value) => value == null || value.isEmpty
+              ? 'fiche_field_required'.tr()
+              : null,
         ),
       ],
     );
@@ -511,18 +574,18 @@ class _ConsultationPageState extends State<ConsultationPage> {
           ),
           errorStyle: const TextStyle(height: 0.5),
         ),
-        hint: const Text("Programmation de rendez-vous *"),
+        hint: Text('fiche_dd_rdv_hint'.tr()),
         initialValue: _programmationRdv,
-        // 🛑 VALIDATION: Programmation RDV est obligatoire
-        validator: (value) => value == null ? 'Sélection obligatoire' : null,
-        items: const [
+        validator: (value) =>
+            value == null ? 'fiche_select_required'.tr() : null,
+        items: [
           DropdownMenuItem(
             value: 'programmer',
-            child: Text("Rendez-vous à effectuer"),
+            child: Text('fiche_dd_rdv_yes'.tr()),
           ),
           DropdownMenuItem(
             value: 'pas_programmer',
-            child: Text("Pas de nouveau rendez-vous"),
+            child: Text('fiche_dd_rdv_no'.tr()),
           ),
         ],
         onChanged: (String? newValue) {
@@ -547,7 +610,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
     String? rdvValidator(String? value) {
       if (_programmationRdv == 'programmer' &&
           (value == null || value.isEmpty)) {
-        return 'Date/Heure obligatoire';
+        return 'fiche_datetime_required'.tr();
       }
       return null;
     }
@@ -557,9 +620,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Choisir la date et l'heure :",
-            style: TextStyle(
+          Text(
+            'fiche_pick_datetime'.tr(),
+            style: const TextStyle(
               fontWeight: FontWeight.w500,
               color: Colors.black87,
             ),
@@ -575,7 +638,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
                   validator:
                       rdvValidator, // 🛑 Ajout de la validation contextuelle
                   decoration: InputDecoration(
-                    hintText: 'Date *',
+                    hintText: 'fiche_hint_date'.tr(),
                     errorStyle: const TextStyle(height: 0.5),
                     filled: true,
                     fillColor: fieldBackgroundColor,
@@ -627,7 +690,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
                   validator:
                       rdvValidator, // 🛑 Ajout de la validation contextuelle
                   decoration: InputDecoration(
-                    hintText: 'Heure *',
+                    hintText: 'fiche_hint_time'.tr(),
                     errorStyle: const TextStyle(height: 0.5),
                     filled: true,
                     fillColor: fieldBackgroundColor,
@@ -676,6 +739,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       backgroundColor: primaryPurple,
       appBar: AppBar(
@@ -685,12 +749,13 @@ class _ConsultationPageState extends State<ConsultationPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          _patientName,
+          _patientNameLoaded ? _patientName : 'fiche_loading_name'.tr(),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
+        centerTitle: !isDesktop,
         actions: [
           IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
@@ -698,170 +763,185 @@ class _ConsultationPageState extends State<ConsultationPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              // Titre "Formulire de Consultation"
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14.0),
-                decoration: BoxDecoration(
-                  color: lightPurple,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Text(
-                    "Formulaire de Consultation",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 21,
-                      fontWeight: FontWeight.bold,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop ? 1000 : double.infinity,
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  // Titre "Formulire de Consultation"
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14.0),
+                    decoration: BoxDecoration(
+                      color: lightPurple,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 15),
-
-              // --- Carte blanche principale (Formulaire) ---
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Form(
-                  // 🔑 Enveloppe tout le contenu du formulaire dans le widget Form
-                  key: _formKey,
-                  autovalidateMode: AutovalidateMode
-                      .onUserInteraction, // Validation lors de l'interaction
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Section 1: Infos générales (obligatoires)
-                      _buildGeneralInfoSection(),
-
-                      // Dropdown Statut Consultation (obligatoire)
-                      _buildExamStatusDropdown(),
-
-                      // Liste des examens (conditionnel)
-                      if (_showExamens)
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: 15.0,
-                            bottom: 8.0,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Liste des examens à effectuer :",
-                                style: TextStyle(fontWeight: FontWeight.w500),
-                              ),
-                              const SizedBox(height: 5),
-                              _examensLoading
-                                  ? const Center(
-                                      child: CircularProgressIndicator(),
-                                    )
-                                  : Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8.0,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: fieldBackgroundColor,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: fieldBorderColor,
-                                        ),
-                                      ),
-                                      child: _examens.isEmpty
-                                          ? const Padding(
-                                              padding: EdgeInsets.all(16.0),
-                                              child: Text(
-                                                'Aucun examen disponible',
-                                                style: TextStyle(
-                                                  color: Colors.grey,
-                                                ),
-                                              ),
-                                            )
-                                          : Column(
-                                              children: _examens
-                                                  .asMap()
-                                                  .entries
-                                                  .map((entry) {
-                                                    return _buildExamCheckbox(
-                                                      examen: entry.value,
-                                                      index: entry.key,
-                                                    );
-                                                  })
-                                                  .toList(),
-                                            ),
-                                    ),
-                            ],
-                          ),
-                        ),
-
-                      const SizedBox(height: 25),
-
-                      // Section 2: Finalisation (obligatoire)
-                      _buildFinalizationSection(),
-
-                      // Dropdown Programmation RDV (obligatoire)
-                      _buildRdvDropdown(),
-
-                      // Date et Heure du RDV (conditionnel et obligatoire si 'programmer')
-                      if (_showRdvDateTime) _buildRdvDateTimeFields(context),
-
-                      const SizedBox(height: 20),
-
-                      // --- Bouton "Finaliser" ---
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _finalizeConsultation,
-                          // 🛑 Déclenche la validation avant la sauvegarde
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryBlue,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: const Text(
-                            "Finaliser la consultation",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                    child: Center(
+                      child: Text(
+                        'fiche_form_title'.tr(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                  const SizedBox(height: 15),
 
-              const SizedBox(height: 25),
+                  // --- Carte blanche principale (Formulaire) ---
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Form(
+                      // 🔑 Enveloppe tout le contenu du formulaire dans le widget Form
+                      key: _formKey,
+                      autovalidateMode: AutovalidateMode
+                          .onUserInteraction, // Validation lors de l'interaction
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Section 1: Infos générales (obligatoires)
+                          _buildGeneralInfoSection(),
 
-              // --- Footer ---
-              const Text(
-                "@2025 Yamgai Mokube Franck Daniel",
-                style: TextStyle(color: Colors.white70, fontSize: 12),
+                          // Dropdown Statut Consultation (obligatoire)
+                          _buildExamStatusDropdown(),
+
+                          // Liste des examens (conditionnel)
+                          if (_showExamens)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 15.0,
+                                bottom: 8.0,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'fiche_exams_list_title'.tr(),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  _examensLoading
+                                      ? const Center(
+                                          child: CircularProgressIndicator(),
+                                        )
+                                      : Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 8.0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: fieldBackgroundColor,
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            border: Border.all(
+                                              color: fieldBorderColor,
+                                            ),
+                                          ),
+                                          child: _examens.isEmpty
+                                              ? Padding(
+                                                  padding: const EdgeInsets.all(
+                                                    16.0,
+                                                  ),
+                                                  child: Text(
+                                                    'fiche_exams_empty'.tr(),
+                                                    style: const TextStyle(
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                )
+                                              : Column(
+                                                  children: _examens
+                                                      .asMap()
+                                                      .entries
+                                                      .map((entry) {
+                                                        return _buildExamCheckbox(
+                                                          examen: entry.value,
+                                                          index: entry.key,
+                                                        );
+                                                      })
+                                                      .toList(),
+                                                ),
+                                        ),
+                                ],
+                              ),
+                            ),
+
+                          const SizedBox(height: 25),
+
+                          // Section 2: Finalisation (obligatoire)
+                          _buildFinalizationSection(),
+
+                          // Dropdown Programmation RDV (obligatoire)
+                          _buildRdvDropdown(),
+
+                          // Date et Heure du RDV (conditionnel et obligatoire si 'programmer')
+                          if (_showRdvDateTime)
+                            _buildRdvDateTimeFields(context),
+
+                          const SizedBox(height: 20),
+
+                          // --- Bouton "Finaliser" ---
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _finalizeConsultation,
+                              // 🛑 Déclenche la validation avant la sauvegarde
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryBlue,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 15,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: Text(
+                                'fiche_finalize_button'.tr(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // --- Footer ---
+                  Text(
+                    'fiche_footer'.tr(),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
         ),
       ),

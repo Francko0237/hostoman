@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'detail_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:hostoman/shared/receipt_pdf_generator.dart';
 
 // Couleurs (mêmes que paiementList.dart)
 const Color npPrimaryColor = Color(0xFF4CAF50);
@@ -47,11 +49,11 @@ class _DetailUIState extends State<DetailUI> {
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.check_circle_outline, color: Colors.white),
+            const Icon(Icons.check_circle_outline, color: Colors.white),
             const SizedBox(width: 12),
-            const Text(
-              '✅ Paiement validé',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            Text(
+              'pay_validated'.tr(),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -62,7 +64,163 @@ class _DetailUIState extends State<DetailUI> {
         elevation: 6,
       ),
     );
-    Navigator.pop(context, true); // Retour à la liste avec refresh
+
+    final printConfirm = await _proposerImpressionRecu();
+    if (printConfirm == true) {
+      await _imprimerRecu();
+    }
+
+    if (mounted) Navigator.pop(context, true); // Retour à la liste avec refresh
+  }
+
+  Future<void> _imprimerRecu() async {
+    if (detailsData == null) return;
+
+    final patientMap = detailsData!['Patient'] as Map<String, dynamic>;
+    final patient = Patient.fromMap(patientMap);
+
+    final List<dynamic> paiementsList = detailsData!['paiement'] ?? [];
+    Map<String, dynamic> paiementDataMap = {};
+    if (paiementsList.isNotEmpty) {
+      paiementDataMap = paiementsList.last as Map<String, dynamic>;
+    }
+    final paiement = Paiement.fromMap(paiementDataMap);
+
+    final typeService = detailsData!['type_service'] ?? 'Consultation';
+    final motif = paiementDataMap['motif'] ?? 'pay_default_motif'.tr();
+    final examensList =
+        (detailsData!['examen_a_effectuer'] as List<dynamic>?) ?? [];
+
+    final data = ReceiptPdfData(
+      patientNom: patient.nom_complet,
+      patientSexe: patient.sexe,
+      patientAge: patient.age.toString(),
+      patientTelephone: patient.telephone.toString(),
+      idConsultation: widget.idConsultation,
+      serviceName: typeService,
+      motif: motif,
+      montant: (paiement.prix_a_paye ?? 0).toDouble(),
+      datePaiement: DateFormat('dd/MM/yyyy à HH:mm').format(DateTime.now()),
+      statutPaiement: 'Payé',
+      examens: examensList,
+    );
+
+    await ReceiptPdfGenerator.printReceipt(context: context, data: data);
+  }
+
+  Future<bool?> _proposerImpressionRecu() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 8,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: npPrimaryColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.print,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'pay_dlg_print_title'.tr(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'pay_dlg_print_msg'.tr(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15, color: Colors.grey[800]),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(
+                            color: Colors.grey.shade400,
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'pay_dlg_print_later'.tr(),
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.pop(context, true),
+                        icon: const Icon(Icons.print, size: 18),
+                        label: Text('pay_dlg_print_now'.tr()),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: npPrimaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> annulerPaiement() async {
@@ -74,11 +232,11 @@ class _DetailUIState extends State<DetailUI> {
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.cancel_outlined, color: Colors.white),
+            const Icon(Icons.cancel_outlined, color: Colors.white),
             const SizedBox(width: 12),
-            const Text(
-              'Paiement annulé',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            Text(
+              'pay_cancelled'.tr(),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -127,10 +285,10 @@ class _DetailUIState extends State<DetailUI> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Annuler le paiement',
-                        style: TextStyle(
+                        'pay_dlg_cancel_title'.tr(),
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -143,7 +301,7 @@ class _DetailUIState extends State<DetailUI> {
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Êtes-vous sûr de vouloir annuler ce paiement ?',
+                  'pay_dlg_cancel_msg'.tr(),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 15, color: Colors.grey[800]),
                 ),
@@ -173,7 +331,7 @@ class _DetailUIState extends State<DetailUI> {
                           ),
                         ),
                         child: Text(
-                          'Non',
+                          'pay_dlg_cancel_no'.tr(),
                           style: TextStyle(
                             color: Colors.grey[700],
                             fontWeight: FontWeight.w600,
@@ -192,9 +350,9 @@ class _DetailUIState extends State<DetailUI> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Oui, annuler',
-                          style: TextStyle(
+                        child: Text(
+                          'pay_dlg_cancel_yes'.tr(),
+                          style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
@@ -225,7 +383,7 @@ class _DetailUIState extends State<DetailUI> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Détails du Paiement',
+          'pay_detail_title'.tr(),
           style: TextStyle(
             color: Color(0xFF26AE6C),
             fontSize: 20,
@@ -248,7 +406,7 @@ class _DetailUIState extends State<DetailUI> {
                     CircularProgressIndicator(color: npPrimaryColor),
                     const SizedBox(height: 16),
                     Text(
-                      'Chargement...',
+                      'pay_loading'.tr(),
                       style: TextStyle(
                         color: npPrimaryColor,
                         fontWeight: FontWeight.w500,
@@ -280,7 +438,7 @@ class _DetailUIState extends State<DetailUI> {
                     Icon(Icons.error_outline, size: 64, color: npErrorColor),
                     const SizedBox(height: 20),
                     Text(
-                      'Erreur de chargement',
+                      'pay_detail_load_error'.tr(),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
@@ -406,32 +564,37 @@ class _DetailUIState extends State<DetailUI> {
             Divider(color: Colors.grey.shade300),
             const SizedBox(height: 16),
             // Détails
-            _buildInfoRow(Icons.cake, 'Âge', '${patient.age} ans', npBlueColor),
+            _buildInfoRow(
+              Icons.cake,
+              'pay_field_age'.tr(),
+              'pay_field_age_value'.tr(namedArgs: {'age': '${patient.age}'}),
+              npBlueColor,
+            ),
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.phone,
-              'Téléphone',
+              'pay_field_phone'.tr(),
               patient.telephone.toString(),
               npSuccessColor,
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.location_on,
-              'Adresse',
+              'pay_field_address'.tr(),
               patient.adresse,
               npOrangeColor,
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.work,
-              'Profession',
+              'pay_field_profession'.tr(),
               patient.profession,
               npPrimaryColor,
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.family_restroom,
-              'Statut matrimonial',
+              'pay_field_marital'.tr(),
               patient.statut_matrimonial,
               npAccentColor,
             ),
@@ -449,17 +612,17 @@ class _DetailUIState extends State<DetailUI> {
     // Cela permet d'afficher le paiement d'examens plutôt que le paiement de consultation
     final paiementDataMap = paiementsList.last as Map<String, dynamic>;
     final paiement = Paiement.fromMap(paiementDataMap);
-    final motif = paiementDataMap['motif'] ?? 'Frais de Consultation';
+    final motif = paiementDataMap['motif'] ?? 'pay_default_motif'.tr();
     final statutPaiement = paiementDataMap['statut_paiement'] ?? 'en_attente';
     final datePaiement = paiementDataMap['date_paiement'];
 
-    String dateFormatted = 'N/A';
+    String dateFormatted = 'pay_value_na'.tr();
     if (datePaiement != null) {
       try {
         final date = DateTime.parse(datePaiement);
         dateFormatted = DateFormat('dd/MM/yyyy à HH:mm').format(date);
       } catch (e) {
-        dateFormatted = 'Date invalide';
+        dateFormatted = 'pay_value_invalid_date'.tr();
       }
     }
 
@@ -508,7 +671,7 @@ class _DetailUIState extends State<DetailUI> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Informations Paiement',
+                  'pay_section_payment'.tr(),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -520,15 +683,17 @@ class _DetailUIState extends State<DetailUI> {
             const SizedBox(height: 20),
             _buildInfoRow(
               Icons.medical_services,
-              'Motif',
+              'pay_field_motif'.tr(),
               motif,
               npOrangeColor,
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.attach_money,
-              'Montant',
-              '${paiement.prix_a_paye ?? 0} FCFA',
+              'pay_field_amount'.tr(),
+              'pay_field_amount_value'.tr(
+                namedArgs: {'value': '${paiement.prix_a_paye ?? 0}'},
+              ),
               npSuccessColor,
             ),
             const SizedBox(height: 12),
@@ -548,7 +713,7 @@ class _DetailUIState extends State<DetailUI> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Statut',
+                        'pay_field_status'.tr(),
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -566,7 +731,7 @@ class _DetailUIState extends State<DetailUI> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          statutPaiement.toUpperCase(),
+                          _statutLabel(statutPaiement),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -582,7 +747,7 @@ class _DetailUIState extends State<DetailUI> {
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.calendar_today,
-              'Date',
+              'pay_field_date'.tr(),
               dateFormatted,
               npBlueColor,
             ),
@@ -596,13 +761,13 @@ class _DetailUIState extends State<DetailUI> {
     final typeService = detailsData!['type_service'] ?? 'Consultation';
     final dateEnregistrement = detailsData!['date_enregistrement'];
 
-    String dateFormatted = 'N/A';
+    String dateFormatted = 'pay_value_na'.tr();
     if (dateEnregistrement != null) {
       try {
         final date = DateTime.parse(dateEnregistrement);
         dateFormatted = DateFormat('dd/MM/yyyy à HH:mm').format(date);
       } catch (e) {
-        dateFormatted = 'Date invalide';
+        dateFormatted = 'pay_value_invalid_date'.tr();
       }
     }
 
@@ -639,7 +804,7 @@ class _DetailUIState extends State<DetailUI> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Informations Consultation',
+                  'pay_section_consultation'.tr(),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -651,14 +816,14 @@ class _DetailUIState extends State<DetailUI> {
             const SizedBox(height: 20),
             _buildInfoRow(
               Icons.medical_services,
-              'Type de service',
+              'pay_field_service_type'.tr(),
               typeService,
               npPrimaryColor,
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.access_time,
-              'Date d\'enregistrement',
+              'pay_field_registration_date'.tr(),
               dateFormatted,
               npBlueColor,
             ),
@@ -708,6 +873,17 @@ class _DetailUIState extends State<DetailUI> {
     );
   }
 
+  String _statutLabel(String statut) {
+    switch (statut) {
+      case 'payer':
+        return 'pay_status_paid'.tr();
+      case 'annuler':
+        return 'pay_status_cancelled'.tr();
+      default:
+        return 'pay_status_pending'.tr();
+    }
+  }
+
   Widget _buildActionButtons() {
     return Row(
       children: [
@@ -715,7 +891,7 @@ class _DetailUIState extends State<DetailUI> {
           child: OutlinedButton.icon(
             onPressed: annulerPaiement,
             icon: const Icon(Icons.cancel, size: 20),
-            label: const Text('Annuler'),
+            label: Text('pay_btn_cancel'.tr()),
             style: OutlinedButton.styleFrom(
               backgroundColor: npErrorColor,
               foregroundColor: Colors.white,
@@ -732,7 +908,7 @@ class _DetailUIState extends State<DetailUI> {
           child: ElevatedButton.icon(
             onPressed: validerPaiement,
             icon: const Icon(Icons.check, size: 20),
-            label: const Text('Valider le paiement'),
+            label: Text('pay_btn_validate_full'.tr()),
             style: ElevatedButton.styleFrom(
               backgroundColor: npSuccessColor,
               foregroundColor: Colors.white,

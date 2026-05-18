@@ -18,7 +18,8 @@ class DetailService {
             Statut_Consultation,
             id_patient,
             Patient(*),
-            paiement!inner(*)
+            paiement!inner(*),
+            examen_a_effectuer(nom_examen, prix_examen, statut_examen)
           ''')
           .eq('id_consultation', idConsultation)
           .single();

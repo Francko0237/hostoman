@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 // Assurez-vous que ces imports sont corrects
 import 'package:hostoman/model_unifier.dart';
@@ -116,7 +117,7 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
             Icon(Icons.person, color: npPrimaryColor, size: 24),
             const SizedBox(width: 12),
             Text(
-              '  Profil',
+              '  ${'acc_profil_title'.tr()}',
               style: TextStyle(
                 color: npPrimaryColor,
                 fontSize: 20,
@@ -152,7 +153,7 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                         CircularProgressIndicator(color: npPrimaryColor),
                         const SizedBox(height: 20),
                         Text(
-                          'Chargement des données...',
+                          'acc_profil_loading'.tr(),
                           style: TextStyle(
                             color: npPrimaryColor,
                             fontWeight: FontWeight.w600,
@@ -196,7 +197,7 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          'Aucune donnée de médecin trouvée',
+                          'acc_profil_no_data'.tr(),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 20,
@@ -206,7 +207,7 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          'Veuillez vous assurer d\'être connecté.',
+                          'acc_profil_check_connected'.tr(),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 15,
@@ -294,7 +295,7 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                                 ), // Espacement augmenté
 
                                 Text(
-                                  'Mr. ${medecin!.prenom} ${medecin!.nom}', // Affichage "Mr."
+                                  '${'acc_profil_mr_prefix'.tr()} ${medecin!.prenom} ${medecin!.nom}',
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 28, // Taille de texte plus grande
@@ -360,9 +361,9 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                                       size: 28,
                                     ), // Icône plus grande
                                     const SizedBox(width: 12),
-                                    const Text(
-                                      'Coordonnées et Information',
-                                      style: TextStyle(
+                                    Text(
+                                      'acc_profil_contact_info'.tr(),
+                                      style: const TextStyle(
                                         fontSize:
                                             20, // Taille de texte augmentéef
                                         fontWeight: FontWeight.w700,
@@ -378,23 +379,30 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                                 ), // Séparateur
                                 _buildInfoCardRow(
                                   Icons.phone,
-                                  'Téléphone',
+                                  'acc_profil_phone'.tr(),
                                   medecin!.telephone.toString(),
                                 ),
                                 _buildInfoCardRow(
                                   Icons.email,
-                                  'Email',
-                                  medecin!.email ?? 'Non renseigné',
+                                  'acc_profil_email'.tr(),
+                                  medecin!.email ??
+                                      'acc_profil_not_provided'.tr(),
                                 ),
                                 _buildInfoCardRow(
                                   Icons.location_on,
-                                  'Adresse',
-                                  medecin!.adresse ?? 'Non renseigné',
+                                  'acc_profil_address'.tr(),
+                                  medecin!.adresse ??
+                                      'acc_profil_not_provided'.tr(),
                                 ),
                                 _buildInfoCardRow(
                                   Icons.cake,
-                                  'Âge',
-                                  '${medecin!.age ?? 'N/A'} ans',
+                                  'acc_profil_age'.tr(),
+                                  'acc_profil_age_value'.tr(
+                                    namedArgs: {
+                                      'age':
+                                          '${medecin!.age ?? 'acc_profil_age_unknown'.tr()}',
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
@@ -450,7 +458,7 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
-                                  'Paiements enregistrés',
+                                  'cprof_payments_registered'.tr(),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 18, // Taille de texte augmentée
@@ -467,7 +475,7 @@ class _ProfilCaissierState extends State<ProfilCaissier> {
                           ), // Espacement final augmenté
                           Center(
                             child: Text(
-                              '© 2025 Yamgai Mokube Franck Daniel',
+                              'cdash_footer'.tr(),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: npLightTextColor.withOpacity(0.7),

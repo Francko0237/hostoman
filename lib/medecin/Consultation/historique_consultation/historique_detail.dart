@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'historique_service.dart';
 
@@ -25,7 +26,8 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
   List<Map<String, dynamic>> _examens = [];
 
   bool _isLoading = true;
-  String _patientName = 'Chargement...';
+  String _patientName = '';
+  bool _patientNameLoaded = false;
 
   @override
   void initState() {
@@ -60,8 +62,8 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
           _parametresVitaux =
               consultation['Parametres_vitaux'] as Map<String, dynamic>?;
           _examens = examens;
-          _patientName =
-              _patientData?['nom_complet']?.toString() ?? 'Patient Inconnu';
+          _patientName = _patientData?['nom_complet']?.toString() ?? '';
+          _patientNameLoaded = true;
           _isLoading = false;
         });
       }
@@ -70,7 +72,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur de chargement: $e'),
+            content: Text('hcdet_load_error'.tr(namedArgs: {'msg': '$e'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -82,7 +84,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
 
   Widget _buildConsultationTab() {
     if (_consultationData == null) {
-      return const Center(child: Text('Aucune donnée disponible'));
+      return Center(child: Text('hcdet_no_data'.tr()));
     }
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -90,19 +92,19 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
       child: Column(
         children: [
           _buildSectionCard(
-            title: 'Diagnostic Initial',
+            title: 'hcdet_section_diag_initial'.tr(),
             icon: Icons.manage_search_rounded,
             children: [
               _buildReadOnlyField(
-                'Antécédent',
+                'hcdet_field_antecedent'.tr(),
                 _consultationData!['antecedents']?.toString(),
               ),
               _buildReadOnlyField(
-                'Signes et symptômes',
+                'hcdet_field_signs'.tr(),
                 _consultationData!['signes_symptomes']?.toString(),
               ),
               _buildReadOnlyField(
-                'Diagnostic initial',
+                'hcdet_field_diag_initial'.tr(),
                 _consultationData!['diagnostic_initial']?.toString(),
                 isLast: true,
               ),
@@ -110,15 +112,15 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
           ),
           const SizedBox(height: 12),
           _buildSectionCard(
-            title: 'Diagnostic Final & Traitement',
+            title: 'hcdet_section_diag_final'.tr(),
             icon: Icons.medical_services_rounded,
             children: [
               _buildReadOnlyField(
-                'Diagnostic final',
+                'hcdet_field_diag_final'.tr(),
                 _consultationData!['diagnostic_final']?.toString(),
               ),
               _buildReadOnlyField(
-                'Traitement prescrit',
+                'hcdet_field_treatment'.tr(),
                 _consultationData!['traitement_prescrit']?.toString(),
                 isLast: true,
               ),
@@ -126,20 +128,20 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
           ),
           const SizedBox(height: 12),
           _buildSectionCard(
-            title: 'Rendez-vous',
+            title: 'hcdet_section_rdv'.tr(),
             icon: Icons.event_rounded,
             children: [
               _buildReadOnlyField(
-                'Programmation',
+                'hcdet_field_rdv_status'.tr(),
                 _consultationData!['programmation_rdv']?.toString() ==
                         'programmer'
-                    ? 'Rendez-vous à effectuer'
-                    : 'Pas de nouveau rendez-vous',
+                    ? 'hcdet_rdv_yes'.tr()
+                    : 'hcdet_rdv_no'.tr(),
                 isLast: _consultationData!['date_rdv_prevu'] == null,
               ),
               if (_consultationData!['date_rdv_prevu'] != null)
                 _buildReadOnlyField(
-                  'Date du RDV',
+                  'hcdet_field_rdv_date'.tr(),
                   _formatDateTime(_consultationData!['date_rdv_prevu']),
                   isLast: true,
                 ),
@@ -186,9 +188,9 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Aucun examen prescrit',
-                style: TextStyle(
+              Text(
+                'hcdet_exams_empty_title'.tr(),
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                   color: medPrimaryColor,
@@ -196,7 +198,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
               ),
               const SizedBox(height: 8),
               Text(
-                'Cette consultation n\'a pas d\'examens associés',
+                'hcdet_exams_empty_msg'.tr(),
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
@@ -212,7 +214,8 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
       itemCount: _examens.length,
       itemBuilder: (context, index) {
         final examen = _examens[index];
-        final nomExamen = examen['nom_examen']?.toString() ?? 'Examen inconnu';
+        final nomExamen =
+            examen['nom_examen']?.toString() ?? 'hcdet_exam_unknown'.tr();
         final resultatExamen = examen['resultat_examen']?.toString();
 
         return Container(
@@ -294,7 +297,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Terminé',
+                                  'hcdet_exam_done_badge'.tr(),
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
@@ -308,7 +311,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Résultats',
+                        'hcdet_exam_results_label'.tr(),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
@@ -317,7 +320,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        resultatExamen ?? 'Aucun résultat renseigné',
+                        resultatExamen ?? 'hcdet_exam_no_result'.tr(),
                         style: TextStyle(
                           fontSize: 13,
                           color: resultatExamen != null
@@ -343,10 +346,10 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
 
   Widget _buildInfosTab() {
     if (_patientData == null) {
-      return const Center(child: Text('Aucune donnée disponible'));
+      return Center(child: Text('hcdet_no_data'.tr()));
     }
 
-    final nom = _patientData!['nom_complet']?.toString() ?? 'N/A';
+    final nom = _patientData!['nom_complet']?.toString() ?? 'pay_value_na'.tr();
     final sexe = _patientData!['sexe']?.toString() ?? '';
     final age = _patientData!['age']?.toString() ?? '';
 
@@ -415,28 +418,28 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
                         children: [
                           Icon(
                             sexe == 'Homme' ? Icons.man : Icons.woman,
-                            size: 15,
+                            size: 16,
                             color: Colors.grey[600],
                           ),
                           const SizedBox(width: 4),
                           Text(
                             sexe,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               color: Colors.grey[700],
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 16),
                           Icon(
-                            Icons.calendar_today,
-                            size: 10,
+                            Icons.cake_outlined,
+                            size: 14,
                             color: Colors.grey[600],
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Text(
-                            '$age ans',
+                            'clist_age_value'.tr(namedArgs: {'age': age}),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               color: Colors.grey[700],
                             ),
                           ),
@@ -452,30 +455,30 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
 
           // Infos administratives
           _buildSectionCard(
-            title: 'Informations administratives',
+            title: 'hcdet_section_admin'.tr(),
             icon: Icons.person_rounded,
             children: [
               _buildInfoRow(
                 Icons.phone_rounded,
-                'Téléphone',
+                'hcdet_field_phone'.tr(),
                 _patientData!['telephone'],
                 iconColor: Colors.blue,
               ),
               _buildInfoRow(
                 Icons.work_rounded,
-                'Profession',
+                'hcdet_field_profession'.tr(),
                 _patientData!['profession'],
                 iconColor: Colors.orange,
               ),
               _buildInfoRow(
                 Icons.favorite_rounded,
-                'Statut matrimonial',
+                'hcdet_field_marital'.tr(),
                 _patientData!['statut_matrimonial'],
                 iconColor: Colors.pink,
               ),
               _buildInfoRow(
                 Icons.location_on_rounded,
-                'Adresse',
+                'hcdet_field_address'.tr(),
                 _patientData!['adresse'],
                 iconColor: Colors.green,
                 isLast: true,
@@ -487,49 +490,60 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
           // Paramètres vitaux
           if (_parametresVitaux != null)
             _buildSectionCard(
-              title: 'Paramètres vitaux',
+              title: 'hcdet_section_vitals'.tr(),
               icon: Icons.favorite_border_rounded,
               children: [
                 _buildInfoRow(
                   Icons.thermostat_rounded,
-                  'Température',
+                  'hcdet_field_temperature'.tr(),
                   _parametresVitaux!['temperature'] != null
-                      ? '${_parametresVitaux!['temperature']}°C'
-                      : 'N/A',
+                      ? 'hcdet_temperature_value'.tr(
+                          namedArgs: {
+                            'value': '${_parametresVitaux!['temperature']}',
+                          },
+                        )
+                      : 'pay_value_na'.tr(),
                   iconColor: Colors.orange,
                 ),
                 _buildInfoRow(
                   Icons.monitor_heart_rounded,
-                  'Tension artérielle',
+                  'hcdet_field_tension'.tr(),
                   (_parametresVitaux!['systolique'] != null &&
                           _parametresVitaux!['diastolique'] != null)
-                      ? '${_parametresVitaux!['systolique']}/${_parametresVitaux!['diastolique']} mmHg'
-                      : 'N/A',
+                      ? 'hcdet_tension_value'.tr(
+                          namedArgs: {
+                            'value':
+                                '${_parametresVitaux!['systolique']}/${_parametresVitaux!['diastolique']}',
+                          },
+                        )
+                      : 'pay_value_na'.tr(),
                   iconColor: Colors.red,
                 ),
                 _buildInfoRow(
                   Icons.monitor_weight_rounded,
-                  'Poids',
+                  'hcdet_field_weight'.tr(),
                   _parametresVitaux!['poid'] != null
-                      ? '${_parametresVitaux!['poid']} kg'
-                      : 'N/A',
+                      ? 'hcdet_weight_value'.tr(
+                          namedArgs: {'value': '${_parametresVitaux!['poid']}'},
+                        )
+                      : 'pay_value_na'.tr(),
                   iconColor: Colors.blue,
                 ),
                 _buildInfoRow(
                   Icons.health_and_safety_rounded,
-                  'Statut VIH',
+                  'hcdet_field_hiv'.tr(),
                   _parametresVitaux!['statut_VIH'],
                   iconColor: Colors.purple,
                 ),
                 _buildInfoRow(
                   Icons.vaccines_rounded,
-                  'Vaccination',
+                  'hcdet_field_vaccination'.tr(),
                   _parametresVitaux!['vaccination'],
                   iconColor: Colors.teal,
                 ),
                 _buildInfoRow(
                   Icons.description_rounded,
-                  'Motif de consultation',
+                  'hcdet_field_motif'.tr(),
                   _parametresVitaux!['motif_de_consultation'],
                   iconColor: Colors.indigo,
                   isLast: true,
@@ -629,7 +643,9 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
                   border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: Text(
-                  value?.isNotEmpty == true ? value! : 'Non renseigné',
+                  value?.isNotEmpty == true
+                      ? value!
+                      : 'hcdet_not_provided'.tr(),
                   style: TextStyle(
                     fontSize: 14,
                     color: value?.isNotEmpty == true
@@ -690,7 +706,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      value?.toString() ?? 'N/A',
+                      value?.toString() ?? 'pay_value_na'.tr(),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -709,12 +725,12 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
   }
 
   String _formatDateTime(String? dateString) {
-    if (dateString == null) return 'N/A';
+    if (dateString == null) return 'pay_value_na'.tr();
     try {
       final date = DateTime.parse(dateString);
       return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} à ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     } catch (_) {
-      return 'N/A';
+      return 'pay_value_na'.tr();
     }
   }
 
@@ -733,7 +749,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          _patientName,
+          _patientNameLoaded ? _patientName : 'fiche_loading_name'.tr(),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 20,
@@ -755,10 +771,10 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
             fontSize: 14,
             fontWeight: FontWeight.w400,
           ),
-          tabs: const [
-            Tab(text: 'Consultation'),
-            Tab(text: 'Examens'),
-            Tab(text: 'Infos'),
+          tabs: [
+            Tab(text: 'hcdet_tab_consultation'.tr()),
+            Tab(text: 'hcdet_tab_exams'.tr()),
+            Tab(text: 'hcdet_tab_infos'.tr()),
           ],
         ),
       ),
@@ -766,15 +782,22 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
           ? const Center(
               child: CircularProgressIndicator(color: medPrimaryColor),
             )
-          : Container(
-              color: const Color(0xFFF5F3F3),
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildConsultationTab(),
-                  _buildExamensTab(),
-                  _buildInfosTab(),
-                ],
+          : Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 1000 : double.infinity,
+                ),
+                child: Container(
+                  color: const Color(0xFFF5F3F3),
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildConsultationTab(),
+                      _buildExamensTab(),
+                      _buildInfosTab(),
+                    ],
+                  ),
+                ),
               ),
             ),
     );
