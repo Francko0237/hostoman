@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hostoman/model_unifier.dart';
@@ -48,8 +49,7 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage =
-            'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+        errorMessage = 'lex_server_error'.tr();
       });
       print('Erreur de chargement historique: $e');
     }
@@ -77,9 +77,12 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Historique',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          'lhist_title'.tr(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
@@ -109,7 +112,7 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
                   ElevatedButton.icon(
                     onPressed: chargerHistorique,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Réessayer'),
+                    label: Text('lex_retry'.tr()),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: labBlueColor,
                       foregroundColor: Colors.white,
@@ -136,27 +139,27 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
                         maxWidth: isDesktop ? 900 : double.infinity,
                       ),
                       child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Rechercher un patient...',
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: labPrimaryColor,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                        decoration: InputDecoration(
+                          hintText: 'lhist_search_hint'.tr(),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: labPrimaryColor,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setState(() => searchQuery = value);
+                          _applyFilters();
+                        },
                       ),
                     ),
-                    onChanged: (value) {
-                      setState(() => searchQuery = value);
-                      _applyFilters();
-                    },
                   ),
                 ),
-                ),
-              ),
 
                 // Compteur
                 Padding(
@@ -167,12 +170,19 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
                         maxWidth: isDesktop ? 900 : double.infinity,
                       ),
                       child: Text(
-                    '${filteredConsultations.length} dossier${filteredConsultations.length > 1 ? 's' : ''} archivé${filteredConsultations.length > 1 ? 's' : ''}',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        (filteredConsultations.length > 1
+                                ? 'lhist_count_many'
+                                : 'lhist_count_one')
+                            .tr(
+                              namedArgs: {
+                                'count': '${filteredConsultations.length}',
+                              },
+                            ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                    ),
                   ),
                 ),
-                ),
-              ),
 
                 const SizedBox(height: 16),
 
@@ -184,35 +194,38 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
                         maxWidth: isDesktop ? 900 : double.infinity,
                       ),
                       child: filteredConsultations.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Aucun dossier archivé',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 16,
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filteredConsultations.length,
-                          itemBuilder: (context, index) {
-                            final item = filteredConsultations[index];
-                            final patientMap =
-                                item['Patient'] as Map<String, dynamic>;
-                            patientMap['id_patient'] = item['id_patient'];
-                            final patient = Patient.fromMap(patientMap);
-                            final idConsultation = item['id_consultation'];
+                          ? Center(
+                              child: Text(
+                                'lhist_empty'.tr(),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 16,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              itemCount: filteredConsultations.length,
+                              itemBuilder: (context, index) {
+                                final item = filteredConsultations[index];
+                                final patientMap =
+                                    item['Patient'] as Map<String, dynamic>;
+                                patientMap['id_patient'] = item['id_patient'];
+                                final patient = Patient.fromMap(patientMap);
+                                final idConsultation = item['id_consultation'];
 
-                            return _buildPatientCard(
-                              patient: patient,
-                              idConsultation: idConsultation,
-                              dateEnregistrement: item['date_enregistrement'],
-                            );
-                          },
-                        ),
-                        ),
-                      ),
+                                return _buildPatientCard(
+                                  patient: patient,
+                                  idConsultation: idConsultation,
+                                  dateEnregistrement:
+                                      item['date_enregistrement'],
+                                );
+                              },
+                            ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -226,8 +239,15 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
     required String dateEnregistrement,
   }) {
     final date = DateTime.parse(dateEnregistrement);
-    final dateFormatted =
-        '${date.day}/${date.month}/${date.year} à ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final dateFormatted = 'lhist_date_format'.tr(
+      namedArgs: {
+        'd': '${date.day}',
+        'm': '${date.month}',
+        'y': '${date.year}',
+        'h': date.hour.toString().padLeft(2, '0'),
+        'min': date.minute.toString().padLeft(2, '0'),
+      },
+    );
 
     return InkWell(
       onTap: () {
@@ -295,7 +315,9 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
                       Icon(Icons.cake, size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
-                        '${patient.age} ans',
+                        'lhist_age_value'.tr(
+                          namedArgs: {'age': '${patient.age}'},
+                        ),
                         style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
                     ],
@@ -326,9 +348,9 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
                 color: labBlueColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text(
-                'Terminé',
-                style: TextStyle(
+              child: Text(
+                'lhist_badge_done'.tr(),
+                style: const TextStyle(
                   color: labBlueColor,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -364,18 +386,18 @@ class _HistoriqueLaboUIState extends State<HistoriqueLaboUI> {
             break;
         }
       },
-      items: const [
+      items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard),
-          label: 'Dashboard',
+          icon: const Icon(Icons.dashboard),
+          label: 'labd_bottom_dashboard'.tr(),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart),
-          label: 'Statistiques',
+          icon: const Icon(Icons.bar_chart),
+          label: 'labd_bottom_stats'.tr(),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.history),
-          label: 'Historiques',
+          icon: const Icon(Icons.history),
+          label: 'labd_bottom_history'.tr(),
         ),
       ],
     );

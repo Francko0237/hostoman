@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dashboard_service.dart';
@@ -94,8 +95,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
         setState(() {
           isLoading = false;
           if (!silent) {
-            errorMessage =
-                'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+            errorMessage = 'labd_server_error'.tr();
           }
         });
       }
@@ -144,7 +144,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
           ElevatedButton.icon(
             onPressed: chargerDonnees,
             icon: const Icon(Icons.refresh),
-            label: const Text('Réessayer'),
+            label: Text('labd_retry'.tr()),
             style: ElevatedButton.styleFrom(
               backgroundColor: LabTheme.primaryColor,
               foregroundColor: Colors.white,
@@ -205,16 +205,16 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      const Text(
-                        'Laboratoire',
-                        style: TextStyle(
+                      Text(
+                        'labd_module_name'.tr(),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       Text(
-                        'Hôpital de District de Manjo',
+                        'auth_hospital_name'.tr(),
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.6),
                           fontSize: 11,
@@ -232,40 +232,46 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                       _labPcNavItem(
                         context,
                         Icons.dashboard,
-                        'Dashboard',
+                        'labd_nav_dashboard'.tr(),
                         null,
                         active: true,
                       ),
                       _labPcNavItem(
                         context,
                         Icons.science_outlined,
-                        'Examens à faire',
+                        'labd_action_exams_todo'.tr(),
                         '/Dashboard_Laboratoire/ExamensAFaire',
                       ),
                       _labPcNavItem(
                         context,
                         Icons.check_circle_outline,
-                        'Résultats',
+                        'labd_action_results'.tr(),
                         '/Dashboard_Laboratoire/Resultats',
                       ),
                       _labPcNavItem(
                         context,
                         Icons.bar_chart,
-                        'Statistiques',
+                        'labd_action_stats'.tr(),
                         '/Dashboard_Laboratoire/Statistiques',
                       ),
                       _labPcNavItem(
                         context,
                         Icons.history,
-                        'Historique',
+                        'labd_action_history'.tr(),
                         '/Dashboard_Laboratoire/Historique',
                       ),
                       Divider(color: Colors.white.withValues(alpha: 0.1)),
                       _labPcNavItem(
                         context,
                         Icons.person_outline,
-                        'Profil',
+                        'labd_nav_profile'.tr(),
                         '/Dashboard_Laboratoire/Profil',
+                      ),
+                      _labPcNavItem(
+                        context,
+                        Icons.settings_outlined,
+                        'labd_nav_settings'.tr(),
+                        '/Dashboard_Laboratoire/parametrelaboratoire',
                       ),
                     ],
                   ),
@@ -282,9 +288,12 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                       color: Colors.white54,
                       size: 18,
                     ),
-                    label: const Text(
-                      'Déconnexion',
-                      style: TextStyle(color: Colors.white54, fontSize: 13),
+                    label: Text(
+                      'labd_menu_logout'.tr(),
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 13,
+                      ),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
@@ -335,7 +344,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Dashboard Laboratoire',
+                        'labd_breadcrumb'.tr(),
                         style: TextStyle(
                           color: labColor,
                           fontSize: 14,
@@ -361,7 +370,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Hôpital de District de Manjo',
+                              'auth_hospital_name'.tr(),
                               style: TextStyle(
                                 color: labColor,
                                 fontSize: 12,
@@ -381,9 +390,9 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Tableau de bord',
-                          style: TextStyle(
+                        Text(
+                          'labd_section_title'.tr(),
+                          style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF1A1A2E),
@@ -391,7 +400,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Module Laboratoire',
+                          'labd_section_subtitle'.tr(),
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -403,7 +412,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                           children: [
                             Expanded(
                               child: _labKpiCard(
-                                'En attente (Examen)',
+                                'labd_kpi_pending_exam'.tr(),
                                 '$patientsEnAttenteExamen',
                                 Icons.science_outlined,
                                 Colors.orange.shade700,
@@ -412,7 +421,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                             const SizedBox(width: 16),
                             Expanded(
                               child: _labKpiCard(
-                                'En attente (Résultat)',
+                                'labd_kpi_pending_result'.tr(),
                                 '$patientsEnAttenteResultat',
                                 Icons.hourglass_empty,
                                 labColor,
@@ -421,9 +430,9 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                           ],
                         ),
                         const SizedBox(height: 28),
-                        const Text(
-                          'Actions rapides',
-                          style: TextStyle(
+                        Text(
+                          'labd_quick_actions'.tr(),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF1A1A2E),
@@ -436,8 +445,8 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                               child: _labPcActionCard(
                                 context,
                                 icon: Icons.science_outlined,
-                                label: 'Examens à faire',
-                                subtitle: 'Traiter les examens',
+                                label: 'labd_action_exams_todo'.tr(),
+                                subtitle: 'labd_action_exams_todo_sub'.tr(),
                                 color: labColor,
                                 route: '/Dashboard_Laboratoire/ExamensAFaire',
                               ),
@@ -447,8 +456,8 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                               child: _labPcActionCard(
                                 context,
                                 icon: Icons.check_circle_outline,
-                                label: 'Résultats',
-                                subtitle: 'Saisir les résultats',
+                                label: 'labd_action_results'.tr(),
+                                subtitle: 'labd_action_results_sub'.tr(),
                                 color: LabTheme.successColor,
                                 route: '/Dashboard_Laboratoire/Resultats',
                               ),
@@ -458,8 +467,8 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                               child: _labPcActionCard(
                                 context,
                                 icon: Icons.bar_chart,
-                                label: 'Statistiques',
-                                subtitle: 'Rapports journaliers',
+                                label: 'labd_action_stats'.tr(),
+                                subtitle: 'labd_action_stats_sub'.tr(),
                                 color: Colors.blue,
                                 route: '/Dashboard_Laboratoire/Statistiques',
                               ),
@@ -469,7 +478,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                         if (patientsEnCours.isNotEmpty) ...[
                           const SizedBox(height: 28),
                           Text(
-                            '🔬 Examens en cours',
+                            'labd_section_ongoing'.tr(),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -480,7 +489,9 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                           ...patientsEnCours.map((patient) {
                             final patientMap =
                                 patient['Patient'] as Map<String, dynamic>;
-                            final nom = patientMap['nom_complet'] ?? 'Inconnu';
+                            final nom =
+                                patientMap['nom_complet'] ??
+                                'labd_unknown_patient'.tr();
                             final examens = patient['examens_details'] ?? '';
                             return _ExamenListItem(
                               patientName: nom,
@@ -633,7 +644,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
               Row(
                 children: [
                   Text(
-                    'Accéder',
+                    'labd_open'.tr(),
                     style: TextStyle(
                       fontSize: 12,
                       color: color,
@@ -677,7 +688,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
             ),
             child: Center(
               child: Text(
-                'Dashboard Laboratoire',
+                'labd_title'.tr(),
                 style: TextStyle(
                   color: LabTheme.primaryColor,
                   fontSize: 28,
@@ -706,7 +717,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
         children: [
           Expanded(
             child: _StatCard(
-              label: 'Patient En attente\n(Examen)',
+              label: 'labd_kpi_pending_exam_mobile'.tr(),
               count: patientsEnAttenteExamen,
               textColor: Colors.orange.shade800,
             ),
@@ -714,7 +725,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
           const SizedBox(width: 10),
           Expanded(
             child: _StatCard(
-              label: 'Patient En attente\n(Résultat)',
+              label: 'labd_kpi_pending_result_mobile'.tr(),
               count: patientsEnAttenteResultat,
               textColor: LabTheme.primaryColor,
             ),
@@ -733,7 +744,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
           Expanded(
             child: _ActionCard(
               icon: Icons.science_outlined,
-              label: 'Examens à faire',
+              label: 'labd_action_exams_todo'.tr(),
               color: LabTheme.accentColor.withOpacity(0.1),
               iconColor: LabTheme.accentColor,
               onTap: () => context.push('/Dashboard_Laboratoire/ExamensAFaire'),
@@ -743,7 +754,7 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
           Expanded(
             child: _ActionCard(
               icon: Icons.check_circle_outline,
-              label: 'Résultats',
+              label: 'labd_action_results'.tr(),
               color: LabTheme.successColor.withOpacity(0.1),
               iconColor: LabTheme.successColor,
               onTap: () => context.push('/Dashboard_Laboratoire/Resultats'),
@@ -768,9 +779,9 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '🔬 Examens en Cours',
-            style: TextStyle(
+          Text(
+            'labd_section_ongoing_mobile'.tr(),
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: LabTheme.primaryColor,
@@ -787,12 +798,12 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
   // Liste des examens
   Widget _buildExamensList() {
     if (patientsEnCours.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(40.0),
+          padding: const EdgeInsets.all(40.0),
           child: Text(
-            'Aucun patient en attente de résultat aujourd\'hui',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            'labd_ongoing_empty'.tr(),
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
         ),
@@ -807,7 +818,8 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
         itemBuilder: (context, index) {
           final patient = patientsEnCours[index];
           final patientMap = patient['Patient'] as Map<String, dynamic>;
-          final nomComplet = patientMap['nom_complet'] ?? 'Inconnu';
+          final nomComplet =
+              patientMap['nom_complet'] ?? 'labd_unknown_patient'.tr();
           final examensDetails = patient['examens_details'] ?? '';
 
           return _ExamenListItem(
@@ -824,6 +836,8 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
   void _handleMenuSelection(String value) async {
     if (value == 'profile') {
       context.go('/Dashboard_Laboratoire/Profil');
+    } else if (value == 'settings') {
+      context.push('/Dashboard_Laboratoire/parametrelaboratoire');
     } else if (value == 'deconnexion') {
       await _handleDeconnexion();
     }
@@ -835,8 +849,8 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
       await Supabase.instance.client.auth.signOut();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Déconnexion réussie !'),
+          SnackBar(
+            content: Text('labd_logout_success'.tr()),
             backgroundColor: LabTheme.successColor,
           ),
         );
@@ -845,8 +859,8 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erreur lors de la déconnexion'),
+          SnackBar(
+            content: Text('labd_logout_error'.tr()),
             backgroundColor: LabTheme.attentionColor,
           ),
         );
@@ -857,13 +871,14 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
   // Gestion de la finalisation d'examen
   void _handleFinalizeExamen(Map<String, dynamic> patient) {
     final patientMap = patient['Patient'] as Map<String, dynamic>;
-    final nomComplet = patientMap['nom_complet'] ?? 'Inconnu';
+    final nomComplet = patientMap['nom_complet'] ?? 'labd_unknown_patient'.tr();
     final idConsultation = patient['id_consultation'];
-    final telephone = patientMap['telephone']?.toString() ?? 'N/A';
+    final telephone =
+        patientMap['telephone']?.toString() ?? 'pay_value_na'.tr();
     final age = patient['age'] != null
         ? patient['age'].toString()
         : (patientMap['age'] != null ? patientMap['age'].toString() : '0');
-    final sexe = patientMap['sexe'] ?? 'N/A';
+    final sexe = patientMap['sexe'] ?? 'pay_value_na'.tr();
 
     final data = PatientResultatData(
       nomComplet: nomComplet,
@@ -925,9 +940,9 @@ class _CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       // Titre avec bordure arrondie
       title: Container(
-        child: const Text(
-          'Hopital de District de Manjo',
-          style: TextStyle(
+        child: Text(
+          'auth_hospital_name'.tr(),
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 19,
             fontWeight: FontWeight.w600,
@@ -954,14 +969,21 @@ class _CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               _buildPopupMenuItem(
                 value: 'profile',
                 icon: Icons.person_outline,
-                label: 'Profile',
+                label: 'labd_menu_profile'.tr(),
+                color: LabTheme.primaryColor,
+              ),
+              const PopupMenuDivider(),
+              _buildPopupMenuItem(
+                value: 'settings',
+                icon: Icons.settings_outlined,
+                label: 'labd_menu_settings'.tr(),
                 color: LabTheme.primaryColor,
               ),
               const PopupMenuDivider(),
               _buildPopupMenuItem(
                 value: 'deconnexion',
                 icon: Icons.logout_outlined,
-                label: 'Déconnexion',
+                label: 'labd_menu_logout'.tr(),
                 color: LabTheme.attentionColor,
               ),
             ],
@@ -1200,7 +1222,10 @@ class _ExamenListItem extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       ),
-      child: const Text('Finaliser', style: TextStyle(fontSize: 14)),
+      child: Text(
+        'labd_finalize_btn'.tr(),
+        style: const TextStyle(fontSize: 14),
+      ),
     );
   }
 }
@@ -1220,18 +1245,18 @@ class _CustomBottomNav extends StatelessWidget {
       unselectedItemColor: Colors.grey.shade500,
       showUnselectedLabels: true,
       onTap: (index) => _handleNavigation(context, index),
-      items: const [
+      items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard),
-          label: 'Dashboard',
+          icon: const Icon(Icons.dashboard),
+          label: 'labd_bottom_dashboard'.tr(),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart),
-          label: 'Statistiques',
+          icon: const Icon(Icons.bar_chart),
+          label: 'labd_bottom_stats'.tr(),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.history),
-          label: 'Historiques',
+          icon: const Icon(Icons.history),
+          label: 'labd_bottom_history'.tr(),
         ),
       ],
     );

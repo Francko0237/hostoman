@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'statistiques_service.dart';
@@ -69,7 +70,10 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('hclist_error_snack'.tr(namedArgs: {'msg': '$e'})),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -108,7 +112,10 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('hclist_error_snack'.tr(namedArgs: {'msg': '$e'})),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -152,7 +159,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
   }
 
   String _formatDate(DateTime? date) {
-    if (date == null) return 'Sélectionner';
+    if (date == null) return 'stats_date_pick'.tr();
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
@@ -177,9 +184,9 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Statistiques',
-          style: TextStyle(
+        title: Text(
+          'stats_title'.tr(),
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -199,13 +206,13 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
                 child: const Icon(Icons.refresh, color: Colors.white),
               ),
               onPressed: _loadStatistiques,
-              tooltip: 'Actualiser',
+              tooltip: 'pay_refresh'.tr(),
             ),
           ),
           if (_patients.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.print, color: Colors.white),
-              tooltip: 'Imprimer la liste',
+              tooltip: 'stats_print_tooltip'.tr(),
               onPressed: _printPatientList,
             ),
         ],
@@ -278,9 +285,9 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
-                'Période d\'analyse',
-                style: TextStyle(
+              Text(
+                'stats_period_section'.tr(),
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF1C1C2E),
@@ -297,7 +304,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
             children: [
               Expanded(
                 child: _buildDateButton(
-                  label: 'Date début',
+                  label: 'stats_date_start'.tr(),
                   date: _dateDebut,
                   onTap: () => _selectDate(context, true),
                 ),
@@ -305,7 +312,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildDateButton(
-                  label: 'Date fin',
+                  label: 'stats_date_end'.tr(),
                   date: _dateFin,
                   onTap: () => _selectDate(context, false),
                 ),
@@ -324,9 +331,9 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
                 color: Colors.white,
                 size: 18,
               ),
-              label: const Text(
-                'Afficher les statistiques',
-                style: TextStyle(
+              label: Text(
+                'stats_btn_show'.tr(),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -407,7 +414,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
           children: [
             Expanded(
               child: _buildStatCard(
-                title: 'Terminées',
+                title: 'stats_card_completed'.tr(),
                 count: _nbTerminees,
                 icon: Icons.check_circle_rounded,
                 color: medSuccessColor,
@@ -417,7 +424,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                title: 'Annulées',
+                title: 'stats_card_cancelled'.tr(),
                 count: _nbAnnulees,
                 icon: Icons.cancel_rounded,
                 color: medErrorColor,
@@ -428,7 +435,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
         ),
         const SizedBox(height: 12),
         _buildStatCard(
-          title: 'Rendez-vous terminés',
+          title: 'stats_card_rdv'.tr(),
           count: _nbRdvTermines,
           icon: Icons.event_available_rounded,
           color: medInfoColor,
@@ -548,11 +555,11 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
 
   Widget _buildPatientList() {
     // Label selon catégorie
-    String categoryLabel = 'consultations terminées';
+    String categoryLabel = 'stats_label_completed'.tr();
     if (_selectedCategory == 'annulees') {
-      categoryLabel = 'consultations annulées';
+      categoryLabel = 'stats_label_cancelled'.tr();
     }
-    if (_selectedCategory == 'rdv') categoryLabel = 'rendez-vous terminés';
+    if (_selectedCategory == 'rdv') categoryLabel = 'stats_label_rdv'.tr();
 
     if (_patients.isEmpty) {
       return Container(
@@ -583,9 +590,9 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Aucun patient trouvé',
-              style: TextStyle(
+            Text(
+              'stats_empty_title'.tr(),
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: medPrimaryColor,
@@ -593,7 +600,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Aucune donnée pour cette période',
+              'stats_empty_msg'.tr(),
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
@@ -675,7 +682,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
 
   Widget _buildPatientCard(Map<String, dynamic> consultation) {
     final patient = consultation['Patient'] as Map<String, dynamic>?;
-    final nom = patient?['nom_complet'] ?? 'N/A';
+    final nom = patient?['nom_complet'] ?? 'pay_value_na'.tr();
     final sexe = patient?['sexe'] ?? '';
     final age = patient?['age']?.toString() ?? '';
     final idConsultation = consultation['id_consultation'];
@@ -754,28 +761,28 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
                         children: [
                           Icon(
                             sexe == 'Homme' ? Icons.man : Icons.woman,
-                            size: 15,
+                            size: 16,
                             color: Colors.grey[600],
                           ),
                           const SizedBox(width: 4),
                           Text(
                             sexe,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               color: Colors.grey[700],
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 16),
                           Icon(
-                            Icons.calendar_today,
-                            size: 10,
+                            Icons.cake_outlined,
+                            size: 14,
                             color: Colors.grey[600],
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Text(
-                            '$age ans',
+                            'clist_age_value'.tr(namedArgs: {'age': age}),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               color: Colors.grey[700],
                             ),
                           ),
@@ -837,28 +844,34 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
   Future<void> _printPatientList() async {
     final dateFormat = DateFormat('dd/MM/yyyy');
     final periodeLabel = (_dateDebut != null && _dateFin != null)
-        ? 'Du ${dateFormat.format(_dateDebut!)} au ${dateFormat.format(_dateFin!)}'
-        : 'Toutes dates';
+        ? 'stats_pdf_period'.tr(
+            namedArgs: {
+              'start': dateFormat.format(_dateDebut!),
+              'end': dateFormat.format(_dateFin!),
+            },
+          )
+        : 'stats_pdf_all_dates'.tr();
 
     String categorieLabel;
     switch (_selectedCategory) {
       case 'terminees':
-        categorieLabel = 'Terminées';
+        categorieLabel = 'stats_pdf_cat_completed'.tr();
         break;
       case 'annulees':
-        categorieLabel = 'Annulées';
+        categorieLabel = 'stats_pdf_cat_cancelled'.tr();
         break;
       default:
-        categorieLabel = 'Rendez-vous terminés';
+        categorieLabel = 'stats_pdf_cat_rdv'.tr();
     }
 
     final pdfPatients = _patients.map((consultation) {
       final patient = consultation['Patient'] as Map<String, dynamic>?;
-      final nom = patient?['nom_complet'] ?? 'N/A';
+      final nom = patient?['nom_complet'] ?? 'pay_value_na'.tr();
       final sexe = patient?['sexe'] ?? '';
       final age = patient?['age']?.toString() ?? '';
       final telephone = patient?['telephone']?.toString() ?? '';
-      final dateBrute = DateTime.tryParse(
+      final dateBrute =
+          DateTime.tryParse(
             consultation['date_derniere_mise_ajour']?.toString() ?? '',
           ) ??
           DateTime.now();
@@ -866,7 +879,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
       return PatientPdfData(
         nom: nom,
         sexe: sexe,
-        age: '$age ans',
+        age: 'clist_age_value'.tr(namedArgs: {'age': age}),
         telephone: telephone,
         dateEnregistrement: dateFormat.format(dateBrute),
         categorie: categorieLabel,
@@ -875,11 +888,11 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
 
     await PatientListPdfGenerator.previewAndPrint(
       context: context,
-      serviceName: 'Médecin',
+      serviceName: 'stats_pdf_service'.tr(),
       periodeLabel: periodeLabel,
       patients: pdfPatients,
       showCategorie: true,
-      categorieLabel: 'Statut consultation',
+      categorieLabel: 'stats_pdf_cat_label'.tr(),
     );
   }
 }

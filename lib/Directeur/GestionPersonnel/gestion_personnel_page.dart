@@ -14,6 +14,7 @@ const List<String> _kRoles = [
   'Major Accueil',
   'Caissier',
   'Laborantin',
+  'Pharmacien',
   'Infirmier',
 ];
 
@@ -29,6 +30,8 @@ String _roleKey(String role) {
       return 'role_cashier';
     case 'Laborantin':
       return 'role_lab';
+    case 'Pharmacien':
+      return 'role_pharmacist';
     case 'Infirmier':
       return 'role_nurse';
     default:
@@ -274,7 +277,11 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              _buildField(adresseCtrl, 'staff_field_address'.tr(), Icons.home),
+                              _buildField(
+                                adresseCtrl,
+                                'staff_field_address'.tr(),
+                                Icons.home,
+                              ),
                               const SizedBox(height: 12),
                               DropdownButtonFormField<String>(
                                 initialValue: selectedRole,
@@ -400,7 +407,9 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            child: Text(isEdit ? 'staff_save'.tr() : 'staff_add'.tr()),
+                            child: Text(
+                              isEdit ? 'staff_save'.tr() : 'staff_add'.tr(),
+                            ),
                           ),
                         ),
                       ],
@@ -431,7 +440,9 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
       validator:
           validator ??
           (required
-              ? (v) => (v == null || v.trim().isEmpty) ? 'staff_field_required'.tr() : null
+              ? (v) => (v == null || v.trim().isEmpty)
+                    ? 'staff_field_required'.tr()
+                    : null
               : null),
       decoration: InputDecoration(
         labelText: label,
@@ -602,9 +613,12 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
       underline: const SizedBox(),
       borderRadius: BorderRadius.circular(12),
       items: roles
-          .map((r) => DropdownMenuItem(
+          .map(
+            (r) => DropdownMenuItem(
               value: r,
-              child: Text(r == 'Tous' ? 'staff_all'.tr() : _trRole(r))))
+              child: Text(r == 'Tous' ? 'staff_all'.tr() : _trRole(r)),
+            ),
+          )
           .toList(),
       onChanged: (v) {
         setState(() {
@@ -625,7 +639,8 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
     final email = p['email'] ?? '';
     final tel = p['telephone']?.toString() ?? '';
     final rawSexe = p['sexe']?.toString() ?? 'Homme';
-    final sexe = (rawSexe == 'F' || rawSexe == 'Femme' || rawSexe == 'F\u00e9minin')
+    final sexe =
+        (rawSexe == 'F' || rawSexe == 'Femme' || rawSexe == 'F\u00e9minin')
         ? 'Femme'
         : 'Homme';
     final initial = rawNom.isNotEmpty ? rawNom[0].toUpperCase() : '?';
@@ -636,6 +651,7 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
       'Major Accueil': const Color(0xFF059669),
       'Caissier': const Color(0xFFD97706),
       'Laborantin': const Color(0xFFDC2626),
+      'Pharmacien': const Color(0xFF2E7D5B),
       'Infirmier': const Color(0xFF2563EB),
     };
     final roleColor = roleColors[role] ?? dirPrimaryColor;
@@ -764,7 +780,11 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                 value: 'edit',
                 child: Row(
                   children: [
-                    const Icon(Icons.edit_rounded, color: Colors.blue, size: 18),
+                    const Icon(
+                      Icons.edit_rounded,
+                      color: Colors.blue,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Text('staff_edit'.tr()),
                   ],
@@ -774,7 +794,11 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                 value: 'delete',
                 child: Row(
                   children: [
-                    const Icon(Icons.delete_rounded, color: Colors.red, size: 18),
+                    const Icon(
+                      Icons.delete_rounded,
+                      color: Colors.red,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Text('staff_delete'.tr()),
                   ],

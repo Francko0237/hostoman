@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'examen__faire_service.dart';
@@ -59,8 +60,7 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage =
-            'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+        errorMessage = 'lex_server_error'.tr();
       });
     }
   }
@@ -112,9 +112,7 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
       if (mounted) {
         if (statutApres == 'tous-traites') {
           print('✅ Tous traités → Retour à la liste avec pop()');
-          _showSuccessSnackBar(
-            'Tous les examens sont pris en charge. Patient en attente de résultat.',
-          );
+          _showSuccessSnackBar('lexd_all_done'.tr());
           await Future.delayed(const Duration(milliseconds: 800));
 
           // Utilise pop() pour revenir en arrière (la liste se rechargera automatiquement)
@@ -128,15 +126,13 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
       }
     } catch (e) {
       print('❌ Erreur lors de la vérification : $e');
-      _showErrorSnackBar('Erreur lors de la vérification : $e');
+      _showErrorSnackBar('lexd_err_verify'.tr(namedArgs: {'msg': '$e'}));
     }
   }
 
   Future<void> _enregistrerExamens() async {
     if (selectedExamensIds.isEmpty) {
-      _showErrorSnackBar(
-        "Veuillez sélectionner au moins un examen à enregistrer.",
-      );
+      _showErrorSnackBar('lexd_err_none_save'.tr());
       return;
     }
 
@@ -145,14 +141,17 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
       final selectedList = selectedExamensIds.toList();
       await laboService.enregistrerExamensEnCours(selectedList);
 
+      final n = selectedList.length;
       _showSuccessSnackBar(
-        "${selectedList.length} examen(s) enregistré(s) (En cours).",
+        (n > 1 ? 'lexd_success_save_many' : 'lexd_success_save_one').tr(
+          namedArgs: {'count': '$n'},
+        ),
       );
 
       // Vérifie si tous les examens sont terminés et redirige si nécessaire
       await _verifierEtRediriger();
     } catch (e) {
-      _showErrorSnackBar("Erreur lors de l'enregistrement: $e");
+      _showErrorSnackBar('lexd_err_save'.tr(namedArgs: {'msg': '$e'}));
     } finally {
       setState(() => isLoading = false);
     }
@@ -160,25 +159,31 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
 
   Future<void> _annulerExamens() async {
     if (selectedExamensIds.isEmpty) {
-      _showErrorSnackBar("Veuillez sélectionner au moins un examen à annuler.");
+      _showErrorSnackBar('lexd_err_none_cancel'.tr());
       return;
     }
 
+    final n = selectedExamensIds.length;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmation d\'annulation'),
+        title: Text('lexd_confirm_title'.tr()),
         content: Text(
-          'Êtes-vous sûr de vouloir annuler les ${selectedExamensIds.length} examen(s) sélectionné(s)?',
+          (n > 1 ? 'lexd_confirm_msg_many' : 'lexd_confirm_msg_one').tr(
+            namedArgs: {'count': '$n'},
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Non'),
+            child: Text('lexd_confirm_no'.tr()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Oui, Annuler', style: TextStyle(color: labErrorColor)),
+            child: Text(
+              'lexd_confirm_yes'.tr(),
+              style: const TextStyle(color: labErrorColor),
+            ),
           ),
         ],
       ),
@@ -190,12 +195,17 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
         final selectedList = selectedExamensIds.toList();
         await laboService.annulerExamens(selectedList);
 
-        _showSuccessSnackBar("${selectedList.length} examen(s) annulé(s).");
+        final m = selectedList.length;
+        _showSuccessSnackBar(
+          (m > 1 ? 'lexd_success_cancel_many' : 'lexd_success_cancel_one').tr(
+            namedArgs: {'count': '$m'},
+          ),
+        );
 
         // Vérifie si tous les examens sont annulés et redirige si nécessaire
         await _verifierEtRediriger();
       } catch (e) {
-        _showErrorSnackBar("Erreur lors de l'annulation: $e");
+        _showErrorSnackBar('lexd_err_cancel'.tr(namedArgs: {'msg': '$e'}));
       } finally {
         setState(() => isLoading = false);
       }
@@ -268,9 +278,12 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: const Text(
-          "Examens à effectuer",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          'lexd_title'.tr(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: SafeArea(
@@ -281,324 +294,331 @@ class _ExamenDetailScreenState extends State<ExamenDetailScreen> {
             ),
             child: Column(
               children: [
-            // Bandeau Patient
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF33333D),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              widget.nomPatient.isNotEmpty
-                                  ? widget.nomPatient[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: Text(
-                            widget.nomPatient,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: widget.sexe == 'Homme'
-                                ? Colors.blue.shade600
-                                : Colors.pink.shade600,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            widget.sexe,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
+                // Bandeau Patient
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF33333D),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 10,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    const Divider(
-                      color: Colors.grey,
-                      height: 1,
-                      thickness: 0.5,
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildInfoItem(
-                          icon: Icons.assignment_ind_outlined,
-                          label: 'Consultation ID:',
-                          value: widget.idConsultation.toString(),
-                        ),
-                        const SizedBox(width: 8),
-                        _buildInfoItem(
-                          icon: Icons.calendar_today_outlined,
-                          label: 'Âge:',
-                          value: '${widget.age} ans',
-                        ),
-                        const SizedBox(width: 8),
-                        _buildInfoItem(
-                          icon: Icons.phone_outlined,
-                          label: 'Tél:',
-                          value: widget.telephone,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Tout Sélectionner
-            Padding(
-              padding: const EdgeInsets.only(
-                left: 16.0,
-                right: 16.0,
-                top: 8.0,
-                bottom: 8.0,
-              ),
-              child: Row(
-                children: [
-                  Checkbox(
-                    value: isAllSelected,
-                    onChanged: toggleSelectAll,
-                    activeColor: labSuccessColor,
-                    checkColor: Colors.white,
-                    fillColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return labSuccessColor;
-                      }
-                      return Colors.grey.shade700;
-                    }),
-                  ),
-                  const Text(
-                    "Tout sélectionner",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Liste des examens
-            Expanded(
-              child: isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : errorMessage != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 60,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Text(
-                              errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 16,
+                        Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  widget.nomPatient.isNotEmpty
+                                      ? widget.nomPatient[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            onPressed: chargerExamens,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Réessayer'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: labPrimaryColor,
+                            const SizedBox(width: 15),
+                            Expanded(
+                              child: Text(
+                                widget.nomPatient,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
+                                horizontal: 10,
+                                vertical: 4,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              decoration: BoxDecoration(
+                                color: widget.sexe == 'Homme'
+                                    ? Colors.blue.shade600
+                                    : Colors.pink.shade600,
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : examens.isEmpty
-                  ? Center(
-                      child: Text(
-                        "Aucun examen à effectuer (Statut: En attente)",
-                        style: TextStyle(color: Colors.grey[400]),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      itemCount: examens.length,
-                      itemBuilder: (context, index) {
-                        final examen = examens[index];
-                        final idExamen = examen['id_examen'] as int;
-                        final isSelected = selectedExamensIds.contains(
-                          idExamen,
-                        );
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: Material(
-                            color: const Color(0xFF33333D),
-                            borderRadius: BorderRadius.circular(10),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(10),
-                              onTap: () => toggleExamen(idExamen, !isSelected),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 15.0,
-                                  horizontal: 8.0,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Checkbox(
-                                      value: isSelected,
-                                      onChanged: (val) =>
-                                          toggleExamen(idExamen, val),
-                                      activeColor: labSuccessColor,
-                                      checkColor: Colors.white,
-                                      fillColor:
-                                          WidgetStateProperty.resolveWith((
-                                            states,
-                                          ) {
-                                            if (states.contains(
-                                              WidgetState.selected,
-                                            )) {
-                                              return labSuccessColor;
-                                            }
-                                            return Colors.grey.shade700;
-                                          }),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        examen['nom_examen'].toString(),
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      examen['statut_examen'].toString(),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade500,
-                                      ),
-                                    ),
-                                  ],
+                              child: Text(
+                                widget.sexe,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Divider(
+                          color: Colors.grey,
+                          height: 1,
+                          thickness: 0.5,
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildInfoItem(
+                              icon: Icons.assignment_ind_outlined,
+                              label: 'lexd_field_consult_id'.tr(),
+                              value: widget.idConsultation.toString(),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildInfoItem(
+                              icon: Icons.calendar_today_outlined,
+                              label: 'lexd_field_age'.tr(),
+                              value: 'lexd_age_value'.tr(
+                                namedArgs: {'age': widget.age},
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildInfoItem(
+                              icon: Icons.phone_outlined,
+                              label: 'lexd_field_phone'.tr(),
+                              value: widget.telephone,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-            ),
+                  ),
+                ),
 
-            // Boutons Annuler et Enregistrer
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _annulerExamens,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: labErrorColor,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        "Annuler",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                // Tout Sélectionner
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    top: 8.0,
+                    bottom: 8.0,
                   ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _enregistrerExamens,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: labSuccessColor,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: isAllSelected,
+                        onChanged: toggleSelectAll,
+                        activeColor: labSuccessColor,
+                        checkColor: Colors.white,
+                        fillColor: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return labSuccessColor;
+                          }
+                          return Colors.grey.shade700;
+                        }),
                       ),
-                      child: const Text(
-                        "Enregistrer",
-                        style: TextStyle(
+                      Text(
+                        'lexd_select_all'.tr(),
+                        style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+
+                // Liste des examens
+                Expanded(
+                  child: isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : errorMessage != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 60,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                ),
+                                child: Text(
+                                  errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                onPressed: chargerExamens,
+                                icon: const Icon(Icons.refresh),
+                                label: Text('lex_retry'.tr()),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: labPrimaryColor,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : examens.isEmpty
+                      ? Center(
+                          child: Text(
+                            'lexd_empty'.tr(),
+                            style: TextStyle(color: Colors.grey[400]),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          itemCount: examens.length,
+                          itemBuilder: (context, index) {
+                            final examen = examens[index];
+                            final idExamen = examen['id_examen'] as int;
+                            final isSelected = selectedExamensIds.contains(
+                              idExamen,
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: Material(
+                                color: const Color(0xFF33333D),
+                                borderRadius: BorderRadius.circular(10),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(10),
+                                  onTap: () =>
+                                      toggleExamen(idExamen, !isSelected),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 15.0,
+                                      horizontal: 8.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          value: isSelected,
+                                          onChanged: (val) =>
+                                              toggleExamen(idExamen, val),
+                                          activeColor: labSuccessColor,
+                                          checkColor: Colors.white,
+                                          fillColor:
+                                              WidgetStateProperty.resolveWith((
+                                                states,
+                                              ) {
+                                                if (states.contains(
+                                                  WidgetState.selected,
+                                                )) {
+                                                  return labSuccessColor;
+                                                }
+                                                return Colors.grey.shade700;
+                                              }),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            examen['nom_examen'].toString(),
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          examen['statut_examen'].toString(),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+
+                // Boutons Annuler et Enregistrer
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _annulerExamens,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: labErrorColor,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'lexd_btn_cancel'.tr(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _enregistrerExamens,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: labSuccessColor,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'lexd_btn_save'.tr(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
-    ),
-    ),
     );
   }
 }

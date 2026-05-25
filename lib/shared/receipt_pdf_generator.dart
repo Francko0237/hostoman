@@ -1,8 +1,9 @@
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:flutter/material.dart' show BuildContext;
-import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Données nécessaires pour générer le reçu
@@ -41,7 +42,7 @@ class ReceiptPdfGenerator {
     try {
       final client = Supabase.instance.client;
       final user = client.auth.currentUser;
-      if (user == null) return 'Agent inconnu';
+      if (user == null) return 'rcpt_agent_unknown'.tr();
 
       final data = await client
           .from('Personnel_hopital')
@@ -53,11 +54,11 @@ class ReceiptPdfGenerator {
       final prenom = data['Prenom']?.toString() ?? '';
 
       final fullName = '$prenom $nom'.trim();
-      if (fullName.isEmpty) return 'Agent inconnu';
+      if (fullName.isEmpty) return 'rcpt_agent_unknown'.tr();
       return fullName;
     } catch (e) {
       final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) return 'Agent inconnu';
+      if (user == null) return 'rcpt_agent_unknown'.tr();
       final meta = user.userMetadata;
       if (meta != null) {
         final nom = meta['Nom'] ?? meta['nom'] ?? meta['name'];
@@ -65,7 +66,7 @@ class ReceiptPdfGenerator {
         if (nom != null && prenom != null) return '$prenom $nom';
         if (nom != null) return nom.toString();
       }
-      return user.email ?? 'Agent inconnu';
+      return user.email ?? 'rcpt_agent_unknown'.tr();
     }
   }
 
@@ -82,8 +83,17 @@ class ReceiptPdfGenerator {
     final ttfBold = pw.Font.helveticaBold();
     final ttfItalic = pw.Font.helveticaOblique();
 
+    // Logo (silencieux si l'asset est introuvable)
+    pw.MemoryImage? logoImage;
+    try {
+      final bytes = await rootBundle.load('assets/images/logo.png');
+      logoImage = pw.MemoryImage(bytes.buffer.asUint8List());
+    } catch (_) {
+      logoImage = null;
+    }
+
     final now = DateTime.now();
-    final dateImpression = DateFormat("dd/MM/yyyy 'à' HH:mm").format(now);
+    final dateImpression = DateFormat('rcpt_date_format'.tr()).format(now);
 
     // UUID court (8 caractères) pour le N° de Reçu
     final numRecu = data.idConsultation.length > 8
@@ -99,7 +109,12 @@ class ReceiptPdfGenerator {
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
               // ========== EN-TÊTE ==========
-              _buildHeader(ttf: ttf, ttfBold: ttfBold, ttfItalic: ttfItalic),
+              _buildHeader(
+                ttf: ttf,
+                ttfBold: ttfBold,
+                ttfItalic: ttfItalic,
+                logo: logoImage,
+              ),
               pw.SizedBox(height: 15),
 
               // ========== TITRE REÇU ==========
@@ -109,7 +124,7 @@ class ReceiptPdfGenerator {
                 ),
                 padding: const pw.EdgeInsets.symmetric(vertical: 8),
                 child: pw.Text(
-                  'REÇU DE PAIEMENT',
+                  'rcpt_title'.tr(),
                   style: pw.TextStyle(
                     font: ttfBold,
                     fontSize: 14,
@@ -122,7 +137,7 @@ class ReceiptPdfGenerator {
 
               pw.Center(
                 child: pw.Text(
-                  'N° Reçu : RECU-$numRecu',
+                  'rcpt_number'.tr(namedArgs: {'num': numRecu}),
                   style: pw.TextStyle(
                     font: ttfBold,
                     fontSize: 10,
@@ -134,7 +149,7 @@ class ReceiptPdfGenerator {
 
               // ========== INFOS PATIENT ==========
               pw.Text(
-                'INFORMATIONS DU PATIENT',
+                'rcpt_section_patient'.tr(),
                 style: pw.TextStyle(
                   font: ttfBold,
                   fontSize: 10,
@@ -144,19 +159,31 @@ class ReceiptPdfGenerator {
               ),
               pw.SizedBox(height: 8),
 
-              _buildInfoRow(ttf, ttfBold, 'Nom Complet', data.patientNom),
               _buildInfoRow(
                 ttf,
                 ttfBold,
-                'Âge / Sexe',
-                '${data.patientAge} ans / ${data.patientSexe}',
+                'rcpt_label_name'.tr(),
+                data.patientNom,
               ),
-              _buildInfoRow(ttf, ttfBold, 'Téléphone', data.patientTelephone),
+              _buildInfoRow(
+                ttf,
+                ttfBold,
+                'rcpt_label_age_sex'.tr(),
+                'rcpt_value_age_sex'.tr(
+                  namedArgs: {'age': data.patientAge, 'sexe': data.patientSexe},
+                ),
+              ),
+              _buildInfoRow(
+                ttf,
+                ttfBold,
+                'rcpt_label_phone'.tr(),
+                data.patientTelephone,
+              ),
               pw.SizedBox(height: 15),
 
               // ========== DÉTAILS DU PAIEMENT ==========
               pw.Text(
-                'DÉTAILS DU PAIEMENT',
+                'rcpt_section_payment'.tr(),
                 style: pw.TextStyle(
                   font: ttfBold,
                   fontSize: 10,
@@ -175,21 +202,31 @@ class ReceiptPdfGenerator {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow(ttf, ttfBold, 'Motif', data.motif),
-                    pw.SizedBox(height: 4),
-                    _buildInfoRow(ttf, ttfBold, 'Service', data.serviceName),
+                    _buildInfoRow(
+                      ttf,
+                      ttfBold,
+                      'rcpt_label_motif'.tr(),
+                      data.motif,
+                    ),
                     pw.SizedBox(height: 4),
                     _buildInfoRow(
                       ttf,
                       ttfBold,
-                      'Date / Heure',
+                      'rcpt_label_service'.tr(),
+                      data.serviceName,
+                    ),
+                    pw.SizedBox(height: 4),
+                    _buildInfoRow(
+                      ttf,
+                      ttfBold,
+                      'rcpt_label_datetime'.tr(),
                       data.datePaiement,
                     ),
                     pw.SizedBox(height: 4),
                     _buildInfoRow(
                       ttf,
                       ttfBold,
-                      'Statut',
+                      'rcpt_label_status'.tr(),
                       data.statutPaiement.toUpperCase(),
                     ),
                     pw.SizedBox(height: 8),
@@ -199,11 +236,15 @@ class ReceiptPdfGenerator {
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
                         pw.Text(
-                          'MONTANT TOTAL PAYÉ',
+                          'rcpt_total_label'.tr(),
                           style: pw.TextStyle(font: ttfBold, fontSize: 11),
                         ),
                         pw.Text(
-                          '${data.montant.toStringAsFixed(0)} FCFA',
+                          'rcpt_amount_value'.tr(
+                            namedArgs: {
+                              'amount': data.montant.toStringAsFixed(0),
+                            },
+                          ),
                           style: pw.TextStyle(
                             font: ttfBold,
                             fontSize: 13,
@@ -221,7 +262,7 @@ class ReceiptPdfGenerator {
               if (data.examens.isNotEmpty) ...[
                 pw.SizedBox(height: 10),
                 pw.Text(
-                  'EXAMENS RÉALISÉS',
+                  'rcpt_section_exams'.tr(),
                   style: pw.TextStyle(
                     font: ttfBold,
                     fontSize: 10,
@@ -238,7 +279,9 @@ class ReceiptPdfGenerator {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: data.examens.map((exam) {
-                      final nom = exam['nom_examen']?.toString() ?? 'Examen inconnu';
+                      final nom =
+                          exam['nom_examen']?.toString() ??
+                          'rcpt_exam_unknown'.tr();
                       final prix = exam['prix_examen']?.toString() ?? '0';
                       return pw.Padding(
                         padding: const pw.EdgeInsets.only(bottom: 2),
@@ -246,9 +289,21 @@ class ReceiptPdfGenerator {
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
                             pw.Expanded(
-                              child: pw.Text('- $nom', style: pw.TextStyle(font: ttf, fontSize: 9, color: PdfColors.grey800)),
+                              child: pw.Text(
+                                '- $nom',
+                                style: pw.TextStyle(
+                                  font: ttf,
+                                  fontSize: 9,
+                                  color: PdfColors.grey800,
+                                ),
+                              ),
                             ),
-                            pw.Text('$prix FCFA', style: pw.TextStyle(font: ttfBold, fontSize: 9)),
+                            pw.Text(
+                              'rcpt_amount_value'.tr(
+                                namedArgs: {'amount': prix},
+                              ),
+                              style: pw.TextStyle(font: ttfBold, fontSize: 9),
+                            ),
                           ],
                         ),
                       );
@@ -267,7 +322,7 @@ class ReceiptPdfGenerator {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'Le Caissier / L\'Agent',
+                        'rcpt_sign_agent'.tr(),
                         style: pw.TextStyle(font: ttfBold, fontSize: 9),
                       ),
                       pw.SizedBox(height: 25),
@@ -281,7 +336,7 @@ class ReceiptPdfGenerator {
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text(
-                        'Signature / Cachet',
+                        'rcpt_sign_stamp'.tr(),
                         style: pw.TextStyle(font: ttfBold, fontSize: 9),
                       ),
                       pw.SizedBox(height: 25),
@@ -301,7 +356,7 @@ class ReceiptPdfGenerator {
               pw.SizedBox(height: 5),
               pw.Center(
                 child: pw.Text(
-                  'Hôpital de District de Manjo - Imprimé le $dateImpression',
+                  'rcpt_footer_printed'.tr(namedArgs: {'date': dateImpression}),
                   style: pw.TextStyle(
                     font: ttfItalic,
                     fontSize: 7,
@@ -312,7 +367,7 @@ class ReceiptPdfGenerator {
               pw.SizedBox(height: 2),
               pw.Center(
                 child: pw.Text(
-                  'Ce reçu sert de preuve de paiement. Veuillez le conserver avec soin.',
+                  'rcpt_footer_note'.tr(),
                   style: pw.TextStyle(
                     font: ttf,
                     fontSize: 7,
@@ -372,41 +427,51 @@ class ReceiptPdfGenerator {
     required pw.Font ttf,
     required pw.Font ttfBold,
     required pw.Font ttfItalic,
+    pw.MemoryImage? logo,
   }) {
+    const kPrimary = PdfColor.fromInt(0xFF2E7D32); // Vert caisse
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        // Blason HDM
+        // Logo (image réelle si disponible, sinon fallback texte)
         pw.Container(
           width: 50,
           height: 50,
           decoration: pw.BoxDecoration(
             shape: pw.BoxShape.circle,
-            color: const PdfColor.fromInt(0xFF2E7D32), // Vert
+            color: logo == null ? kPrimary : PdfColors.white,
+            border: logo == null
+                ? null
+                : pw.Border.all(color: kPrimary, width: 1),
           ),
-          child: pw.Center(
-            child: pw.Column(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              children: [
-                pw.Text(
-                  'HDM',
-                  style: pw.TextStyle(
-                    font: ttfBold,
-                    fontSize: 13,
-                    color: PdfColors.white,
+          padding: logo == null
+              ? pw.EdgeInsets.zero
+              : const pw.EdgeInsets.all(3),
+          child: logo != null
+              ? pw.ClipOval(child: pw.Image(logo, fit: pw.BoxFit.cover))
+              : pw.Center(
+                  child: pw.Column(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'HDM',
+                        style: pw.TextStyle(
+                          font: ttfBold,
+                          fontSize: 13,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                      pw.Text(
+                        'MANJO',
+                        style: pw.TextStyle(
+                          font: ttf,
+                          fontSize: 6,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                pw.Text(
-                  'MANJO',
-                  style: pw.TextStyle(
-                    font: ttf,
-                    fontSize: 6,
-                    color: PdfColors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
         pw.SizedBox(width: 10),
 
@@ -416,11 +481,11 @@ class ReceiptPdfGenerator {
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               pw.Text(
-                'REPUBLIQUE DU CAMEROUN',
+                'rcpt_header_republic'.tr(),
                 style: pw.TextStyle(font: ttfBold, fontSize: 8),
               ),
               pw.Text(
-                'Paix – Travail – Patrie',
+                'rcpt_header_motto'.tr(),
                 style: pw.TextStyle(
                   font: ttfItalic,
                   fontSize: 6.5,
@@ -429,7 +494,7 @@ class ReceiptPdfGenerator {
               ),
               pw.SizedBox(height: 5),
               pw.Text(
-                'HÔPITAL DE DISTRICT DE MANJO',
+                'rcpt_header_hospital'.tr(),
                 style: pw.TextStyle(
                   font: ttfBold,
                   fontSize: 10,
@@ -437,7 +502,7 @@ class ReceiptPdfGenerator {
                 ),
               ),
               pw.Text(
-                'Système de Gestion Hospitalière — Hostoman',
+                'rcpt_header_app'.tr(),
                 style: pw.TextStyle(
                   font: ttf,
                   fontSize: 6.5,

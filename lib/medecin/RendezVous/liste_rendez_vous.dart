@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -39,9 +40,11 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('hclist_error_snack'.tr(namedArgs: {'msg': '$e'})),
+          ),
+        );
       }
     }
   }
@@ -51,9 +54,12 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3F3),
       appBar: AppBar(
-        title: const Text(
-          "Rendez-vous Programmés",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        title: Text(
+          'rdv_title'.tr(),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: primaryPurple,
         leading: IconButton(
@@ -102,7 +108,7 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            "Aucun rendez-vous programmé",
+            'rdv_empty'.tr(),
             style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
         ],
@@ -112,9 +118,11 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
 
   Widget _buildRendezVousCard(Map<String, dynamic> rdv) {
     final patient = rdv['Patient'] as Map<String, dynamic>;
-    final String nom = patient['nom_complet']?.toString() ?? 'Inconnu';
-    final String telephone = patient['telephone']?.toString() ?? 'N/A';
-    final String sexe = patient['sexe']?.toString() ?? 'N/A';
+    final String nom =
+        patient['nom_complet']?.toString() ?? 'rdv_unknown_patient'.tr();
+    final String telephone =
+        patient['telephone']?.toString() ?? 'pay_value_na'.tr();
+    final String sexe = patient['sexe']?.toString() ?? 'pay_value_na'.tr();
     final int? age = patient['age'];
 
     final rdvDateStr = rdv['date_rdv_prevu'];
@@ -165,9 +173,9 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
                         color: Colors.red.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        "EN RETARD",
-                        style: TextStyle(
+                      child: Text(
+                        'rdv_late_badge'.tr(),
+                        style: const TextStyle(
                           color: Colors.red,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -186,7 +194,12 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    "$sexe, ${age ?? '?'} ans",
+                    'rdv_sex_age'.tr(
+                      namedArgs: {
+                        'sexe': sexe,
+                        'age': age?.toString() ?? 'rdv_age_unknown'.tr(),
+                      },
+                    ),
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   const SizedBox(width: 16),
@@ -203,10 +216,10 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
                   Text(
                     rdvDate != null
                         ? DateFormat(
-                            'EEE d MMM yyyy à HH:mm',
-                            'fr_FR',
+                            'rdv_date_format'.tr(),
+                            context.locale.toString(),
                           ).format(rdvDate)
-                        : "Date inconnue",
+                        : 'rdv_date_unknown'.tr(),
                     style: TextStyle(
                       color: dateColor,
                       fontSize: 16,

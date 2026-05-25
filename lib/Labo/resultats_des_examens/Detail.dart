@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'resultat_des_examens_service.dart';
@@ -67,8 +68,7 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
       if (mounted) {
         setState(() {
           isLoading = false;
-          errorMessage =
-              'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+          errorMessage = 'lex_server_error'.tr();
         });
       }
     }
@@ -81,10 +81,8 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
     );
     if (restants.isEmpty && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '🎉 Tous les résultats sont saisis ! Consultation finalisée.',
-          ),
+        SnackBar(
+          content: Text('lresd_snack_all_done'.tr()),
           backgroundColor: labSuccessColor,
         ),
       );
@@ -101,7 +99,8 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
 
   Future<void> _afficherDialogResultat(Map<String, dynamic> examen) async {
     final idExamen = examen['id_examen'] as int;
-    final nomExamen = examen['nom_examen']?.toString() ?? 'Examen';
+    final nomExamen =
+        examen['nom_examen']?.toString() ?? 'lresd_default_exam_name'.tr();
 
     final TextEditingController controller = TextEditingController();
 
@@ -115,7 +114,7 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Résultat: $nomExamen',
+                'lresd_dialog_title'.tr(namedArgs: {'name': nomExamen}),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -127,8 +126,8 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
             TextField(
               controller: controller,
               decoration: InputDecoration(
-                labelText: 'Saisir le résultat',
-                hintText: 'Ex: Positif, Négatif, 12.5 g/dL...',
+                labelText: 'lresd_dialog_field_label'.tr(),
+                hintText: 'lresd_dialog_field_hint'.tr(),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -142,14 +141,14 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, null),
-            child: const Text('Annuler'),
+            child: Text('lresd_dialog_cancel'.tr()),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text),
             style: ElevatedButton.styleFrom(backgroundColor: labSuccessColor),
-            child: const Text(
-              'Enregistrer',
-              style: TextStyle(color: Colors.white),
+            child: Text(
+              'lresd_dialog_save'.tr(),
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         ],
@@ -168,7 +167,9 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('✅ Résultat de "$nomExamen" enregistré'),
+              content: Text(
+                'lresd_snack_saved'.tr(namedArgs: {'name': nomExamen}),
+              ),
               backgroundColor: labSuccessColor,
             ),
           );
@@ -181,7 +182,7 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('❌ Erreur: $e'),
+              content: Text('lresd_snack_error'.tr(namedArgs: {'msg': '$e'})),
               backgroundColor: Colors.red,
             ),
           );
@@ -241,9 +242,12 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: const Text(
-          "Saisie des résultats",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          'lresd_title'.tr(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: SafeArea(
@@ -338,19 +342,21 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
                           children: [
                             _buildInfoItem(
                               icon: Icons.assignment_ind_outlined,
-                              label: 'Consultation ID:',
+                              label: 'lresd_field_consult_id'.tr(),
                               value: widget.idConsultation.toString(),
                             ),
                             const SizedBox(width: 8),
                             _buildInfoItem(
                               icon: Icons.calendar_today_outlined,
-                              label: 'Âge:',
-                              value: '${widget.age} ans',
+                              label: 'lresd_field_age'.tr(),
+                              value: 'lresd_age_value'.tr(
+                                namedArgs: {'age': widget.age},
+                              ),
                             ),
                             const SizedBox(width: 8),
                             _buildInfoItem(
                               icon: Icons.phone_outlined,
-                              label: 'Tél:',
+                              label: 'lresd_field_phone'.tr(),
                               value: widget.telephone,
                             ),
                           ],
@@ -379,7 +385,7 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Cliquez sur un examen pour saisir son résultat',
+                            'lresd_instruction'.tr(),
                             style: TextStyle(
                               color: Colors.grey[300],
                               fontSize: 13,
@@ -430,7 +436,7 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
                               ElevatedButton.icon(
                                 onPressed: chargerExamens,
                                 icon: const Icon(Icons.refresh),
-                                label: const Text('Réessayer'),
+                                label: Text('lex_retry'.tr()),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: labPrimaryColor,
@@ -449,7 +455,7 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
                       : examens.isEmpty
                       ? Center(
                           child: Text(
-                            "Aucun examen disponible",
+                            'lresd_empty'.tr(),
                             style: TextStyle(color: Colors.grey[400]),
                           ),
                         )
@@ -459,7 +465,8 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
                           itemBuilder: (context, index) {
                             final examen = examens[index];
                             final nomExamen =
-                                examen['nom_examen']?.toString() ?? 'Examen';
+                                examen['nom_examen']?.toString() ??
+                                'lresd_default_exam_name'.tr();
                             final statutExamen =
                                 examen['statut_examen']?.toString() ??
                                 'En cours';
@@ -535,8 +542,9 @@ class _ResultatDetailScreenState extends State<ResultatDetailScreen> {
                                               const SizedBox(height: 4),
                                               Text(
                                                 isTermine
-                                                    ? 'Résultat saisi ✓'
-                                                    : 'En attente de résultat',
+                                                    ? 'lresd_status_done'.tr()
+                                                    : 'lresd_status_pending'
+                                                          .tr(),
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: isTermine

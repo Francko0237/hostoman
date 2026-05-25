@@ -69,6 +69,8 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
           context.go('/Dashboard_Medecin');
         } else if (role == 'Laborantin') {
           context.go('/Dashboard_Laboratoire');
+        } else if (role == 'Pharmacien') {
+          context.go('/Dashboard_Pharmacie');
         } else {
           print('erreur de role');
         }

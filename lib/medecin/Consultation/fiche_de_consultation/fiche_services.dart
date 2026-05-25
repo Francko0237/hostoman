@@ -28,7 +28,30 @@ class MedecinServices {
         .toList();
   }
 
+  /// 💊 Récupère la liste des médicaments du catalogue (actifs uniquement).
+  /// Le champ `disponible` est calculé : actif AND stock > 0.
+  Future<List<Map<String, dynamic>>> getListeMedicaments() async {
+    final response = await supabase
+        .from('listemedicament')
+        .select(
+          'id_medicament, nom_medicament, forme, dosage, prix_unitaire, stock, actif',
+        )
+        .eq('actif', true)
+        .order('nom_medicament', ascending: true);
+
+    return (response as List<dynamic>)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+  }
+
   /// 🩺 Sauvegarde les données de la consultation (Adapté à ton UI)
+  /// [medicamentsPrescrits] : liste de maps avec
+  ///   - id_medicament (int?)        -> NULL si saisie libre
+  ///   - nom_medicament (String)
+  ///   - posologie (String)
+  ///   - quantite (int)
+  ///   - prix_unitaire (num?)        -> NULL si saisie libre
+  ///   - disponible_initialement (bool)
   Future<void> saveConsultationData({
     required int idConsultation,
     required String antecedents,
@@ -40,6 +63,8 @@ class MedecinServices {
     required String traitementPrescrit,
     String? programmationRdv,
     DateTime? rdvDate,
+    List<Map<String, dynamic>> medicamentsPrescrits = const [],
+    String? idPatient,
   }) async {
     final now = DateTime.now().toIso8601String();
 
@@ -94,6 +119,60 @@ class MedecinServices {
         'prix_a_paye': totalPrix,
         'statut_paiement': 'en_attente',
         'motif': 'Examens',
+        'date_paiement': now,
+      });
+    }
+
+    // 4. Traitement des médicaments prescrits (Pharmacie)
+    if (medicamentsPrescrits.isNotEmpty) {
+      // Total estimé (les saisies libres sans prix sont ignorées du total)
+      double totalMed = 0;
+      for (final m in medicamentsPrescrits) {
+        final prix = (m['prix_unitaire'] as num?)?.toDouble() ?? 0;
+        final qte = (m['quantite'] as num?)?.toInt() ?? 1;
+        totalMed += prix * qte;
+      }
+
+      // 4.a Création de la prescription
+      final prescriptionRes = await supabase
+          .from('prescription')
+          .insert({
+            'id_consultation': idConsultation,
+            'id_patient': idPatient,
+            'type_prescription': 'consultation',
+            'statut_prescription': 'en_attente_paiement',
+            'total_prix': totalMed,
+            'date_prescription': now,
+            'date_derniere_mise_ajour': now,
+          })
+          .select('id_prescription')
+          .single();
+
+      final int idPrescription = prescriptionRes['id_prescription'] as int;
+
+      // 4.b Lignes de prescription
+      final List<Map<String, dynamic>> lignes = medicamentsPrescrits.map((m) {
+        return {
+          'id_prescription': idPrescription,
+          'id_medicament': m['id_medicament'], // peut être null
+          'nom_medicament': m['nom_medicament'],
+          'posologie': m['posologie'],
+          'quantite': m['quantite'],
+          'prix_unitaire': m['prix_unitaire'], // peut être null si saisie libre
+          'disponible_initialement': m['disponible_initialement'] ?? false,
+          'statut_ligne': 'en_attente',
+        };
+      }).toList();
+
+      await supabase.from('prescription_ligne').insert(lignes);
+
+      // 4.c Facture pharmacie
+      await supabase.from('paiement').insert({
+        'id_consultation': idConsultation,
+        'id_prescription': idPrescription,
+        'prix_a_paye': totalMed,
+        'statut_paiement': 'en_attente',
+        'motif': 'Medicaments',
         'date_paiement': now,
       });
     }

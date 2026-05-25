@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'package:intl/intl.dart';
@@ -68,8 +69,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
       if (mounted) {
         setState(() {
           isLoading = false;
-          errorMessage =
-              'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+          errorMessage = 'lex_server_error'.tr();
         });
       }
     }
@@ -81,7 +81,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
       initialDate: isDebut ? dateDebut : dateFin,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      locale: const Locale('fr', 'FR'),
+      locale: context.locale,
     );
 
     if (picked != null) {
@@ -108,9 +108,12 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Statistiques Laboratoire',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          'lstat_title'.tr(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
@@ -120,7 +123,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
           if (patients.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.print, color: Colors.white),
-              tooltip: 'Imprimer la liste',
+              tooltip: 'lstat_print_tooltip'.tr(),
               onPressed: _printPatientList,
             ),
         ],
@@ -146,7 +149,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
                   ElevatedButton.icon(
                     onPressed: chargerDonnees,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Réessayer'),
+                    label: Text('lex_retry'.tr()),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: labBlueColor,
                       foregroundColor: Colors.white,
@@ -216,9 +219,9 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
                 color: labPrimaryColor,
               ),
               const SizedBox(width: 8),
-              const Text(
-                'Période',
-                style: TextStyle(
+              Text(
+                'lstat_period_title'.tr(),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -231,7 +234,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
             children: [
               Expanded(
                 child: _buildDateField(
-                  label: 'Début',
+                  label: 'lstat_date_start'.tr(),
                   date: dateFormat.format(dateDebut),
                   onTap: () => _selectDate(context, true),
                 ),
@@ -242,7 +245,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
               ),
               Expanded(
                 child: _buildDateField(
-                  label: 'Fin',
+                  label: 'lstat_date_end'.tr(),
                   date: dateFormat.format(dateFin),
                   onTap: () => _selectDate(context, false),
                 ),
@@ -314,9 +317,9 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
             children: [
               const Icon(Icons.filter_list, size: 20, color: labPrimaryColor),
               const SizedBox(width: 8),
-              const Text(
-                'Filtres optionnels',
-                style: TextStyle(
+              Text(
+                'lstat_filters_title'.tr(),
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: Colors.black87,
@@ -341,7 +344,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
         children: [
           Expanded(
             child: _buildStatCard(
-              label: 'Patients Terminés',
+              label: 'lstat_card_done'.tr(),
               count: statistiques['termines'] ?? 0,
               color: labGreenColor,
               icon: Icons.check_circle,
@@ -357,7 +360,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
           const SizedBox(width: 12),
           Expanded(
             child: _buildStatCard(
-              label: 'Patients Annulés',
+              label: 'lstat_card_cancelled'.tr(),
               count: statistiques['annules'] ?? 0,
               color: Colors.red,
               icon: Icons.cancel,
@@ -431,8 +434,16 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
         children: [
           Text(
             statutFiltre == null
-                ? 'Liste des patients (${patients.length})'
-                : 'Patients - ${statutFiltre}s (${patients.length})',
+                ? 'lstat_section_all'.tr(
+                    namedArgs: {'count': '${patients.length}'},
+                  )
+                : (statutFiltre == 'Terminé'
+                      ? 'lstat_section_done'.tr(
+                          namedArgs: {'count': '${patients.length}'},
+                        )
+                      : 'lstat_section_cancelled'.tr(
+                          namedArgs: {'count': '${patients.length}'},
+                        )),
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -449,7 +460,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
               ),
               child: Center(
                 child: Text(
-                  'Aucun patient pour cette période',
+                  'lstat_empty'.tr(),
                   style: TextStyle(color: Colors.grey[600]),
                 ),
               ),
@@ -498,106 +509,125 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: labGreenColor,
-            child: Text(
-              patient.nom_complet[0].toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: labGreenColor,
+              child: Text(
+                patient.nom_complet[0].toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
 
-          // Infos patient
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  patient.nom_complet,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+            // Infos patient
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    patient.nom_complet,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      patient.sexe == 'Homme' ? Icons.male : Icons.female,
-                      size: 14,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${patient.sexe}, ${patient.age} ans',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 12,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      dateFormatted,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(Icons.science, size: 12, color: labGreenColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$nombreExamens examen${nombreExamens > 1 ? 's' : ''}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: labGreenColor,
-                        fontWeight: FontWeight.w600,
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        patient.sexe == 'Homme' ? Icons.male : Icons.female,
+                        size: 14,
+                        color: Colors.grey[600],
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 4),
+                      Text(
+                        'lstat_sex_age'.tr(
+                          namedArgs: {
+                            'sexe': patient.sexe,
+                            'age': '${patient.age}',
+                          },
+                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 12,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        dateFormatted,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(Icons.science, size: 12, color: labGreenColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        (nombreExamens > 1
+                                ? 'lstat_exams_many'
+                                : 'lstat_exams_one')
+                            .tr(namedArgs: {'count': '$nombreExamens'}),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: labGreenColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
   }
 
   Future<void> _printPatientList() async {
     final dateFormat = DateFormat('dd/MM/yyyy');
-    final periodeLabel =
-        'Du ${dateFormat.format(dateDebut)} au ${dateFormat.format(dateFin)}';
+    final periodeLabel = 'lstat_pdf_period'.tr(
+      namedArgs: {
+        'start': dateFormat.format(dateDebut),
+        'end': dateFormat.format(dateFin),
+      },
+    );
+    final statutLabel = statutFiltre == null
+        ? 'lstat_pdf_status_all'.tr()
+        : (statutFiltre == 'Terminé'
+              ? 'lstat_pdf_status_done'.tr()
+              : 'lstat_pdf_status_cancelled'.tr());
 
     final pdfPatients = patients.map((item) {
       final patientMap = Map<String, dynamic>.from(
-          item['Patient'] as Map<String, dynamic>);
+        item['Patient'] as Map<String, dynamic>,
+      );
       patientMap['id_patient'] = item['id_patient'];
       if (!patientMap.containsKey('date_enregistrement') ||
           patientMap['date_enregistrement'] == null) {
@@ -606,27 +636,33 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
       }
       final patient = Patient.fromMap(patientMap);
       final nombreExamens = item['nombre_examens'] ?? 0;
-      final dateConsult = DateTime.tryParse(
-              item['date_enregistrement'] ?? '') ??
+      final dateConsult =
+          DateTime.tryParse(item['date_enregistrement'] ?? '') ??
           DateTime.now();
 
       return PatientPdfData(
         nom: patient.nom_complet,
         sexe: patient.sexe,
-        age: '${patient.age} ans',
+        age: 'lex_age_value'.tr(namedArgs: {'age': '${patient.age}'}),
         telephone: patient.telephone.toString(),
         dateEnregistrement: dateFormat.format(dateConsult),
-        categorie: '$nombreExamens examen(s) — ${statutFiltre ?? "Tous"}',
+        categorie:
+            (nombreExamens > 1
+                    ? 'lstat_pdf_cat_value_many'
+                    : 'lstat_pdf_cat_value_one')
+                .tr(
+                  namedArgs: {'count': '$nombreExamens', 'statut': statutLabel},
+                ),
       );
     }).toList();
 
     await PatientListPdfGenerator.previewAndPrint(
       context: context,
-      serviceName: 'Laboratoire',
+      serviceName: 'lstat_pdf_service'.tr(),
       periodeLabel: periodeLabel,
       patients: pdfPatients,
       showCategorie: true,
-      categorieLabel: 'Statut / Examens',
+      categorieLabel: 'lstat_pdf_cat_label'.tr(),
     );
   }
 
@@ -650,18 +686,18 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
             break;
         }
       },
-      items: const [
+      items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard),
-          label: 'Dashboard',
+          icon: const Icon(Icons.dashboard),
+          label: 'labd_bottom_dashboard'.tr(),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart),
-          label: 'Statistiques',
+          icon: const Icon(Icons.bar_chart),
+          label: 'labd_bottom_stats'.tr(),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.history),
-          label: 'Historiques',
+          icon: const Icon(Icons.history),
+          label: 'labd_bottom_history'.tr(),
         ),
       ],
     );

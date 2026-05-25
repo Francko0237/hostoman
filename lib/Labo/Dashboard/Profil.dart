@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 // Assurez-vous que ces imports sont corrects
 import 'package:hostoman/model_unifier.dart';
@@ -59,8 +60,7 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
       if (mounted) {
         setState(() {
           loading = false;
-          errorMessage =
-              'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+          errorMessage = 'lprof_server_error'.tr();
         });
       }
     }
@@ -122,12 +122,12 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
         ),
         title: Row(
           children: [
-            SizedBox(width: 75),
-            Icon(Icons.person, color: labPrimaryColor, size: 24),
+            const SizedBox(width: 75),
+            const Icon(Icons.person, color: labPrimaryColor, size: 24),
             const SizedBox(width: 12),
             Text(
-              '  Profil',
-              style: TextStyle(
+              '  ${'lprof_title'.tr()}',
+              style: const TextStyle(
                 color: labPrimaryColor,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -162,8 +162,8 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                         CircularProgressIndicator(color: labPrimaryColor),
                         const SizedBox(height: 20),
                         Text(
-                          'Chargement des données...',
-                          style: TextStyle(
+                          'lprof_loading'.tr(),
+                          style: const TextStyle(
                             color: labPrimaryColor,
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
@@ -199,7 +199,7 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                       ElevatedButton.icon(
                         onPressed: _loadLaborantin,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('Réessayer'),
+                        label: Text('lprof_retry'.tr()),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: labPrimaryColor,
                           foregroundColor: Colors.white,
@@ -248,9 +248,9 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          'Aucune donnée de médecin trouvée',
+                          'lprof_no_data_title'.tr(),
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
                             color: labErrorColor,
@@ -258,7 +258,7 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          'Veuillez vous assurer d\'être connecté.',
+                          'lprof_no_data_msg'.tr(),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 15,
@@ -345,7 +345,7 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                                   height: 24,
                                 ), // Espacement augmenté
                                 Text(
-                                  'Mr. ${laborantin!.prenom} ${laborantin!.nom}', // Affichage "Dr."
+                                  '${'lprof_civility_mr'.tr()} ${laborantin!.prenom} ${laborantin!.nom}',
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 28, // Taille de texte plus grande
@@ -410,9 +410,9 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                                       size: 28,
                                     ), // Icône plus grande
                                     const SizedBox(width: 12),
-                                    const Text(
-                                      'Coordonnées et Information',
-                                      style: TextStyle(
+                                    Text(
+                                      'lprof_section_contact'.tr(),
+                                      style: const TextStyle(
                                         fontSize:
                                             20, // Taille de texte augmentée
                                         fontWeight: FontWeight.w700,
@@ -428,23 +428,31 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                                 ), // Séparateur
                                 _buildInfoCardRow(
                                   Icons.phone,
-                                  'Téléphone',
+                                  'lprof_field_phone'.tr(),
                                   laborantin!.telephone.toString(),
                                 ),
                                 _buildInfoCardRow(
                                   Icons.email,
-                                  'Email',
-                                  laborantin!.email ?? 'Non renseigné',
+                                  'lprof_field_email'.tr(),
+                                  laborantin!.email ??
+                                      'lprof_not_provided'.tr(),
                                 ),
                                 _buildInfoCardRow(
                                   Icons.location_on,
-                                  'Adresse',
-                                  laborantin!.adresse ?? 'Non renseigné',
+                                  'lprof_field_address'.tr(),
+                                  laborantin!.adresse ??
+                                      'lprof_not_provided'.tr(),
                                 ),
                                 _buildInfoCardRow(
                                   Icons.cake,
-                                  'Âge',
-                                  '${laborantin!.age ?? 'N/A'} ans',
+                                  'lprof_field_age'.tr(),
+                                  'lprof_age_value'.tr(
+                                    namedArgs: {
+                                      'age':
+                                          laborantin!.age?.toString() ??
+                                          'lprof_value_na'.tr(),
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
@@ -476,9 +484,9 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                                       size: 28,
                                     ),
                                     const SizedBox(width: 12),
-                                    const Text(
-                                      'Statistiques',
-                                      style: TextStyle(
+                                    Text(
+                                      'lprof_section_stats'.tr(),
+                                      style: const TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.w700,
                                         color: labTextColor,
@@ -539,7 +547,7 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              'Examens effectués',
+                                              'lprof_exams_done'.tr(),
                                               style: TextStyle(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.w600,
@@ -561,7 +569,7 @@ class _ProfilLaborantinPageState extends State<ProfilLaborantinPage> {
                           ), // Espacement final augmenté
                           Center(
                             child: Text(
-                              '© 2025 Yamgai Mokube Franck Daniel',
+                              'lprof_footer'.tr(),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: labLightTextColor.withOpacity(0.7),

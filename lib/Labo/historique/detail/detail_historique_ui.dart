@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'detail_historique_service.dart';
@@ -46,8 +47,7 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage =
-            'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+        errorMessage = 'lex_server_error'.tr();
       });
       print('Erreur de chargement détails: $e');
     }
@@ -66,9 +66,12 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Détails de la Consultation',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          'lhistd_title'.tr(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: isLoading
@@ -92,7 +95,7 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
                   ElevatedButton.icon(
                     onPressed: chargerDetails,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Réessayer'),
+                    label: Text('lex_retry'.tr()),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: labBlueColor,
                       foregroundColor: Colors.white,
@@ -109,10 +112,10 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
               ),
             )
           : detailsData == null
-          ? const Center(
+          ? Center(
               child: Text(
-                'Aucun détail trouvé',
-                style: TextStyle(color: Colors.white),
+                'lhistd_no_data'.tr(),
+                style: const TextStyle(color: Colors.white),
               ),
             )
           : Align(
@@ -190,30 +193,34 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
             const Divider(height: 32),
 
             // Informations
-            _buildInfoRow(Icons.cake, 'Âge:', '${patient.age} ans'),
+            _buildInfoRow(
+              Icons.cake,
+              'lhistd_field_age'.tr(),
+              'lhistd_age_value'.tr(namedArgs: {'age': '${patient.age}'}),
+            ),
             const SizedBox(height: 12),
             _buildInfoRow(
               patient.sexe == 'Homme' ? Icons.male : Icons.female,
-              'Sexe:',
+              'lhistd_field_sex'.tr(),
               patient.sexe,
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.phone,
-              'Téléphone:',
+              'lhistd_field_phone'.tr(),
               patient.telephone.toString(),
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.medical_services,
-              'Consultation ID:',
+              'lhistd_field_consult_id'.tr(),
               widget.idConsultation.toString(),
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.check_circle,
-              'Statut:',
-              'TERMINÉE',
+              'lhistd_field_status'.tr(),
+              'lhistd_status_done'.tr(),
               valueColor: labBlueColor,
             ),
           ],
@@ -260,17 +267,21 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
 
     // Filtrer uniquement les examens terminés et annulés
     final examensAffiches = examensList
-        .where((examen) =>
-            examen['statut_examen'] == 'Terminé' ||
-            examen['statut_examen'] == 'Annulé' ||
-            examen['statut_examen'] == 'annuler')
+        .where(
+          (examen) =>
+              examen['statut_examen'] == 'Terminé' ||
+              examen['statut_examen'] == 'Annulé' ||
+              examen['statut_examen'] == 'annuler',
+        )
         .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Liste des Examens (${examensAffiches.length})',
+          'lhistd_section_exams'.tr(
+            namedArgs: {'count': '${examensAffiches.length}'},
+          ),
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -285,10 +296,10 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'Aucun examen (Terminé ou Annulé)',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+                'lhistd_exams_empty'.tr(),
+                style: const TextStyle(color: Colors.grey, fontSize: 14),
               ),
             ),
           )
@@ -301,12 +312,15 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
   }
 
   Widget _buildExamenCard(Map<String, dynamic> examen) {
-    final nomExamen = examen['nom_examen'] ?? 'Examen';
-    final resultat = examen['resultat_examen'] ?? 'N/A';
+    final nomExamen = examen['nom_examen'] ?? 'lhistd_default_exam_name'.tr();
+    final resultat = examen['resultat_examen'] ?? 'pay_value_na'.tr();
     final statut = examen['statut_examen'] ?? 'En cours';
-    
+
     final bool isAnnule = statut.toString().toLowerCase().contains('annul');
     final statutColor = isAnnule ? Colors.red : labBlueColor;
+    final String statutLabel = isAnnule
+        ? 'lhistd_exam_status_cancelled'.tr()
+        : 'lhistd_exam_status_done'.tr();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -340,7 +354,7 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
           Row(
             children: [
               Text(
-                'Résultat:',
+                'lhistd_field_result'.tr(),
                 style: TextStyle(fontSize: 13, color: Colors.grey[600]),
               ),
               const SizedBox(width: 8),
@@ -363,7 +377,7 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Statut:',
+                'lhistd_field_exam_status'.tr(),
                 style: TextStyle(fontSize: 13, color: Colors.grey[600]),
               ),
               Container(
@@ -376,7 +390,7 @@ class _DetailHistoriqueLaboUIState extends State<DetailHistoriqueLaboUI> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  statut.toUpperCase(),
+                  statutLabel,
                   style: TextStyle(
                     color: statutColor,
                     fontSize: 12,

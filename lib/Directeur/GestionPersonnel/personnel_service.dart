@@ -7,7 +7,7 @@ import 'dart:convert';
 /// Copiez-la depuis `supabase status` (cherchez "service_role key"). Si vous êtes bloqué,
 /// le fallback avec signUp est utilisé, mais il gérera mieux les insertions locale.
 const String _serviceRoleKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q';
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Z3ljY3lheXduY2Fmb2NtZG5kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTg0NDI0MiwiZXhwIjoyMDkxNDIwMjQyfQ.kP8VFJipmsN6T9wO13etVWjhmm79SGPve4JbXNP63M8';
 
 class PersonnelService {
   final SupabaseClient supabase;
@@ -126,13 +126,25 @@ class PersonnelService {
   /// ✏️ Modifie un membre du personnel (sans toucher à l'Auth)
   Future<String?> updatePersonnel(String id, Map<String, dynamic> data) async {
     try {
-      await supabase
+      // .select() force Supabase à renvoyer les lignes modifiées,
+      // sinon une RLS qui filtre silencieusement laisse passer un "succès" vide.
+      final rows = await supabase
           .from('Personnel_hopital')
           .update(data)
-          .eq('id_personnel', id);
+          .eq('id_personnel', id)
+          .select();
+
+      if (rows.isEmpty) {
+        // L'update a été accepté mais 0 ligne modifiée :
+        // soit l'id ne correspond plus, soit RLS bloque côté Postgres.
+        return 'Aucune modification effectuée. Vérifiez vos droits (RLS) '
+            'ou rechargez la liste avant de réessayer.';
+      }
       return null;
+    } on PostgrestException catch (e) {
+      return 'Erreur modification: ${e.message}';
     } catch (e) {
-      return 'Erreur modification: $e';
+      return 'Erreur inattendue: $e';
     }
   }
 

@@ -47,6 +47,7 @@ import 'package:hostoman/medecin/dashboard/Parametre.dart';
 //Laboratoire
 import 'package:hostoman/Labo/Dashboard/Dashboard.dart';
 import 'package:hostoman/Labo/Dashboard/Profil.dart';
+import 'package:hostoman/Labo/Dashboard/Parametre.dart';
 import 'package:hostoman/Labo/Examen_a_faire/examen_a_faire.dart';
 import 'package:hostoman/Labo/Examen_a_faire/Detail.dart';
 import 'package:hostoman/Labo/resultats_des_examens/resultat_des_examens.dart';
@@ -54,6 +55,17 @@ import 'package:hostoman/Labo/resultats_des_examens/Detail.dart';
 import 'package:hostoman/Labo/historique/historique_ui.dart';
 import 'package:hostoman/Labo/historique/detail/detail_historique_ui.dart';
 import 'package:hostoman/Labo/statistique/statistique_ui.dart';
+
+// Pharmacie
+import 'package:hostoman/Pharmacie/Dashboard/Dashboard.dart';
+import 'package:hostoman/Pharmacie/Dashboard/Profil.dart';
+import 'package:hostoman/Pharmacie/Dashboard/Parametre.dart';
+import 'package:hostoman/Pharmacie/Dashboard/gestion_medicaments.dart';
+import 'package:hostoman/Pharmacie/Ordonnances/ordonnances_list.dart';
+import 'package:hostoman/Pharmacie/Ordonnances/ordonnance_detail.dart';
+import 'package:hostoman/Pharmacie/VenteLibre/vente_libre.dart';
+import 'package:hostoman/Pharmacie/Historique/historique.dart';
+import 'package:hostoman/Pharmacie/Statistique/statistique.dart';
 
 //Configuration de toutes les route du projets
 final GoRouter _router = GoRouter(
@@ -295,6 +307,55 @@ final GoRouter _router = GoRouter(
         GoRoute(
           path: 'Profil',
           builder: (context, state) => const ProfilLaborantinPage(),
+        ),
+        GoRoute(
+          path: 'parametrelaboratoire',
+          builder: (context, state) => const ParametreLaboratoirePage(),
+        ),
+      ],
+    ),
+
+    // Pharmacie
+    GoRoute(
+      path: '/Dashboard_Pharmacie',
+      builder: (context, state) => const DashboardPharmacie(),
+      routes: [
+        GoRoute(
+          path: 'Ordonnances',
+          builder: (context, state) => const OrdonnancesList(),
+          routes: [
+            GoRoute(
+              path: ':idPrescription',
+              builder: (context, state) {
+                final id = int.parse(state.pathParameters['idPrescription']!);
+                return OrdonnanceDetail(idPrescription: id);
+              },
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'VenteLibre',
+          builder: (context, state) => const VenteLibrePage(),
+        ),
+        GoRoute(
+          path: 'Catalogue',
+          builder: (context, state) => const GestionMedicaments(),
+        ),
+        GoRoute(
+          path: 'Historique',
+          builder: (context, state) => const HistoriquePharmacie(),
+        ),
+        GoRoute(
+          path: 'Statistiques',
+          builder: (context, state) => const StatistiquePharmacie(),
+        ),
+        GoRoute(
+          path: 'Profil',
+          builder: (context, state) => const ProfilPharmacien(),
+        ),
+        GoRoute(
+          path: 'Parametres',
+          builder: (context, state) => const ParametrePharmacie(),
         ),
       ],
     ),

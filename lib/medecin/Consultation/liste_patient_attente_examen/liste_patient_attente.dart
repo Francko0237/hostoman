@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 
@@ -48,7 +49,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
     } catch (e) {
       print('❌ Erreur de chargement: $e');
       setState(() {
-        errorMessage = 'Erreur lors du chargement des patients : $e';
+        errorMessage = 'att_error_loading'.tr(namedArgs: {'msg': '$e'});
       });
     } finally {
       if (mounted) {
@@ -132,21 +133,22 @@ class _EnattenteExamState extends State<EnattenteExam> {
           children: [
             Icon(Icons.warning_amber_rounded, color: medErrorColor),
             const SizedBox(width: 12),
-            const Text('Confirmer l\'annulation'),
+            Text('att_cancel_title'.tr()),
           ],
         ),
-        content: Text(
-          'Voulez-vous vraiment annuler la consultation de $nomPatient ?',
-        ),
+        content: Text('att_cancel_msg'.tr(namedArgs: {'nom': nomPatient})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Non'),
+            child: Text('att_cancel_no'.tr()),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: medErrorColor),
-            child: const Text('Oui', style: TextStyle(color: Colors.white)),
+            child: Text(
+              'att_cancel_yes'.tr(),
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -157,7 +159,9 @@ class _EnattenteExamState extends State<EnattenteExam> {
         await consultationService.annulerConsultation(idConsultation);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Consultation de $nomPatient annulée'),
+            content: Text(
+              'att_cancel_success'.tr(namedArgs: {'nom': nomPatient}),
+            ),
             backgroundColor: medErrorColor,
           ),
         );
@@ -165,7 +169,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Erreur: $e'),
+            content: Text('att_cancel_error'.tr(namedArgs: {'msg': '$e'})),
             backgroundColor: medErrorColor,
           ),
         );
@@ -193,15 +197,15 @@ class _EnattenteExamState extends State<EnattenteExam> {
   String _getStatutLabel(String? statutExamen) {
     switch (statutExamen) {
       case 'en-attente-examen':
-        return 'En attente d\'examen';
+        return 'att_status_waiting_exam'.tr();
       case 'en-attente-resultat':
-        return 'En attente de résultat';
+        return 'att_status_waiting_result'.tr();
       case 'resultat-disponible':
-        return 'Résultats disponibles';
+        return 'att_status_result_available'.tr();
       case 'Annuler':
-        return 'Annulée';
+        return 'att_status_cancelled'.tr();
       default:
-        return 'Inconnu';
+        return 'att_status_unknown'.tr();
     }
   }
 
@@ -219,12 +223,12 @@ class _EnattenteExamState extends State<EnattenteExam> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            SizedBox(width: 40),
+            const SizedBox(width: 40),
             Text(
-              "En attente d'Examen",
-              style: TextStyle(
+              'att_title'.tr(),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -246,7 +250,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
                 child: const Icon(Icons.refresh, color: Colors.white),
               ),
               onPressed: chargerConsultations,
-              tooltip: 'Actualiser',
+              tooltip: 'pay_refresh'.tr(),
             ),
           ),
         ],
@@ -275,7 +279,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
                           ),
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Rechercher un patient par nom...',
+                              hintText: 'pay_search_hint'.tr(),
                               hintStyle: TextStyle(color: Colors.grey.shade500),
                               prefixIcon: Icon(
                                 Icons.search,
@@ -329,7 +333,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
                               ],
                             ],
                           ),
-                          tooltip: 'Trier',
+                          tooltip: 'pay_sort_tooltip'.tr(),
                           color: Colors.white,
                           elevation: 8,
                           shape: RoundedRectangleBorder(
@@ -343,28 +347,28 @@ class _EnattenteExamState extends State<EnattenteExam> {
                             _buildFilterMenuItem(
                               value: 'name_asc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom A → Z',
+                              label: 'pay_sort_name_asc'.tr(),
                               isSelected: sortOption == 'name_asc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'name_desc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom Z → A',
+                              label: 'pay_sort_name_desc'.tr(),
                               isSelected: sortOption == 'name_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_desc',
                               icon: Icons.access_time,
-                              label: 'Plus récent',
+                              label: 'pay_sort_date_desc'.tr(),
                               isSelected: sortOption == 'date_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_asc',
                               icon: Icons.access_time,
-                              label: 'Plus ancien',
+                              label: 'pay_sort_date_asc'.tr(),
                               isSelected: sortOption == 'date_asc',
                             ),
                           ],
@@ -390,7 +394,14 @@ class _EnattenteExamState extends State<EnattenteExam> {
                       maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: Text(
-                      '${filteredConsultations.length} patient${filteredConsultations.length > 1 ? 's' : ''} en attente',
+                      (filteredConsultations.length > 1
+                              ? 'att_count_many'
+                              : 'att_count_one')
+                          .tr(
+                            namedArgs: {
+                              'count': '${filteredConsultations.length}',
+                            },
+                          ),
                       style: const TextStyle(
                         fontSize: 14,
                         color: medPrimaryColor,
@@ -423,9 +434,9 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                   color: medPrimaryColor,
                                 ),
                                 const SizedBox(height: 16),
-                                const Text(
-                                  'Chargement...',
-                                  style: TextStyle(
+                                Text(
+                                  'att_loading'.tr(),
+                                  style: const TextStyle(
                                     color: medPrimaryColor,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -449,7 +460,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: chargerConsultations,
-                                child: const Text('Réessayer'),
+                                child: Text('att_retry'.tr()),
                               ),
                             ],
                           ),
@@ -486,9 +497,9 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                const Text(
-                                  'Aucun patient en attente',
-                                  style: TextStyle(
+                                Text(
+                                  'att_empty_title'.tr(),
+                                  style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w600,
                                     color: medPrimaryColor,
@@ -496,7 +507,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Les patients ayant payé apparaîtront ici',
+                                  'att_empty_msg'.tr(),
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey[600],
@@ -618,28 +629,39 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                               const SizedBox(height: 4),
                                               Row(
                                                 children: [
-                                                  patient.sexe == 'Homme'
-                                                      ? Icon(
-                                                          Icons.man,
-                                                          size: 15,
-                                                          color:
-                                                              Colors.grey[600],
-                                                        )
-                                                      : Icon(
-                                                          Icons.woman,
-                                                          size: 15,
-                                                          color:
-                                                              Colors.grey[600],
-                                                        ),
+                                                  Icon(
+                                                    patient.sexe == 'Homme'
+                                                        ? Icons.man
+                                                        : Icons.woman,
+                                                    size: 16,
+                                                    color: Colors.grey[600],
+                                                  ),
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     patient.sexe,
                                                     style: TextStyle(
-                                                      fontSize: 10,
+                                                      fontSize: 12,
                                                       color: Colors.grey[700],
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 12),
+                                                  const SizedBox(width: 16),
+                                                  Icon(
+                                                    Icons.cake_outlined,
+                                                    size: 14,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    'clist_age_value'.tr(
+                                                      namedArgs: {
+                                                        'age': '${patient.age}',
+                                                      },
+                                                    ),
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey[700],
+                                                    ),
+                                                  ),
                                                 ],
                                               ),
                                               if (examensList.isNotEmpty) ...[
@@ -655,7 +677,11 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                                     const SizedBox(width: 4),
                                                     Expanded(
                                                       child: Text(
-                                                        'Examens: $examensList',
+                                                        'att_exams_label'.tr(
+                                                          namedArgs: {
+                                                            'list': examensList,
+                                                          },
+                                                        ),
                                                         style: TextStyle(
                                                           fontSize: 11,
                                                           fontWeight:
@@ -735,7 +761,7 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                               color: medErrorColor,
                                               size: 25,
                                             ),
-                                            tooltip: 'Annuler',
+                                            tooltip: 'att_cancel_tooltip'.tr(),
                                           ),
                                         ),
                                       ],
@@ -758,15 +784,15 @@ class _EnattenteExamState extends State<EnattenteExam> {
   String _getSortLabel() {
     switch (sortOption) {
       case 'name_asc':
-        return 'A → Z';
+        return 'pay_sort_short_az'.tr();
       case 'name_desc':
-        return 'Z → A';
+        return 'pay_sort_short_za'.tr();
       case 'date_desc':
-        return 'Récent';
+        return 'pay_sort_short_recent'.tr();
       case 'date_asc':
-        return 'Ancien';
+        return 'pay_sort_short_old'.tr();
       default:
-        return 'Trier';
+        return 'pay_sort_tooltip'.tr();
     }
   }
 

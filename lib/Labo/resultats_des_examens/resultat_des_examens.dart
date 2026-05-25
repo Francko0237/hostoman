@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 
@@ -89,8 +90,7 @@ class _ResultatsListeState extends State<ResultatsListe> {
       print('❌ Erreur de chargement: $e');
       setState(() {
         isLoading = false;
-        errorMessage =
-            'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+        errorMessage = 'lex_server_error'.tr();
       });
     }
   }
@@ -170,13 +170,17 @@ class _ResultatsListeState extends State<ResultatsListe> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.assignment_turned_in, color: Colors.white, size: 28),
-            SizedBox(width: 12),
+            const Icon(
+              Icons.assignment_turned_in,
+              color: Colors.white,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
             Text(
-              "Résultats à saisir",
-              style: TextStyle(
+              'lres_title'.tr(),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -198,7 +202,7 @@ class _ResultatsListeState extends State<ResultatsListe> {
                 child: const Icon(Icons.refresh, color: Colors.white),
               ),
               onPressed: chargerPatients,
-              tooltip: 'Actualiser',
+              tooltip: 'pay_refresh'.tr(),
             ),
           ),
         ],
@@ -227,7 +231,7 @@ class _ResultatsListeState extends State<ResultatsListe> {
                           ),
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Rechercher un patient par nom...',
+                              hintText: 'pay_search_hint'.tr(),
                               hintStyle: TextStyle(color: Colors.grey.shade500),
                               prefixIcon: Icon(
                                 Icons.search,
@@ -281,7 +285,7 @@ class _ResultatsListeState extends State<ResultatsListe> {
                               ],
                             ],
                           ),
-                          tooltip: 'Trier',
+                          tooltip: 'pay_sort_tooltip'.tr(),
                           color: Colors.white,
                           elevation: 8,
                           shape: RoundedRectangleBorder(
@@ -295,28 +299,28 @@ class _ResultatsListeState extends State<ResultatsListe> {
                             _buildFilterMenuItem(
                               value: 'name_asc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom A → Z',
+                              label: 'pay_sort_name_asc'.tr(),
                               isSelected: sortOption == 'name_asc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'name_desc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom Z → A',
+                              label: 'pay_sort_name_desc'.tr(),
                               isSelected: sortOption == 'name_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_desc',
                               icon: Icons.access_time,
-                              label: 'Plus récent',
+                              label: 'pay_sort_date_desc'.tr(),
                               isSelected: sortOption == 'date_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_asc',
                               icon: Icons.access_time,
-                              label: 'Plus ancien',
+                              label: 'pay_sort_date_asc'.tr(),
                               isSelected: sortOption == 'date_asc',
                             ),
                           ],
@@ -342,7 +346,12 @@ class _ResultatsListeState extends State<ResultatsListe> {
                       maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: Text(
-                      '${filteredPatients.length} patient${filteredPatients.length > 1 ? 's' : ''} en attente de résultat',
+                      (filteredPatients.length > 1
+                              ? 'lres_count_many'
+                              : 'lres_count_one')
+                          .tr(
+                            namedArgs: {'count': '${filteredPatients.length}'},
+                          ),
                       style: const TextStyle(
                         fontSize: 14,
                         color: labPrimaryColor,
@@ -375,9 +384,9 @@ class _ResultatsListeState extends State<ResultatsListe> {
                                   color: labPrimaryColor,
                                 ),
                                 const SizedBox(height: 16),
-                                const Text(
-                                  'Chargement...',
-                                  style: TextStyle(
+                                Text(
+                                  'lres_loading'.tr(),
+                                  style: const TextStyle(
                                     color: labPrimaryColor,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -418,9 +427,9 @@ class _ResultatsListeState extends State<ResultatsListe> {
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                const Text(
-                                  'Aucun résultat à saisir',
-                                  style: TextStyle(
+                                Text(
+                                  'lres_empty_title'.tr(),
+                                  style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w600,
                                     color: labPrimaryColor,
@@ -428,7 +437,7 @@ class _ResultatsListeState extends State<ResultatsListe> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Tous les résultats sont à jour.',
+                                  'lres_empty_msg'.tr(),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 14,
@@ -449,7 +458,8 @@ class _ResultatsListeState extends State<ResultatsListe> {
                                 item['Patient'] as Map<String, dynamic>;
 
                             final telephone =
-                                patientMap['telephone']?.toString() ?? 'N/A';
+                                patientMap['telephone']?.toString() ??
+                                'pay_value_na'.tr();
                             final idConsultationInt =
                                 item['id_consultation'] as int;
                             final idConsultation = idConsultationInt.toString();
@@ -555,38 +565,36 @@ class _ResultatsListeState extends State<ResultatsListe> {
                                               const SizedBox(height: 6),
                                               Row(
                                                 children: [
-                                                  patient.sexe == 'Homme'
-                                                      ? Icon(
-                                                          Icons.man,
-                                                          size: 15,
-                                                          color:
-                                                              Colors.grey[600],
-                                                        )
-                                                      : Icon(
-                                                          Icons.woman,
-                                                          size: 15,
-                                                          color:
-                                                              Colors.grey[600],
-                                                        ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    patient.sexe,
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: Colors.grey[700],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 12),
                                                   Icon(
-                                                    Icons.calendar_today,
-                                                    size: 10,
+                                                    patient.sexe == 'Homme'
+                                                        ? Icons.man
+                                                        : Icons.woman,
+                                                    size: 16,
                                                     color: Colors.grey[600],
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    '${patient.age} ans',
+                                                    patient.sexe,
                                                     style: TextStyle(
-                                                      fontSize: 10,
+                                                      fontSize: 12,
+                                                      color: Colors.grey[700],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 16),
+                                                  Icon(
+                                                    Icons.cake_outlined,
+                                                    size: 14,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    'lres_age_value'.tr(
+                                                      namedArgs: {
+                                                        'age': '${patient.age}',
+                                                      },
+                                                    ),
+                                                    style: TextStyle(
+                                                      fontSize: 12,
                                                       color: Colors.grey[700],
                                                     ),
                                                   ),
@@ -629,7 +637,7 @@ class _ResultatsListeState extends State<ResultatsListe> {
                                               ),
                                               const SizedBox(width: 6),
                                               Text(
-                                                'En attente',
+                                                'lres_badge_pending'.tr(),
                                                 style: TextStyle(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w700,
@@ -666,15 +674,15 @@ class _ResultatsListeState extends State<ResultatsListe> {
   String _getSortLabel() {
     switch (sortOption) {
       case 'name_asc':
-        return 'A → Z';
+        return 'pay_sort_short_az'.tr();
       case 'name_desc':
-        return 'Z → A';
+        return 'pay_sort_short_za'.tr();
       case 'date_desc':
-        return 'Récent';
+        return 'pay_sort_short_recent'.tr();
       case 'date_asc':
-        return 'Ancien';
+        return 'pay_sort_short_old'.tr();
       default:
-        return 'Trier';
+        return 'pay_sort_tooltip'.tr();
     }
   }
 

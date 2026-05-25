@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 
@@ -92,8 +93,7 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
       print('❌ Erreur de chargement: $e');
       setState(() {
         isLoading = false;
-        errorMessage =
-            'Impossible de se connecter au serveur.\nVeuillez vérifier votre connexion internet.';
+        errorMessage = 'lex_server_error'.tr();
       });
     }
   }
@@ -173,13 +173,13 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.science, color: Colors.white, size: 28),
-            SizedBox(width: 12),
+            const Icon(Icons.science, color: Colors.white, size: 28),
+            const SizedBox(width: 12),
             Text(
-              "Examens à faire",
-              style: TextStyle(
+              'lex_title'.tr(),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -201,7 +201,7 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                 child: const Icon(Icons.refresh, color: Colors.white),
               ),
               onPressed: chargerExamens,
-              tooltip: 'Actualiser',
+              tooltip: 'pay_refresh'.tr(),
             ),
           ),
         ],
@@ -230,7 +230,7 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                           ),
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Rechercher un patient par nom...',
+                              hintText: 'pay_search_hint'.tr(),
                               hintStyle: TextStyle(color: Colors.grey.shade500),
                               prefixIcon: Icon(
                                 Icons.search,
@@ -284,7 +284,7 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                               ],
                             ],
                           ),
-                          tooltip: 'Trier',
+                          tooltip: 'pay_sort_tooltip'.tr(),
                           color: Colors.white,
                           elevation: 8,
                           shape: RoundedRectangleBorder(
@@ -298,28 +298,28 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                             _buildFilterMenuItem(
                               value: 'name_asc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom A → Z',
+                              label: 'pay_sort_name_asc'.tr(),
                               isSelected: sortOption == 'name_asc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'name_desc',
                               icon: Icons.sort_by_alpha,
-                              label: 'Nom Z → A',
+                              label: 'pay_sort_name_desc'.tr(),
                               isSelected: sortOption == 'name_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_desc',
                               icon: Icons.access_time,
-                              label: 'Plus récent',
+                              label: 'pay_sort_date_desc'.tr(),
                               isSelected: sortOption == 'date_desc',
                             ),
                             const PopupMenuDivider(),
                             _buildFilterMenuItem(
                               value: 'date_asc',
                               icon: Icons.access_time,
-                              label: 'Plus ancien',
+                              label: 'pay_sort_date_asc'.tr(),
                               isSelected: sortOption == 'date_asc',
                             ),
                           ],
@@ -345,7 +345,12 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                       maxWidth: isDesktop ? 900 : double.infinity,
                     ),
                     child: Text(
-                      '${filteredExamens.length} examen${filteredExamens.length > 1 ? 's' : ''} en attente',
+                      (filteredExamens.length > 1
+                              ? 'lex_count_many'
+                              : 'lex_count_one')
+                          .tr(
+                            namedArgs: {'count': '${filteredExamens.length}'},
+                          ),
                       style: const TextStyle(
                         fontSize: 14,
                         color: labPrimaryColor,
@@ -378,9 +383,9 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                                   color: labPrimaryColor,
                                 ),
                                 const SizedBox(height: 16),
-                                const Text(
-                                  'Chargement...',
-                                  style: TextStyle(
+                                Text(
+                                  'lex_loading'.tr(),
+                                  style: const TextStyle(
                                     color: labPrimaryColor,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -417,7 +422,7 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                               ElevatedButton.icon(
                                 onPressed: chargerExamens,
                                 icon: const Icon(Icons.refresh),
-                                label: const Text('Réessayer'),
+                                label: Text('lex_retry'.tr()),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: labPrimaryColor,
                                   foregroundColor: Colors.white,
@@ -465,9 +470,9 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                const Text(
-                                  'Liste d\'attente vide',
-                                  style: TextStyle(
+                                Text(
+                                  'lex_empty_title'.tr(),
+                                  style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w600,
                                     color: labPrimaryColor,
@@ -475,7 +480,7 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Aucun patient en attente d\'examen.',
+                                  'lex_empty_msg'.tr(),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 14,
@@ -496,7 +501,8 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                                 item['Patient'] as Map<String, dynamic>;
 
                             final telephone =
-                                patientMap['telephone']?.toString() ?? 'N/A';
+                                patientMap['telephone']?.toString() ??
+                                'pay_value_na'.tr();
                             final idConsultationInt =
                                 item['id_consultation'] as int;
                             final idConsultation = idConsultationInt.toString();
@@ -587,38 +593,36 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                                               const SizedBox(height: 6),
                                               Row(
                                                 children: [
-                                                  patient.sexe == 'Homme'
-                                                      ? Icon(
-                                                          Icons.man,
-                                                          size: 15,
-                                                          color:
-                                                              Colors.grey[600],
-                                                        )
-                                                      : Icon(
-                                                          Icons.woman,
-                                                          size: 15,
-                                                          color:
-                                                              Colors.grey[600],
-                                                        ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    patient.sexe,
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: Colors.grey[700],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 12),
                                                   Icon(
-                                                    Icons.calendar_today,
-                                                    size: 10,
+                                                    patient.sexe == 'Homme'
+                                                        ? Icons.man
+                                                        : Icons.woman,
+                                                    size: 16,
                                                     color: Colors.grey[600],
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    '${patient.age} ans',
+                                                    patient.sexe,
                                                     style: TextStyle(
-                                                      fontSize: 10,
+                                                      fontSize: 12,
+                                                      color: Colors.grey[700],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 16),
+                                                  Icon(
+                                                    Icons.cake_outlined,
+                                                    size: 14,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    'lex_age_value'.tr(
+                                                      namedArgs: {
+                                                        'age': '${patient.age}',
+                                                      },
+                                                    ),
+                                                    style: TextStyle(
+                                                      fontSize: 12,
                                                       color: Colors.grey[700],
                                                     ),
                                                   ),
@@ -652,15 +656,15 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
   String _getSortLabel() {
     switch (sortOption) {
       case 'name_asc':
-        return 'A → Z';
+        return 'pay_sort_short_az'.tr();
       case 'name_desc':
-        return 'Z → A';
+        return 'pay_sort_short_za'.tr();
       case 'date_desc':
-        return 'Récent';
+        return 'pay_sort_short_recent'.tr();
       case 'date_asc':
-        return 'Ancien';
+        return 'pay_sort_short_old'.tr();
       default:
-        return 'Trier';
+        return 'pay_sort_tooltip'.tr();
     }
   }
 
