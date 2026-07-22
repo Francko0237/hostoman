@@ -4,35 +4,46 @@ class StatistiquePharmacieService {
   final SupabaseClient supabase;
   StatistiquePharmacieService(this.supabase);
 
-  /// Renvoie les KPI globaux + ventes par jour (7 derniers) +
-  /// top 5 médicaments les plus vendus.
-  Future<Map<String, dynamic>> getStats() async {
-    final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
-    final weekAgoIso = DateTime(weekAgo.year, weekAgo.month, weekAgo.day)
-        .toIso8601String();
+  /// Renvoie les KPI pour une plage de dates donnée.
+  Future<Map<String, dynamic>> getStatsParPlage(
+    DateTime dateDebut,
+    DateTime dateFin,
+  ) async {
+    final debutIso = DateTime(
+      dateDebut.year,
+      dateDebut.month,
+      dateDebut.day,
+    ).toIso8601String();
+    final finIso = DateTime(
+      dateFin.year,
+      dateFin.month,
+      dateFin.day,
+      23,
+      59,
+      59,
+    ).toIso8601String();
 
-    // Ventes payées sur la semaine
+    // 1. Paiements médicaments payés dans la plage (par date de paiement)
     final paiements = await supabase
         .from('paiement')
         .select('prix_a_paye, date_paiement')
         .eq('motif', 'Medicaments')
         .eq('statut_paiement', 'paye')
-        .gte('date_paiement', weekAgoIso);
+        .gte('date_paiement', debutIso)
+        .lte('date_paiement', finIso);
 
-    double totalSemaine = 0;
-    int countSemaine = 0;
+    double totalVente = 0;
     final Map<String, double> parJour = {};
-    for (var i = 0; i < 7; i++) {
-      final d = now.subtract(Duration(days: 6 - i));
+    final nbJours = dateFin.difference(dateDebut).inDays + 1;
+    for (var i = 0; i < nbJours; i++) {
+      final d = dateDebut.add(Duration(days: i));
       final key =
           '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
       parJour[key] = 0;
     }
     for (final p in paiements as List<dynamic>) {
       final amt = (p['prix_a_paye'] as num?)?.toDouble() ?? 0;
-      totalSemaine += amt;
-      countSemaine++;
+      totalVente += amt;
       final dStr = (p['date_paiement'] ?? '').toString();
       if (dStr.length >= 10) {
         final key = dStr.substring(0, 10);
@@ -42,36 +53,55 @@ class StatistiquePharmacieService {
       }
     }
 
-    // Top médicaments (sur les lignes délivrées de la semaine)
-    final lignes = await supabase
-        .from('prescription_ligne')
-        .select(
-            'nom_medicament, quantite, prix_unitaire, statut_ligne, '
-            'prescription!inner(date_prescription, statut_prescription)')
-        .inFilter('statut_ligne', ['delivre', 'substitue']);
+    // 2. Prescriptions créées dans la plage
+    final prescriptions = await supabase
+        .from('prescription')
+        .select('id_prescription')
+        .gte('date_prescription', debutIso)
+        .lte('date_prescription', finIso);
 
+    final prescIds = (prescriptions as List<dynamic>)
+        .map((p) => p['id_prescription'] as int)
+        .toList();
+    final totalOrdonnances = prescIds.length;
+
+    // 3. Lignes délivrées pour ces prescriptions
+    int totalMedVendus = 0;
     final Map<String, Map<String, num>> topMap = {};
-    for (final l in lignes as List<dynamic>) {
-      final nom = (l['nom_medicament'] ?? '').toString();
-      final qte = (l['quantite'] as num?)?.toInt() ?? 0;
-      final prix = (l['prix_unitaire'] as num?)?.toDouble() ?? 0;
-      final entry = topMap.putIfAbsent(nom, () => {'qte': 0, 'ca': 0});
-      entry['qte'] = (entry['qte'] ?? 0) + qte;
-      entry['ca'] = (entry['ca'] ?? 0) + prix * qte;
+    if (prescIds.isNotEmpty) {
+      final lignes = await supabase
+          .from('prescription_ligne')
+          .select('nom_medicament, quantite, prix_unitaire, statut_ligne')
+          .inFilter('id_prescription', prescIds)
+          .inFilter('statut_ligne', ['delivre', 'substitue']);
+      for (final l in lignes as List<dynamic>) {
+        final nom = (l['nom_medicament'] ?? '').toString();
+        final qte = (l['quantite'] as num?)?.toInt() ?? 0;
+        final prix = (l['prix_unitaire'] as num?)?.toDouble() ?? 0;
+        totalMedVendus += qte;
+        final entry = topMap.putIfAbsent(nom, () => {'qte': 0, 'ca': 0});
+        entry['qte'] = (entry['qte'] ?? 0) + qte;
+        entry['ca'] = (entry['ca'] ?? 0) + prix * qte;
+      }
     }
-    final top = topMap.entries
-        .map((e) => {
-              'nom': e.key,
-              'quantite': e.value['qte']!.toInt(),
-              'ca': (e.value['ca'] ?? 0).toDouble(),
-            })
-        .toList()
-      ..sort((a, b) => (b['quantite'] as int).compareTo(a['quantite'] as int));
+    final top =
+        topMap.entries
+            .map(
+              (e) => {
+                'nom': e.key,
+                'quantite': e.value['qte']!.toInt(),
+                'ca': (e.value['ca'] ?? 0).toDouble(),
+              },
+            )
+            .toList()
+          ..sort(
+            (a, b) => (b['quantite'] as int).compareTo(a['quantite'] as int),
+          );
 
-    // Stock bas
+    // 4. Stock actuel (indépendant de la plage)
     final medicaments = await supabase
         .from('listemedicament')
-        .select('id_medicament, nom_medicament, stock, seuil_alerte, actif')
+        .select('stock, seuil_alerte')
         .eq('actif', true);
 
     int stockBas = 0;
@@ -87,13 +117,14 @@ class StatistiquePharmacieService {
     }
 
     return {
-      'total_semaine': totalSemaine,
-      'count_semaine': countSemaine,
-      'par_jour': parJour, // map keyée par yyyy-MM-dd
+      'total_vente': totalVente,
+      'par_jour': parJour,
       'top_medicaments': top.take(5).toList(),
       'stock_bas': stockBas,
       'rupture': rupture,
       'total_catalogue': medicaments.length,
+      'total_med_vendus': totalMedVendus,
+      'total_ordonnances': totalOrdonnances,
     };
   }
 }

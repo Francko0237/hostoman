@@ -3,6 +3,9 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../fiche_de_consultation/fiche_services.dart';
+import '../shared/consultation_pickers.dart';
+import 'consultation_pdf_generator.dart';
+import '../historique_consultation/historique_patient_page.dart';
 
 /// 📄 Page de Finalisation de Consultation (Tabbed View)
 class FinalisationConsultationPage extends StatefulWidget {
@@ -27,9 +30,15 @@ class _FinalisationConsultationPageState
   Map<String, dynamic>? _parametresVitaux;
   Map<String, dynamic>? _consultationData;
 
-  // --- Données Examens ---
+  // --- Données Examens (résultats déjà effectués) ---
   List<Map<String, dynamic>> _examensResultats = [];
   bool _examensLoading = true;
+
+  // --- Nouvelles prescriptions à ajouter au moment de la finalisation ---
+  List<Map<String, dynamic>> _examens = [];
+  bool _examensListeLoading = true;
+  List<Map<String, dynamic>> _medicaments = [];
+  bool _medicamentsLoading = true;
 
   // --- Contrôleurs de Formulaire ---
   final _formKey = GlobalKey<FormState>();
@@ -65,6 +74,88 @@ class _FinalisationConsultationPageState
     _loadPatientData();
     _loadConsultationData();
     _loadExamensResultats();
+    _loadExamensListe();
+    _loadMedicaments();
+  }
+
+  PickerTheme get _pickerTheme => PickerTheme(
+    primary: primaryPurple,
+    light: lightPurple,
+    fieldBg: fieldBackgroundColor,
+    fieldBorder: fieldBorderColor,
+    blue: primaryBlue,
+  );
+
+  Future<void> _loadExamensListe() async {
+    try {
+      final data = await medecinService.getListeExamens();
+      if (!mounted) return;
+      setState(() {
+        _examens = data
+            .map(
+              (e) => {
+                'id_examlist': e['id_examlist'],
+                'nom_examen': e['nom_examen'],
+                'prix_examen': e['prix_examen'],
+                'selected': false,
+                'is_custom': false,
+              },
+            )
+            .toList();
+        _examensListeLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _examensListeLoading = false);
+    }
+  }
+
+  Future<void> _loadMedicaments() async {
+    try {
+      final data = await medecinService.getListeMedicaments();
+      if (!mounted) return;
+      setState(() {
+        _medicaments = data.map((m) {
+          final stock = (m['stock'] as num?)?.toInt() ?? 0;
+          final actif = m['actif'] == true;
+          return {
+            'id_medicament': m['id_medicament'],
+            'nom_medicament': m['nom_medicament'],
+            'forme': m['forme'],
+            'dosage': m['dosage'],
+            'prix_unitaire': m['prix_unitaire'],
+            'stock': stock,
+            'disponible': actif && stock > 0,
+            'selected': false,
+            'quantite': 1,
+            'posologie': '',
+            'is_custom': false,
+          };
+        }).toList();
+        _medicamentsLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _medicamentsLoading = false);
+    }
+  }
+
+  Future<void> _showExamensPicker() async {
+    if (_examensListeLoading) return;
+    final updated = await showExamensPickerDialog(
+      context: context,
+      current: _examens,
+      theme: _pickerTheme,
+    );
+    if (updated != null && mounted) setState(() => _examens = updated);
+  }
+
+  Future<void> _showMedicamentsPicker() async {
+    if (_medicamentsLoading) return;
+    final updated = await showMedicamentsPickerDialog(
+      context: context,
+      current: _medicaments,
+      theme: _pickerTheme,
+    );
+    if (updated != null && mounted) setState(() => _medicaments = updated);
   }
 
   @override
@@ -591,6 +682,89 @@ class _FinalisationConsultationPageState
     );
   }
 
+  // --- IMPRESSION PDF DE LA FICHE ---
+
+  Future<void> _proposePrintPdf({
+    required List<Map<String, dynamic>> examensPrescrits,
+    required List<Map<String, dynamic>> medicamentsPrescrits,
+    DateTime? finalRdvDate,
+  }) async {
+    if (!mounted) return;
+    final shouldPrint = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text('consult_pdf_prompt_title'.tr()),
+        content: Text('consult_pdf_prompt_message'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('consult_pdf_prompt_no'.tr()),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.print, size: 18),
+            label: Text('consult_pdf_prompt_yes'.tr()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryPurple,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+    if (shouldPrint != true || !mounted) return;
+
+    final p = _patientData ?? {};
+    final v = _parametresVitaux ?? {};
+
+    final data = ConsultationPdfData(
+      idConsultation: '${widget.idConsultation}',
+      patientNom: p['nom_complet']?.toString() ?? '—',
+      patientSexe: p['sexe']?.toString() ?? '—',
+      patientAge: p['age']?.toString() ?? '—',
+      patientTelephone: p['telephone']?.toString() ?? '—',
+      patientAdresse: p['adresse']?.toString() ?? '—',
+      patientProfession: p['profession']?.toString() ?? '—',
+      patientStatutMatrimonial: p['statut_matrimonial']?.toString() ?? '—',
+      temperature: v['temperature']?.toString(),
+      tension: (v['systolique'] != null && v['diastolique'] != null)
+          ? '${v['systolique']}/${v['diastolique']}'
+          : null,
+      poids: v['poid']?.toString(),
+      statutVih: v['statut_VIH']?.toString(),
+      vaccination: v['vaccination']?.toString(),
+      motif: v['motif_de_consultation']?.toString(),
+      antecedents: _antecedentsController.text,
+      signesSymptomes: _signesSymptomesController.text,
+      diagnosticInitial: _diagnosticInitialController.text,
+      diagnosticFinal: _diagnosticFinalController.text,
+      traitementPrescrit: _traitementPrescritController.text,
+      rdvDate: finalRdvDate,
+      examensResultats: _examensResultats,
+      nouveauxExamens: examensPrescrits,
+      medicaments: medicamentsPrescrits,
+    );
+
+    // L'overlay de chargement est géré directement par le générateur PDF.
+    try {
+      await ConsultationPdfGenerator.previewAndPrint(
+        context: context,
+        data: data,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('consult_pdf_error'.tr(namedArgs: {'msg': '$e'})),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   // --- SOUMISSION ---
 
   Future<void> _finalizeConsultation() async {
@@ -617,37 +791,66 @@ class _FinalisationConsultationPageState
       );
     }
 
-    try {
-      // Mise à jour de la consultation (sans examens prescrits ici)
-      await Supabase.instance.client
-          .from('Consultation')
-          .update({
-            'antecedents': _antecedentsController.text,
-            'signes_symptomes': _signesSymptomesController.text,
-            'diagnostic_initial': _diagnosticInitialController.text,
-            'diagnostic_final': _diagnosticFinalController.text,
-            'traitement_prescrit': _traitementPrescritController.text,
-            // Logique demandée : "RDV_programmer" si programmé, sinon null
-            'programmation_rdv': _programmationRdv == 'programmer'
-                ? 'RDV_programmer'
-                : null,
-            // Date si programmé, sinon explicitement null
-            'date_rdv_prevu': _programmationRdv == 'programmer'
-                ? finalRdvDate?.toIso8601String()
-                : null,
-            'Statut_Consultation': 'terminer',
-            'date_derniere_mise_ajour': DateTime.now().toIso8601String(),
-          })
-          .eq('id_consultation', widget.idConsultation);
+    // Collecte des nouvelles prescriptions (examens + médicaments)
+    final List<Map<String, dynamic>> examensPrescrits = _examens
+        .where((e) => e['selected'] == true)
+        .map(
+          (e) => {
+            'nom': e['nom_examen'],
+            'prix': (e['prix_examen'] as num?)?.toDouble() ?? 0.0,
+          },
+        )
+        .toList();
 
+    final List<Map<String, dynamic>> medicamentsPrescrits = _medicaments
+        .where((m) => m['selected'] == true)
+        .map(
+          (m) => {
+            'id_medicament': m['id_medicament'],
+            'nom_medicament': m['nom_medicament'],
+            'posologie': m['posologie'],
+            'quantite': m['quantite'],
+            'prix_unitaire': m['prix_unitaire'],
+            'disponible_initialement': m['disponible'] == true,
+          },
+        )
+        .toList();
+
+    try {
+      // Délègue au service : met à jour la consultation, insère les
+      // examens additionnels (avec facture) et la prescription pharmacie.
+      await medecinService.saveConsultationData(
+        idConsultation: widget.idConsultation,
+        antecedents: _antecedentsController.text,
+        signesSymptomes: _signesSymptomesController.text,
+        diagnosticInitial: _diagnosticInitialController.text,
+        statutConsultation: 'terminer',
+        examensPrescrits: examensPrescrits,
+        diagnosticFinal: _diagnosticFinalController.text,
+        traitementPrescrit: _traitementPrescritController.text,
+        programmationRdv: _programmationRdv == 'programmer'
+            ? 'RDV_programmer'
+            : null,
+        rdvDate: _programmationRdv == 'programmer' ? finalRdvDate : null,
+        medicamentsPrescrits: medicamentsPrescrits,
+        idPatient: _patientData?['id_patient']?.toString(),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('final_save_success'.tr()),
+          backgroundColor: Colors.green,
+        ),
+      );
+      // Proposer l'impression de la fiche en PDF
+      await _proposePrintPdf(
+        examensPrescrits: examensPrescrits,
+        medicamentsPrescrits: medicamentsPrescrits,
+        finalRdvDate: finalRdvDate,
+      );
       if (mounted) {
         context.go('/Dashboard_Medecin/ConsultationList');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('final_save_success'.tr()),
-            backgroundColor: Colors.green,
-          ),
-        );
       }
     } catch (e) {
       if (mounted) {
@@ -736,6 +939,23 @@ class _FinalisationConsultationPageState
                 validator: (value) => value == null || value.isEmpty
                     ? 'fiche_field_required'.tr()
                     : null,
+              ),
+              const SizedBox(height: 12),
+              // --- Prescriptions additionnelles (examens + médicaments) ---
+              buildExamsPickerCard(
+                context: context,
+                examens: _examens,
+                loading: _examensListeLoading,
+                theme: _pickerTheme,
+                onTap: _showExamensPicker,
+              ),
+              const SizedBox(height: 8),
+              buildMedicamentsPickerCard(
+                context: context,
+                medicaments: _medicaments,
+                loading: _medicamentsLoading,
+                theme: _pickerTheme,
+                onTap: _showMedicamentsPicker,
               ),
               const SizedBox(height: 20),
               _buildRdvDropdown(),
@@ -878,6 +1098,21 @@ class _FinalisationConsultationPageState
           ),
         ),
         actions: [
+          if (_patientData?['id_patient'] != null)
+            IconButton(
+              icon: const Icon(Icons.history_rounded, color: Colors.white),
+              tooltip: 'hist_btn'.tr(),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HistoriquePatientPage(
+                    idPatient: _patientData!['id_patient'].toString(),
+                    patientName: _patientName,
+                    excludeIdConsultation: widget.idConsultation,
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
             onPressed: () => _showPatientInfoModal(context),

@@ -29,18 +29,40 @@ class OrdonnancesService {
     var query = supabase
         .from('prescription')
         .select(
-            'id_prescription, id_consultation, id_patient, type_prescription, '
-            'statut_prescription, total_prix, date_prescription, '
-            'date_derniere_mise_ajour, '
-            'Patient(id_patient, nom_complet, age, sexe)')
+          'id_prescription, id_consultation, id_patient, type_prescription, '
+          'statut_prescription, total_prix, date_prescription, '
+          'date_derniere_mise_ajour, '
+          'Patient(id_patient, nom_complet, age, sexe)',
+        )
         .inFilter('statut_prescription', statuts);
 
     if (typePrescription != null) {
       query = query.eq('type_prescription', typePrescription);
     }
 
-    final response =
-        await query.order('date_prescription', ascending: false).limit(200);
+    final response = await query
+        .order('date_prescription', ascending: false)
+        .limit(200);
+    return (response as List<dynamic>)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+  }
+
+  /// Liste les prescriptions de type 'consultation' avec statut
+  /// 'en_attente_paiement', en joignant Patient ET Consultation (motif).
+  Future<List<Map<String, dynamic>>> listerConsultationsEnAttente() async {
+    final response = await supabase
+        .from('prescription')
+        .select(
+          'id_prescription, id_consultation, id_patient, '
+          'statut_prescription, total_prix, date_prescription, '
+          'Patient(id_patient, nom_complet, age, sexe), '
+          'Consultation(id_consultation, Parametres_vitaux(motif_de_consultation))',
+        )
+        .eq('type_prescription', 'consultation')
+        .eq('statut_prescription', 'en_attente_paiement')
+        .order('date_prescription', ascending: false)
+        .limit(200);
     return (response as List<dynamic>)
         .map((e) => e as Map<String, dynamic>)
         .toList();
@@ -51,26 +73,30 @@ class OrdonnancesService {
     final prescription = await supabase
         .from('prescription')
         .select(
-            'id_prescription, id_consultation, id_patient, type_prescription, '
-            'statut_prescription, total_prix, date_prescription, '
-            'date_derniere_mise_ajour, '
-            'Patient(id_patient, nom_complet, age, sexe, telephone), '
-            'Consultation(id_consultation, motif_de_consultation)')
+          'id_prescription, id_consultation, id_patient, type_prescription, '
+          'statut_prescription, total_prix, date_prescription, '
+          'date_derniere_mise_ajour, '
+          'Patient(id_patient, nom_complet, age, sexe, telephone), '
+          'Consultation(id_consultation, Parametres_vitaux(motif_de_consultation))',
+        )
         .eq('id_prescription', idPrescription)
         .single();
 
     final lignes = await supabase
         .from('prescription_ligne')
         .select(
-            'id_ligne, id_medicament, id_medicament_substitut, nom_medicament, '
-            'posologie, quantite, prix_unitaire, disponible_initialement, '
-            'statut_ligne')
+          'id_ligne, id_medicament, id_medicament_substitut, nom_medicament, '
+          'posologie, quantite, prix_unitaire, disponible_initialement, '
+          'statut_ligne',
+        )
         .eq('id_prescription', idPrescription)
         .order('id_ligne', ascending: true);
 
     final paiement = await supabase
         .from('paiement')
-        .select('id_paiement, prix_a_paye, statut_paiement, date_paiement, motif')
+        .select(
+          'id_paiement, prix_a_paye, statut_paiement, date_paiement, motif',
+        )
         .eq('id_prescription', idPrescription)
         .maybeSingle();
 
@@ -88,10 +114,7 @@ class OrdonnancesService {
     // Met à jour le paiement lié
     await supabase
         .from('paiement')
-        .update({
-          'statut_paiement': 'paye',
-          'date_paiement': now,
-        })
+        .update({'statut_paiement': 'paye', 'date_paiement': now})
         .eq('id_prescription', idPrescription);
 
     // Met à jour la prescription
@@ -111,10 +134,13 @@ class OrdonnancesService {
     required int idLigne,
     int? idMedicamentSubstitut,
   }) async {
-    await supabase.rpc('delivrer_ligne_prescription', params: {
-      'p_id_ligne': idLigne,
-      'p_id_medicament_substitut': idMedicamentSubstitut,
-    });
+    await supabase.rpc(
+      'delivrer_ligne_prescription',
+      params: {
+        'p_id_ligne': idLigne,
+        'p_id_medicament_substitut': idMedicamentSubstitut,
+      },
+    );
   }
 
   /// Marque une ligne en rupture (non délivrée).

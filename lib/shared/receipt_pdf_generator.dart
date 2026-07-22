@@ -3,8 +3,9 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:flutter/material.dart' show BuildContext;
+import 'package:flutter/material.dart' show BuildContext, Color;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'pdf_loading_overlay.dart';
 
 /// Données nécessaires pour générer le reçu
 class ReceiptPdfData {
@@ -75,317 +76,343 @@ class ReceiptPdfGenerator {
     required BuildContext context,
     required ReceiptPdfData data,
   }) async {
-    final doc = pw.Document();
-    final agentName = await _getAgentNameFromDb();
+    // Verrouille l'écran pendant la construction du document.
+    final built = await runWithPdfLoadingOverlay<_BuiltReceipt>(
+      context: context,
+      spinnerColor: const Color(0xFF2E7D32),
+      work: () async {
+        final doc = pw.Document();
+        final agentName = await _getAgentNameFromDb();
 
-    // Polices intégrées au PDF (instantané)
-    final ttf = pw.Font.helvetica();
-    final ttfBold = pw.Font.helveticaBold();
-    final ttfItalic = pw.Font.helveticaOblique();
+        // Polices intégrées au PDF (instantané)
+        final ttf = pw.Font.helvetica();
+        final ttfBold = pw.Font.helveticaBold();
+        final ttfItalic = pw.Font.helveticaOblique();
 
-    // Logo (silencieux si l'asset est introuvable)
-    pw.MemoryImage? logoImage;
-    try {
-      final bytes = await rootBundle.load('assets/images/logo.png');
-      logoImage = pw.MemoryImage(bytes.buffer.asUint8List());
-    } catch (_) {
-      logoImage = null;
-    }
+        // Logo (silencieux si l'asset est introuvable)
+        pw.MemoryImage? logoImage;
+        try {
+          final bytes = await rootBundle.load('assets/images/logo.png');
+          logoImage = pw.MemoryImage(bytes.buffer.asUint8List());
+        } catch (_) {
+          logoImage = null;
+        }
 
-    final now = DateTime.now();
-    final dateImpression = DateFormat('rcpt_date_format'.tr()).format(now);
+        final now = DateTime.now();
+        final dateImpression = DateFormat('rcpt_date_format'.tr()).format(now);
 
-    // UUID court (8 caractères) pour le N° de Reçu
-    final numRecu = data.idConsultation.length > 8
-        ? data.idConsultation.substring(0, 8).toUpperCase()
-        : data.idConsultation.toUpperCase();
+        // UUID court (8 caractères) pour le N° de Reçu
+        final numRecu = data.idConsultation.length > 8
+            ? data.idConsultation.substring(0, 8).toUpperCase()
+            : data.idConsultation.toUpperCase();
 
-    doc.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a5, // A5 pour un reçu
-        margin: const pw.EdgeInsets.all(30),
-        build: (pw.Context ctx) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-            children: [
-              // ========== EN-TÊTE ==========
-              _buildHeader(
-                ttf: ttf,
-                ttfBold: ttfBold,
-                ttfItalic: ttfItalic,
-                logo: logoImage,
-              ),
-              pw.SizedBox(height: 15),
-
-              // ========== TITRE REÇU ==========
-              pw.Container(
-                decoration: const pw.BoxDecoration(
-                  color: PdfColor.fromInt(0xFF2E7D32), // Vert caisse
-                ),
-                padding: const pw.EdgeInsets.symmetric(vertical: 8),
-                child: pw.Text(
-                  'rcpt_title'.tr(),
-                  style: pw.TextStyle(
-                    font: ttfBold,
-                    fontSize: 14,
-                    color: PdfColors.white,
+        doc.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.a5, // A5 pour un reçu
+            margin: const pw.EdgeInsets.all(30),
+            build: (pw.Context ctx) {
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  // ========== EN-TÊTE ==========
+                  _buildHeader(
+                    ttf: ttf,
+                    ttfBold: ttfBold,
+                    ttfItalic: ttfItalic,
+                    logo: logoImage,
                   ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-              pw.SizedBox(height: 5),
+                  pw.SizedBox(height: 15),
 
-              pw.Center(
-                child: pw.Text(
-                  'rcpt_number'.tr(namedArgs: {'num': numRecu}),
-                  style: pw.TextStyle(
-                    font: ttfBold,
-                    fontSize: 10,
-                    color: PdfColors.grey800,
+                  // ========== TITRE REÇU ==========
+                  pw.Container(
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColor.fromInt(0xFF2E7D32), // Vert caisse
+                    ),
+                    padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                    child: pw.Text(
+                      'rcpt_title'.tr(),
+                      style: pw.TextStyle(
+                        font: ttfBold,
+                        fontSize: 14,
+                        color: PdfColors.white,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
                   ),
-                ),
-              ),
-              pw.SizedBox(height: 20),
+                  pw.SizedBox(height: 5),
 
-              // ========== INFOS PATIENT ==========
-              pw.Text(
-                'rcpt_section_patient'.tr(),
-                style: pw.TextStyle(
-                  font: ttfBold,
-                  fontSize: 10,
-                  color: const PdfColor.fromInt(0xFF2E7D32),
-                  decoration: pw.TextDecoration.underline,
-                ),
-              ),
-              pw.SizedBox(height: 8),
+                  pw.Center(
+                    child: pw.Text(
+                      'rcpt_number'.tr(namedArgs: {'num': numRecu}),
+                      style: pw.TextStyle(
+                        font: ttfBold,
+                        fontSize: 10,
+                        color: PdfColors.grey800,
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(height: 20),
 
-              _buildInfoRow(
-                ttf,
-                ttfBold,
-                'rcpt_label_name'.tr(),
-                data.patientNom,
-              ),
-              _buildInfoRow(
-                ttf,
-                ttfBold,
-                'rcpt_label_age_sex'.tr(),
-                'rcpt_value_age_sex'.tr(
-                  namedArgs: {'age': data.patientAge, 'sexe': data.patientSexe},
-                ),
-              ),
-              _buildInfoRow(
-                ttf,
-                ttfBold,
-                'rcpt_label_phone'.tr(),
-                data.patientTelephone,
-              ),
-              pw.SizedBox(height: 15),
+                  // ========== INFOS PATIENT ==========
+                  pw.Text(
+                    'rcpt_section_patient'.tr(),
+                    style: pw.TextStyle(
+                      font: ttfBold,
+                      fontSize: 10,
+                      color: const PdfColor.fromInt(0xFF2E7D32),
+                      decoration: pw.TextDecoration.underline,
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
 
-              // ========== DÉTAILS DU PAIEMENT ==========
-              pw.Text(
-                'rcpt_section_payment'.tr(),
-                style: pw.TextStyle(
-                  font: ttfBold,
-                  fontSize: 10,
-                  color: const PdfColor.fromInt(0xFF2E7D32),
-                  decoration: pw.TextDecoration.underline,
-                ),
-              ),
-              pw.SizedBox(height: 8),
+                  _buildInfoRow(
+                    ttf,
+                    ttfBold,
+                    'rcpt_label_name'.tr(),
+                    data.patientNom,
+                  ),
+                  _buildInfoRow(
+                    ttf,
+                    ttfBold,
+                    'rcpt_label_age_sex'.tr(),
+                    'rcpt_value_age_sex'.tr(
+                      namedArgs: {
+                        'age': data.patientAge,
+                        'sexe': data.patientSexe,
+                      },
+                    ),
+                  ),
+                  _buildInfoRow(
+                    ttf,
+                    ttfBold,
+                    'rcpt_label_phone'.tr(),
+                    data.patientTelephone,
+                  ),
+                  pw.SizedBox(height: 15),
 
-              pw.Container(
-                padding: const pw.EdgeInsets.all(10),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
-                  color: const PdfColor.fromInt(0xFFF1F8E9), // Vert très clair
-                ),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoRow(
-                      ttf,
-                      ttfBold,
-                      'rcpt_label_motif'.tr(),
-                      data.motif,
+                  // ========== DÉTAILS DU PAIEMENT ==========
+                  pw.Text(
+                    'rcpt_section_payment'.tr(),
+                    style: pw.TextStyle(
+                      font: ttfBold,
+                      fontSize: 10,
+                      color: const PdfColor.fromInt(0xFF2E7D32),
+                      decoration: pw.TextDecoration.underline,
                     ),
-                    pw.SizedBox(height: 4),
-                    _buildInfoRow(
-                      ttf,
-                      ttfBold,
-                      'rcpt_label_service'.tr(),
-                      data.serviceName,
+                  ),
+                  pw.SizedBox(height: 8),
+
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(10),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(
+                        color: PdfColors.grey400,
+                        width: 0.5,
+                      ),
+                      color: const PdfColor.fromInt(
+                        0xFFF1F8E9,
+                      ), // Vert très clair
                     ),
-                    pw.SizedBox(height: 4),
-                    _buildInfoRow(
-                      ttf,
-                      ttfBold,
-                      'rcpt_label_datetime'.tr(),
-                      data.datePaiement,
-                    ),
-                    pw.SizedBox(height: 4),
-                    _buildInfoRow(
-                      ttf,
-                      ttfBold,
-                      'rcpt_label_status'.tr(),
-                      data.statutPaiement.toUpperCase(),
-                    ),
-                    pw.SizedBox(height: 8),
-                    pw.Divider(color: PdfColors.grey500, thickness: 0.5),
-                    pw.SizedBox(height: 8),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text(
-                          'rcpt_total_label'.tr(),
-                          style: pw.TextStyle(font: ttfBold, fontSize: 11),
+                        _buildInfoRow(
+                          ttf,
+                          ttfBold,
+                          'rcpt_label_motif'.tr(),
+                          data.motif,
                         ),
-                        pw.Text(
-                          'rcpt_amount_value'.tr(
-                            namedArgs: {
-                              'amount': data.montant.toStringAsFixed(0),
-                            },
-                          ),
-                          style: pw.TextStyle(
-                            font: ttfBold,
-                            fontSize: 13,
-                            color: const PdfColor.fromInt(
-                              0xFF2E7D32,
-                            ), // Vert foncé
-                          ),
+                        pw.SizedBox(height: 4),
+                        _buildInfoRow(
+                          ttf,
+                          ttfBold,
+                          'rcpt_label_service'.tr(),
+                          data.serviceName,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              if (data.examens.isNotEmpty) ...[
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'rcpt_section_exams'.tr(),
-                  style: pw.TextStyle(
-                    font: ttfBold,
-                    fontSize: 10,
-                    color: const PdfColor.fromInt(0xFF2E7D32),
-                    decoration: pw.TextDecoration.underline,
-                  ),
-                ),
-                pw.SizedBox(height: 5),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(10),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: data.examens.map((exam) {
-                      final nom =
-                          exam['nom_examen']?.toString() ??
-                          'rcpt_exam_unknown'.tr();
-                      final prix = exam['prix_examen']?.toString() ?? '0';
-                      return pw.Padding(
-                        padding: const pw.EdgeInsets.only(bottom: 2),
-                        child: pw.Row(
+                        pw.SizedBox(height: 4),
+                        _buildInfoRow(
+                          ttf,
+                          ttfBold,
+                          'rcpt_label_datetime'.tr(),
+                          data.datePaiement,
+                        ),
+                        pw.SizedBox(height: 4),
+                        _buildInfoRow(
+                          ttf,
+                          ttfBold,
+                          'rcpt_label_status'.tr(),
+                          data.statutPaiement.toUpperCase(),
+                        ),
+                        pw.SizedBox(height: 8),
+                        pw.Divider(color: PdfColors.grey500, thickness: 0.5),
+                        pw.SizedBox(height: 8),
+                        pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Expanded(
-                              child: pw.Text(
-                                '- $nom',
-                                style: pw.TextStyle(
-                                  font: ttf,
-                                  fontSize: 9,
-                                  color: PdfColors.grey800,
-                                ),
-                              ),
+                            pw.Text(
+                              'rcpt_total_label'.tr(),
+                              style: pw.TextStyle(font: ttfBold, fontSize: 11),
                             ),
                             pw.Text(
                               'rcpt_amount_value'.tr(
-                                namedArgs: {'amount': prix},
+                                namedArgs: {
+                                  'amount': data.montant.toStringAsFixed(0),
+                                },
                               ),
-                              style: pw.TextStyle(font: ttfBold, fontSize: 9),
+                              style: pw.TextStyle(
+                                font: ttfBold,
+                                fontSize: 13,
+                                color: const PdfColor.fromInt(
+                                  0xFF2E7D32,
+                                ), // Vert foncé
+                              ),
                             ),
                           ],
                         ),
-                      );
-                    }).toList(),
+                      ],
+                    ),
                   ),
-                ),
-              ],
 
-              pw.Spacer(),
-
-              // ========== SIGNATURES ==========
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'rcpt_sign_agent'.tr(),
-                        style: pw.TextStyle(font: ttfBold, fontSize: 9),
+                  if (data.examens.isNotEmpty) ...[
+                    pw.SizedBox(height: 10),
+                    pw.Text(
+                      'rcpt_section_exams'.tr(),
+                      style: pw.TextStyle(
+                        font: ttfBold,
+                        fontSize: 10,
+                        color: const PdfColor.fromInt(0xFF2E7D32),
+                        decoration: pw.TextDecoration.underline,
                       ),
-                      pw.SizedBox(height: 25),
-                      pw.Text(
-                        agentName,
-                        style: pw.TextStyle(font: ttf, fontSize: 9),
+                    ),
+                    pw.SizedBox(height: 5),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.all(10),
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(
+                          color: PdfColors.grey400,
+                          width: 0.5,
+                        ),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: data.examens.map((exam) {
+                          final nom =
+                              exam['nom_examen']?.toString() ??
+                              'rcpt_exam_unknown'.tr();
+                          final prix = exam['prix_examen']?.toString() ?? '0';
+                          return pw.Padding(
+                            padding: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Row(
+                              mainAxisAlignment:
+                                  pw.MainAxisAlignment.spaceBetween,
+                              children: [
+                                pw.Expanded(
+                                  child: pw.Text(
+                                    '- $nom',
+                                    style: pw.TextStyle(
+                                      font: ttf,
+                                      fontSize: 9,
+                                      color: PdfColors.grey800,
+                                    ),
+                                  ),
+                                ),
+                                pw.Text(
+                                  'rcpt_amount_value'.tr(
+                                    namedArgs: {'amount': prix},
+                                  ),
+                                  style: pw.TextStyle(
+                                    font: ttfBold,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+
+                  pw.Spacer(),
+
+                  // ========== SIGNATURES ==========
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            'rcpt_sign_agent'.tr(),
+                            style: pw.TextStyle(font: ttfBold, fontSize: 9),
+                          ),
+                          pw.SizedBox(height: 25),
+                          pw.Text(
+                            agentName,
+                            style: pw.TextStyle(font: ttf, fontSize: 9),
+                          ),
+                        ],
+                      ),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Text(
+                            'rcpt_sign_stamp'.tr(),
+                            style: pw.TextStyle(font: ttfBold, fontSize: 9),
+                          ),
+                          pw.SizedBox(height: 25),
+                          pw.Text(
+                            '________________________',
+                            style: pw.TextStyle(font: ttf, fontSize: 9),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      pw.Text(
-                        'rcpt_sign_stamp'.tr(),
-                        style: pw.TextStyle(font: ttfBold, fontSize: 9),
+
+                  pw.SizedBox(height: 20),
+
+                  // ========== PIED DE PAGE ==========
+                  pw.Divider(thickness: 0.5, color: PdfColors.grey400),
+                  pw.SizedBox(height: 5),
+                  pw.Center(
+                    child: pw.Text(
+                      'rcpt_footer_printed'.tr(
+                        namedArgs: {'date': dateImpression},
                       ),
-                      pw.SizedBox(height: 25),
-                      pw.Text(
-                        '________________________',
-                        style: pw.TextStyle(font: ttf, fontSize: 9),
+                      style: pw.TextStyle(
+                        font: ttfItalic,
+                        fontSize: 7,
+                        color: PdfColors.grey600,
                       ),
-                    ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Center(
+                    child: pw.Text(
+                      'rcpt_footer_note'.tr(),
+                      style: pw.TextStyle(
+                        font: ttf,
+                        fontSize: 7,
+                        color: PdfColors.grey600,
+                      ),
+                    ),
                   ),
                 ],
-              ),
+              );
+            },
+          ),
+        );
 
-              pw.SizedBox(height: 20),
-
-              // ========== PIED DE PAGE ==========
-              pw.Divider(thickness: 0.5, color: PdfColors.grey400),
-              pw.SizedBox(height: 5),
-              pw.Center(
-                child: pw.Text(
-                  'rcpt_footer_printed'.tr(namedArgs: {'date': dateImpression}),
-                  style: pw.TextStyle(
-                    font: ttfItalic,
-                    fontSize: 7,
-                    color: PdfColors.grey600,
-                  ),
-                ),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Center(
-                child: pw.Text(
-                  'rcpt_footer_note'.tr(),
-                  style: pw.TextStyle(
-                    font: ttf,
-                    fontSize: 7,
-                    color: PdfColors.grey600,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+        return _BuiltReceipt(doc: doc, numRecu: numRecu, fileDate: now);
+      },
     );
 
     // Lancer la prévisualisation et l'impression
     await Printing.layoutPdf(
-      onLayout: (format) async => doc.save(),
+      onLayout: (format) async => built.doc.save(),
       name:
-          'Recu_Paiement_${numRecu}_${DateFormat('yyyyMMdd').format(now)}.pdf',
+          'Recu_Paiement_${built.numRecu}_${DateFormat('yyyyMMdd').format(built.fileDate)}.pdf',
     );
   }
 
@@ -515,4 +542,16 @@ class ReceiptPdfGenerator {
       ],
     );
   }
+}
+
+/// Conteneur interne : reçu PDF construit + numéro + date de génération.
+class _BuiltReceipt {
+  final pw.Document doc;
+  final String numRecu;
+  final DateTime fileDate;
+  _BuiltReceipt({
+    required this.doc,
+    required this.numRecu,
+    required this.fileDate,
+  });
 }

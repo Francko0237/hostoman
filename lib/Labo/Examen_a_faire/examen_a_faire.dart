@@ -584,46 +584,59 @@ class _ExamensAFaireState extends State<ExamensAFaire> {
                                             children: [
                                               Text(
                                                 patient.nom_complet,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  fontSize: 17,
+                                                  fontSize: 15,
                                                   fontWeight: FontWeight.w700,
                                                   color: Colors.grey[900],
                                                 ),
                                               ),
-                                              const SizedBox(height: 6),
+                                              const SizedBox(height: 4),
                                               Row(
                                                 children: [
                                                   Icon(
                                                     patient.sexe == 'Homme'
                                                         ? Icons.man
                                                         : Icons.woman,
-                                                    size: 16,
+                                                    size: 15,
                                                     color: Colors.grey[600],
                                                   ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    patient.sexe,
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey[700],
+                                                  const SizedBox(width: 3),
+                                                  Flexible(
+                                                    child: Text(
+                                                      patient.sexe,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[700],
+                                                      ),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 16),
+                                                  const SizedBox(width: 8),
                                                   Icon(
                                                     Icons.cake_outlined,
-                                                    size: 14,
+                                                    size: 13,
                                                     color: Colors.grey[600],
                                                   ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    'lex_age_value'.tr(
-                                                      namedArgs: {
-                                                        'age': '${patient.age}',
-                                                      },
-                                                    ),
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey[700],
+                                                  const SizedBox(width: 3),
+                                                  Flexible(
+                                                    child: Text(
+                                                      'lex_age_value'.tr(
+                                                        namedArgs: {
+                                                          'age':
+                                                              '${patient.age}',
+                                                        },
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[700],
+                                                      ),
                                                     ),
                                                   ),
                                                 ],

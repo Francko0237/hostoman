@@ -163,9 +163,7 @@ class PharmacieSidebar extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70, fontSize: 13),
               ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.25),
-                ),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -181,11 +179,7 @@ class PharmacieSidebar extends StatelessWidget {
     );
   }
 
-  Widget _navTile(
-    BuildContext context,
-    PharmacieNavItem item,
-    bool isActive,
-  ) {
+  Widget _navTile(BuildContext context, PharmacieNavItem item, bool isActive) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
       child: Material(
@@ -212,8 +206,7 @@ class PharmacieSidebar extends StatelessWidget {
                     style: TextStyle(
                       color: isActive ? Colors.white : Colors.white70,
                       fontSize: 13,
-                      fontWeight:
-                          isActive ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -240,11 +233,15 @@ class PharmacieAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
   final bool showBack;
+
+  /// Quand renseigné, affiche une flèche ← qui navigue vers cette route.
+  final String? backRoute;
   const PharmacieAppBar({
     super.key,
     required this.title,
     this.actions,
     this.showBack = false,
+    this.backRoute,
   });
 
   @override
@@ -256,10 +253,19 @@ class PharmacieAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: PharmacieTheme.primary,
       foregroundColor: Colors.white,
       elevation: 0,
-      automaticallyImplyLeading: showBack,
+      automaticallyImplyLeading: backRoute == null ? showBack : false,
+      leading: backRoute != null
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.go(backRoute!),
+            )
+          : null,
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       actions: actions,
     );
@@ -338,13 +344,13 @@ class PharmacieDrawer extends StatelessWidget {
                       item.labelKey.tr(),
                       style: TextStyle(
                         color: isActive ? Colors.white : Colors.white70,
-                        fontWeight:
-                            isActive ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isActive
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                       ),
                     ),
                     selected: isActive,
-                    selectedTileColor:
-                        Colors.white.withValues(alpha: 0.12),
+                    selectedTileColor: Colors.white.withValues(alpha: 0.12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -439,8 +445,7 @@ class PharmaciePcLayout extends StatelessWidget {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: PharmacieTheme.primary
-                              .withValues(alpha: 0.08),
+                          color: PharmacieTheme.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(

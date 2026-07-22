@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 // Imports
 import 'package:hostoman/model_unifier.dart';
 import 'service_liste_patients.dart';
+import 'package:hostoman/accueil/nouveau_patient/nouveau_patient.dart';
 
 // Couleurs - Thème Médecin
 const Color medPrimaryColor = Color(0xFF5A47C9);
@@ -105,6 +106,18 @@ class _ConsultationListState extends State<ConsultationList> {
     setState(() {
       filteredConsultations = temp;
     });
+  }
+
+  /// Ouvre la page d'enregistrement de patient (réutilise celle de l'accueil).
+  /// Permet au médecin d'enregistrer un patient en cas urgent quand l'agent
+  /// d'accueil n'est pas disponible.
+  Future<void> _ouvrirNouveauPatient() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const Nouveau_Patient()));
+    // Au retour, on rafraîchit la liste au cas où un nouveau patient
+    // serait apparu (après paiement).
+    if (mounted) await chargerConsultations();
   }
 
   Future<void> _annulerConsultation(
@@ -336,6 +349,47 @@ class _ConsultationListState extends State<ConsultationList> {
               ),
             ),
 
+            // Bouton "Ajouter un patient" — pour les cas urgents quand l'agent
+            // d'accueil n'est pas disponible.
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                isDesktop ? 20 : 16,
+                0,
+                isDesktop ? 20 : 16,
+                4,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 900 : double.infinity,
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _ouvrirNouveauPatient,
+                      icon: const Icon(Icons.person_add_alt_1, size: 20),
+                      label: Text(
+                        'clist_add_patient_btn'.tr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: medPrimaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
             // Compteur
             if (!isLoading && filteredConsultations.isNotEmpty)
               Container(
@@ -532,45 +586,115 @@ class _ConsultationListState extends State<ConsultationList> {
                                             children: [
                                               Text(
                                                 patient.nom_complet,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                                 style: const TextStyle(
-                                                  fontSize: 16,
+                                                  fontSize: 15,
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
+                                              const SizedBox(height: 3),
                                               Row(
                                                 children: [
                                                   Icon(
                                                     patient.sexe == 'Homme'
                                                         ? Icons.man
                                                         : Icons.woman,
-                                                    size: 16,
+                                                    size: 15,
                                                     color: Colors.grey[600],
                                                   ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    patient.sexe,
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey[700],
+                                                  const SizedBox(width: 3),
+                                                  Flexible(
+                                                    child: Text(
+                                                      patient.sexe,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[700],
+                                                      ),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 16),
+                                                  const SizedBox(width: 8),
                                                   Icon(
                                                     Icons.cake_outlined,
-                                                    size: 14,
+                                                    size: 13,
                                                     color: Colors.grey[600],
                                                   ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    'clist_age_value'.tr(
-                                                      namedArgs: {
-                                                        'age': '${patient.age}',
-                                                      },
+                                                  const SizedBox(width: 3),
+                                                  Flexible(
+                                                    child: Text(
+                                                      'clist_age_value'.tr(
+                                                        namedArgs: {
+                                                          'age':
+                                                              '${patient.age}',
+                                                        },
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[700],
+                                                      ),
                                                     ),
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey[700],
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 6),
+                                              // Badge motif déplacé ici pour
+                                              // éviter le débordement sur petit écran
+                                              Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: medOrangeColor
+                                                            .withOpacity(0.1),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              6,
+                                                            ),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Icon(
+                                                            Icons
+                                                                .medical_services,
+                                                            size: 12,
+                                                            color:
+                                                                medOrangeColor,
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
+                                                          Flexible(
+                                                            child: Text(
+                                                              motif,
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style: TextStyle(
+                                                                fontSize: 11,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color:
+                                                                    medOrangeColor,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
@@ -578,40 +702,6 @@ class _ConsultationListState extends State<ConsultationList> {
                                             ],
                                           ),
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: medOrangeColor.withOpacity(
-                                              0.1,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.medical_services,
-                                                size: 14,
-                                                color: medOrangeColor,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                motif,
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: medOrangeColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
                                         IconButton(
                                           onPressed: () {
                                             _annulerConsultation(
@@ -622,7 +712,7 @@ class _ConsultationListState extends State<ConsultationList> {
                                           icon: Icon(
                                             Icons.cancel,
                                             color: medErrorColor,
-                                            size: 28,
+                                            size: 26,
                                           ),
                                           tooltip: 'clist_cancel_tooltip'.tr(),
                                         ),

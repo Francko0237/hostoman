@@ -5,9 +5,14 @@ class ListeMedicamentService {
   final SupabaseClient supabase;
   ListeMedicamentService(this.supabase);
 
-  Future<List<Map<String, dynamic>>> getAll({bool actifsSeulement = false}) async {
-    var query = supabase.from('listemedicament').select(
-        'id_medicament, nom_medicament, forme, dosage, prix_unitaire, stock, seuil_alerte, actif, date_enregistrement');
+  Future<List<Map<String, dynamic>>> getAll({
+    bool actifsSeulement = false,
+  }) async {
+    var query = supabase
+        .from('listemedicament')
+        .select(
+          'id_medicament, nom_medicament, forme, dosage, prix_unitaire, stock, seuil_alerte, actif, date_enregistrement',
+        );
     if (actifsSeulement) {
       query = query.eq('actif', true);
     }
@@ -21,17 +26,20 @@ class ListeMedicamentService {
     final response = await supabase
         .from('listemedicament')
         .select(
-            'id_medicament, nom_medicament, forme, dosage, stock, seuil_alerte')
+          'id_medicament, nom_medicament, forme, dosage, stock, seuil_alerte',
+        )
         .eq('actif', true)
         .order('stock', ascending: true);
     return (response as List<dynamic>)
         .map((e) => e as Map<String, dynamic>)
-        .where((e) =>
-            (e['stock'] as num).toInt() <= (e['seuil_alerte'] as num).toInt())
+        .where(
+          (e) =>
+              (e['stock'] as num).toInt() <= (e['seuil_alerte'] as num).toInt(),
+        )
         .toList();
   }
 
-  Future<void> create({
+  Future<int> create({
     required String nom,
     String? forme,
     String? dosage,
@@ -39,15 +47,20 @@ class ListeMedicamentService {
     required int stock,
     int seuilAlerte = 5,
   }) async {
-    await supabase.from('listemedicament').insert({
-      'nom_medicament': nom,
-      'forme': forme,
-      'dosage': dosage,
-      'prix_unitaire': prix,
-      'stock': stock,
-      'seuil_alerte': seuilAlerte,
-      'actif': true,
-    });
+    final result = await supabase
+        .from('listemedicament')
+        .insert({
+          'nom_medicament': nom,
+          'forme': forme,
+          'dosage': dosage,
+          'prix_unitaire': prix,
+          'stock': stock,
+          'seuil_alerte': seuilAlerte,
+          'actif': true,
+        })
+        .select('id_medicament')
+        .single();
+    return result['id_medicament'] as int;
   }
 
   Future<void> update({

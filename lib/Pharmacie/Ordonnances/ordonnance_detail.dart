@@ -64,8 +64,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: Text('phar_confirm_payment_title'.tr()),
         content: Text('phar_confirm_payment_msg'.tr()),
         actions: [
@@ -91,17 +90,21 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
       await _service.confirmerPaiement(widget.idPrescription);
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: PharmacieTheme.success,
-          content: Text('phar_payment_confirmed'.tr()),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: PharmacieTheme.success,
+            content: Text('phar_payment_confirmed'.tr()),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: PharmacieTheme.danger,
-          content: Text('phar_action_error'.tr()),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: PharmacieTheme.danger,
+            content: Text('phar_action_error'.tr()),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -122,10 +125,12 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
         await _service.majPrixLigne(idLigne, saisi);
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            backgroundColor: PharmacieTheme.danger,
-            content: Text('phar_action_error'.tr()),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: PharmacieTheme.danger,
+              content: Text('phar_action_error'.tr()),
+            ),
+          );
         }
         return;
       }
@@ -141,19 +146,25 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
       );
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: PharmacieTheme.success,
-          content: Text('phar_ligne_delivered'.tr()),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: PharmacieTheme.success,
+            content: Text('phar_ligne_delivered'.tr()),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: PharmacieTheme.danger,
-          content: Text(e.toString().contains('Stock insuffisant')
-              ? 'phar_stock_insuffisant'.tr()
-              : 'phar_action_error'.tr()),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: PharmacieTheme.danger,
+            content: Text(
+              e.toString().contains('Stock insuffisant')
+                  ? 'phar_stock_insuffisant'.tr()
+                  : 'phar_action_error'.tr(),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -175,19 +186,25 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
       );
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: PharmacieTheme.success,
-          content: Text('phar_ligne_substituted'.tr()),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: PharmacieTheme.success,
+            content: Text('phar_ligne_substituted'.tr()),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: PharmacieTheme.danger,
-          content: Text(e.toString().contains('Stock insuffisant')
-              ? 'phar_stock_insuffisant'.tr()
-              : 'phar_action_error'.tr()),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: PharmacieTheme.danger,
+            content: Text(
+              e.toString().contains('Stock insuffisant')
+                  ? 'phar_stock_insuffisant'.tr()
+                  : 'phar_action_error'.tr(),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -201,10 +218,12 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
       await _load();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: PharmacieTheme.danger,
-          content: Text('phar_action_error'.tr()),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: PharmacieTheme.danger,
+            content: Text('phar_action_error'.tr()),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -216,19 +235,18 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
     return showDialog<double>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text(
+          'phar_set_price_title'.tr(
+            namedArgs: {'name': (ligne['nom_medicament'] ?? '').toString()},
+          ),
         ),
-        title: Text('phar_set_price_title'.tr(
-            namedArgs: {'name': (ligne['nom_medicament'] ?? '').toString()})),
         content: TextField(
           controller: ctrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             labelText: 'phar_set_price_label'.tr(),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
         actions: [
@@ -254,10 +272,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveLayout(
-      mobile: _buildMobile(),
-      pc: _buildPc(),
-    );
+    return ResponsiveLayout(mobile: _buildMobile(), pc: _buildPc());
   }
 
   Widget _buildMobile() {
@@ -267,10 +282,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
         title: 'phar_ordo_detail_title'.tr(),
         showBack: true,
         actions: [
-          IconButton(
-            onPressed: _load,
-            icon: const Icon(Icons.refresh),
-          ),
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
         ],
       ),
       body: _buildContent(),
@@ -357,8 +369,9 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                       children: [
                         CircleAvatar(
                           radius: 26,
-                          backgroundColor: PharmacieTheme.primary
-                              .withValues(alpha: 0.12),
+                          backgroundColor: PharmacieTheme.primary.withValues(
+                            alpha: 0.12,
+                          ),
                           child: const Icon(
                             Icons.person_outline,
                             color: PharmacieTheme.primary,
@@ -385,9 +398,9 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                                   if (patient?['sexe'] != null)
                                     patient!['sexe'].toString(),
                                   if (patient?['age'] != null)
-                                    'phar_age'.tr(namedArgs: {
-                                      'age': '${patient!['age']}'
-                                    }),
+                                    'phar_age'.tr(
+                                      namedArgs: {'age': '${patient!['age']}'},
+                                    ),
                                   'N° ${p['id_prescription']}',
                                 ].join(' • '),
                                 style: const TextStyle(
@@ -420,11 +433,15 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                               ? 'phar_type_vente_libre'.tr()
                               : 'phar_type_consultation'.tr(),
                         ),
-                        if (consult?['motif_de_consultation'] != null)
+                        if ((consult?['Parametres_vitaux']
+                                as Map?)?['motif_de_consultation'] !=
+                            null)
                           _info(
                             icon: Icons.healing_outlined,
-                            label: consult!['motif_de_consultation']
-                                .toString(),
+                            label:
+                                (consult!['Parametres_vitaux']
+                                        as Map)['motif_de_consultation']
+                                    .toString(),
                           ),
                         if (patient?['telephone'] != null)
                           _info(
@@ -450,8 +467,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: PharmacieTheme.primary
-                            .withValues(alpha: 0.12),
+                        color: PharmacieTheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -473,9 +489,9 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'phar_amount_fcfa'.tr(namedArgs: {
-                              'amount': total.toStringAsFixed(0),
-                            }),
+                            'phar_amount_fcfa'.tr(
+                              namedArgs: {'amount': total.toStringAsFixed(0)},
+                            ),
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
@@ -485,11 +501,13 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                           if (statutPaiement != null) ...[
                             const SizedBox(height: 4),
                             Text(
-                              'phar_payment_status'.tr(namedArgs: {
-                                'status': statutPaiement == 'paye'
-                                    ? 'phar_status_paye'.tr()
-                                    : 'phar_status_attente_paiement'.tr(),
-                              }),
+                              'phar_payment_status'.tr(
+                                namedArgs: {
+                                  'status': statutPaiement == 'paye'
+                                      ? 'phar_status_paye'.tr()
+                                      : 'phar_status_attente_paiement'.tr(),
+                                },
+                              ),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: statutPaiement == 'paye'
@@ -505,8 +523,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                     if (canConfirmPaiement)
                       ElevatedButton.icon(
                         onPressed: _busy ? null : _confirmerPaiement,
-                        icon: const Icon(Icons.check_circle_outline,
-                            size: 18),
+                        icon: const Icon(Icons.check_circle_outline, size: 18),
                         label: Text('phar_confirm_payment_btn'.tr()),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: PharmacieTheme.primary,
@@ -559,10 +576,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: PharmacieTheme.textMuted,
-          ),
+          style: const TextStyle(fontSize: 12, color: PharmacieTheme.textMuted),
         ),
       ],
     );
@@ -574,8 +588,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
     final disponible = l['disponible_initialement'] == true;
     final prix = (l['prix_unitaire'] as num?)?.toDouble();
     final qte = (l['quantite'] as num?)?.toInt() ?? 1;
-    final isDelivered =
-        statut == 'delivre' || statut == 'substitue';
+    final isDelivered = statut == 'delivre' || statut == 'substitue';
     final isRupture = statut == 'rupture';
     final isAnnule = statut == 'annule';
 
@@ -664,8 +677,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                           ),
                         if (!isCustom && !disponible)
                           PharmacieStatusBadge(
-                            text:
-                                'fiche_med_badge_unavailable'.tr(),
+                            text: 'fiche_med_badge_unavailable'.tr(),
                             color: PharmacieTheme.danger,
                           ),
                       ],
@@ -688,9 +700,11 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                   const SizedBox(height: 4),
                   Text(
                     prix != null
-                        ? 'phar_amount_fcfa'.tr(namedArgs: {
-                            'amount': (prix * qte).toStringAsFixed(0),
-                          })
+                        ? 'phar_amount_fcfa'.tr(
+                            namedArgs: {
+                              'amount': (prix * qte).toStringAsFixed(0),
+                            },
+                          )
                         : '—',
                     style: const TextStyle(
                       fontSize: 14,
@@ -714,8 +728,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: PharmacieTheme.success,
                       foregroundColor: Colors.white,
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -730,8 +743,10 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.deepPurple,
                     side: const BorderSide(color: Colors.deepPurple),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -741,8 +756,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                 IconButton(
                   tooltip: 'phar_action_rupture'.tr(),
                   onPressed: _busy ? null : () => _marquerRupture(l),
-                  icon: const Icon(Icons.block,
-                      color: PharmacieTheme.danger),
+                  icon: const Icon(Icons.block, color: PharmacieTheme.danger),
                 ),
               ],
             ),
@@ -770,11 +784,13 @@ class _SubstitutPickerState extends State<_SubstitutPicker> {
     final filtered = _search.isEmpty
         ? widget.catalogue
         : widget.catalogue
-            .where((m) => (m['nom_medicament'] ?? '')
-                .toString()
-                .toLowerCase()
-                .contains(_search))
-            .toList();
+              .where(
+                (m) => (m['nom_medicament'] ?? '')
+                    .toString()
+                    .toLowerCase()
+                    .contains(_search),
+              )
+              .toList();
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -786,8 +802,7 @@ class _SubstitutPickerState extends State<_SubstitutPicker> {
               padding: const EdgeInsets.fromLTRB(20, 18, 12, 14),
               decoration: const BoxDecoration(
                 color: PharmacieTheme.primary,
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Row(
                 children: [
@@ -830,32 +845,25 @@ class _SubstitutPickerState extends State<_SubstitutPicker> {
                   ? Center(child: Text('fiche_med_empty'.tr()))
                   : ListView.separated(
                       itemCount: filtered.length,
-                      separatorBuilder: (_, __) =>
-                          const Divider(height: 1),
+                      separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (_, i) {
                         final m = filtered[i];
-                        final stock =
-                            (m['stock'] as num?)?.toInt() ?? 0;
+                        final stock = (m['stock'] as num?)?.toInt() ?? 0;
                         final dispo = stock > 0;
                         return ListTile(
                           title: Text(
                             (m['nom_medicament'] ?? '').toString(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           subtitle: Text(
                             [
-                              if ((m['forme'] ?? '')
-                                  .toString()
-                                  .isNotEmpty)
+                              if ((m['forme'] ?? '').toString().isNotEmpty)
                                 m['forme'],
-                              if ((m['dosage'] ?? '')
-                                  .toString()
-                                  .isNotEmpty)
+                              if ((m['dosage'] ?? '').toString().isNotEmpty)
                                 m['dosage'],
-                              'phar_stock_label'
-                                  .tr(namedArgs: {'stock': '$stock'}),
+                              'phar_stock_label'.tr(
+                                namedArgs: {'stock': '$stock'},
+                              ),
                             ].join(' • '),
                             style: const TextStyle(fontSize: 11),
                           ),
@@ -867,9 +875,7 @@ class _SubstitutPickerState extends State<_SubstitutPicker> {
                                 ? PharmacieTheme.success
                                 : PharmacieTheme.danger,
                           ),
-                          onTap: dispo
-                              ? () => Navigator.pop(context, m)
-                              : null,
+                          onTap: dispo ? () => Navigator.pop(context, m) : null,
                         );
                       },
                     ),

@@ -64,8 +64,11 @@ import 'package:hostoman/Pharmacie/Dashboard/gestion_medicaments.dart';
 import 'package:hostoman/Pharmacie/Ordonnances/ordonnances_list.dart';
 import 'package:hostoman/Pharmacie/Ordonnances/ordonnance_detail.dart';
 import 'package:hostoman/Pharmacie/VenteLibre/vente_libre.dart';
+import 'package:hostoman/Pharmacie/VenteLibre/vente_detail.dart';
+import 'package:hostoman/Pharmacie/VenteLibre/nouvelle_vente.dart';
 import 'package:hostoman/Pharmacie/Historique/historique.dart';
 import 'package:hostoman/Pharmacie/Statistique/statistique.dart';
+import 'package:hostoman/Pharmacie/Stock/stock_entree_list.dart';
 
 //Configuration de toutes les route du projets
 final GoRouter _router = GoRouter(
@@ -336,6 +339,19 @@ final GoRouter _router = GoRouter(
         GoRoute(
           path: 'VenteLibre',
           builder: (context, state) => const VenteLibrePage(),
+          routes: [
+            GoRoute(
+              path: 'NouvelleVente',
+              builder: (context, state) => const NouvelleVentePage(),
+            ),
+            GoRoute(
+              path: ':idPrescription',
+              builder: (context, state) {
+                final id = int.parse(state.pathParameters['idPrescription']!);
+                return VenteDetailPage(idPrescription: id);
+              },
+            ),
+          ],
         ),
         GoRoute(
           path: 'Catalogue',
@@ -348,6 +364,10 @@ final GoRouter _router = GoRouter(
         GoRoute(
           path: 'Statistiques',
           builder: (context, state) => const StatistiquePharmacie(),
+        ),
+        GoRoute(
+          path: 'Stock',
+          builder: (context, state) => const StockEntreePage(),
         ),
         GoRoute(
           path: 'Profil',
@@ -368,9 +388,9 @@ Future<void> main() async {
   await initializeDateFormatting('fr_FR', null);
   await initializeDateFormatting('en_US', null);
   await Supabase.initialize(
-    url: 'https://mzgyccyaywncafocmdnd.supabase.co',
+    url: 'http://localhost:8000',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Z3ljY3lheXduY2Fmb2NtZG5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDQyNDIsImV4cCI6MjA5MTQyMDI0Mn0.qPO38QBVOZL-5lJx-nItTZVNRJcXpbm2Hk_WOylkjPI',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE',
   );
   runApp(
     EasyLocalization(

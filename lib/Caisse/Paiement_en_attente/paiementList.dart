@@ -892,8 +892,11 @@ class _PaiementlistState extends State<Paiementlist> {
                                               children: [
                                                 Text(
                                                   patient.nom_complet,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                   style: const TextStyle(
-                                                    fontSize: 16,
+                                                    fontSize: 15,
                                                     fontWeight: FontWeight.w600,
                                                   ),
                                                 ),
@@ -903,22 +906,28 @@ class _PaiementlistState extends State<Paiementlist> {
                                                     Sexe == 'Homme'
                                                         ? Icon(
                                                             Icons.man,
-                                                            size: 17,
+                                                            size: 15,
                                                             color: Colors
                                                                 .grey[600],
                                                           )
                                                         : Icon(
                                                             Icons.woman,
-                                                            size: 17,
+                                                            size: 15,
                                                             color: Colors
                                                                 .grey[600],
                                                           ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      patient.sexe,
-                                                      style: TextStyle(
-                                                        fontSize: 13,
-                                                        color: Colors.grey[700],
+                                                    const SizedBox(width: 3),
+                                                    Flexible(
+                                                      child: Text(
+                                                        patient.sexe,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color:
+                                                              Colors.grey[700],
+                                                        ),
                                                       ),
                                                     ),
                                                   ],
@@ -973,16 +982,19 @@ class _PaiementlistState extends State<Paiementlist> {
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(width: 45),
+                                          const SizedBox(width: 8),
                                           //Affichage du paiement a effectuer
-                                          Container(
+                                          Flexible(
+                                            flex: 0,
                                             child: Text(
                                               'pay_price_label'.tr(
                                                 namedArgs: {
                                                   'value': prixAPayer,
                                                 },
                                               ),
-                                              style: TextStyle(
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w600,
                                                 color: Colors.black,

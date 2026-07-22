@@ -12,7 +12,8 @@ class DirectorNotification {
   final String messageKey;
   final Map<String, String> messageArgs;
   final DateTime timestamp;
-  final String? actionTab; // 'finance', 'overview', 'patients', 'staff', 'services'
+  final String?
+  actionTab; // 'finance', 'overview', 'patients', 'staff', 'services'
 
   DirectorNotification({
     required this.id,
@@ -147,6 +148,57 @@ class NotificationsService {
           );
         }
       }
+      // ============ 5. Stock en rupture — Pharmacie (CRITICAL) ============
+      try {
+        final ruptureRes = await supabase
+            .from('listemedicament')
+            .select('id_medicament')
+            .eq('actif', true)
+            .eq('stock', 0)
+            .count(CountOption.exact);
+        if (ruptureRes.count > 0) {
+          notifs.add(
+            DirectorNotification(
+              id: 'stock_rupture',
+              severity: NotificationSeverity.critical,
+              titleKey: 'notif_stock_rupture_title',
+              titleArgs: {'count': '${ruptureRes.count}'},
+              messageKey: 'notif_stock_rupture_msg',
+              messageArgs: {'count': '${ruptureRes.count}'},
+              timestamp: now,
+              actionTab: 'overview',
+            ),
+          );
+        }
+      } catch (_) {}
+
+      // ============ 6. Lots périmés — Pharmacie (WARNING) ============
+      try {
+        final todayStr = now.toIso8601String().split('T').first;
+        final lotsPerimesRaw = await supabase
+            .from('stock_entree')
+            .select('id_medicament')
+            .not('date_peremption', 'is', null)
+            .lt('date_peremption', todayStr);
+        final perimesCount = (lotsPerimesRaw as List)
+            .map((e) => e['id_medicament'])
+            .toSet()
+            .length;
+        if (perimesCount > 0) {
+          notifs.add(
+            DirectorNotification(
+              id: 'lots_perimes',
+              severity: NotificationSeverity.warning,
+              titleKey: 'notif_lots_perimes_title',
+              titleArgs: {'count': '$perimesCount'},
+              messageKey: 'notif_lots_perimes_msg',
+              messageArgs: {'count': '$perimesCount'},
+              timestamp: now,
+              actionTab: 'overview',
+            ),
+          );
+        }
+      } catch (_) {}
     } catch (e) {
       print('Erreur Notifications: $e');
     }

@@ -100,14 +100,9 @@ class _HistoriquePharmacieState extends State<HistoriquePharmacie> {
   Widget _mobile() {
     return Scaffold(
       backgroundColor: PharmacieTheme.background,
-      drawer: const PharmacieDrawer(
-        activeRoute: '/Dashboard_Pharmacie/Historique',
-      ),
       appBar: PharmacieAppBar(
         title: 'phar_hist_title'.tr(),
-        actions: [
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-        ],
+        backRoute: '/Dashboard_Pharmacie',
       ),
       body: _body(),
     );

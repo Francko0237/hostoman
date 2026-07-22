@@ -208,7 +208,10 @@ class _HomeDirecteurPageState extends State<HomeDirecteurPage> {
                     runSpacing: 8,
                     children: [
                       _pill(Icons.calendar_today_rounded, dateStr),
-                      _pill(Icons.access_time_rounded, '${'updated_at'.tr()} : $timeStr'),
+                      _pill(
+                        Icons.access_time_rounded,
+                        '${'updated_at'.tr()} : $timeStr',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -563,6 +566,9 @@ class _HomeDirecteurPageState extends State<HomeDirecteurPage> {
     final examensAttente = _kpis['examensAttente'] ?? 0;
     final patientsAttente = _kpis['patientsAttenteConsult'] ?? 0;
     final consultEnCours = _kpis['consultationsEnCours'] ?? 0;
+    final stockRupture = _kpis['stockRupture'] ?? 0;
+    final stockBas = _kpis['stockBas'] ?? 0;
+    final lotsPerimes = _kpis['lotsPerimes'] ?? 0;
 
     final items = <_AlertData>[
       _AlertData(
@@ -589,6 +595,24 @@ class _HomeDirecteurPageState extends State<HomeDirecteurPage> {
         count: paiementsAttente,
         threshold: 5,
       ),
+      _AlertData(
+        icon: Icons.no_meals_outlined,
+        label: 'kpi_stock_rupture'.tr(),
+        count: stockRupture,
+        threshold: 1,
+      ),
+      _AlertData(
+        icon: Icons.inventory_2_outlined,
+        label: 'kpi_stock_bas'.tr(),
+        count: stockBas,
+        threshold: 1,
+      ),
+      _AlertData(
+        icon: Icons.warning_amber_rounded,
+        label: 'kpi_lots_perimes'.tr(),
+        count: lotsPerimes,
+        threshold: 1,
+      ),
     ];
 
     return _Card(
@@ -606,7 +630,11 @@ class _HomeDirecteurPageState extends State<HomeDirecteurPage> {
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               child: Row(
                 children: [
-                  const Icon(Icons.arrow_forward_rounded, size: 16, color: _primary),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 16,
+                    color: _primary,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'see_service_detail'.tr(),

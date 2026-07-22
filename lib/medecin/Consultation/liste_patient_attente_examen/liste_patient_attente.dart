@@ -621,45 +621,34 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                             children: [
                                               Text(
                                                 patient.nom_complet,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                                 style: const TextStyle(
-                                                  fontSize: 16,
+                                                  fontSize: 15,
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
+                                              const SizedBox(height: 3),
                                               Row(
                                                 children: [
                                                   Icon(
                                                     patient.sexe == 'Homme'
                                                         ? Icons.man
                                                         : Icons.woman,
-                                                    size: 16,
+                                                    size: 15,
                                                     color: Colors.grey[600],
                                                   ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    patient.sexe,
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey[700],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 16),
-                                                  Icon(
-                                                    Icons.cake_outlined,
-                                                    size: 14,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    'clist_age_value'.tr(
-                                                      namedArgs: {
-                                                        'age': '${patient.age}',
-                                                      },
-                                                    ),
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey[700],
+                                                  const SizedBox(width: 3),
+                                                  Flexible(
+                                                    child: Text(
+                                                      patient.sexe,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[700],
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
@@ -699,46 +688,73 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                                   ],
                                                 ),
                                               ],
+                                              const SizedBox(height: 6),
+                                              // Badge statut ici pour
+                                              // éviter le débordement
+                                              Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: statutColor
+                                                            .withOpacity(0.1),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              6,
+                                                            ),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Icon(
+                                                            statutExamen ==
+                                                                    'resultat-disponible'
+                                                                ? Icons
+                                                                      .check_circle
+                                                                : (statutExamen ==
+                                                                          'Annuler'
+                                                                      ? Icons
+                                                                            .cancel
+                                                                      : Icons
+                                                                            .science),
+                                                            size: 13,
+                                                            color: statutColor,
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
+                                                          Flexible(
+                                                            child: Text(
+                                                              statutLabel,
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style: TextStyle(
+                                                                fontSize: 11,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color:
+                                                                    statutColor,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ],
                                           ),
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: statutColor.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                statutExamen ==
-                                                        'resultat-disponible'
-                                                    ? Icons.check_circle
-                                                    : (statutExamen == 'Annuler'
-                                                          ? Icons.cancel
-                                                          : Icons.science),
-                                                size: 14,
-                                                color: statutColor,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                statutLabel,
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: statutColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
 
                                         Container(
                                           decoration: BoxDecoration(

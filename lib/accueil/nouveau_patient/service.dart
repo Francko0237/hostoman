@@ -416,7 +416,7 @@ class PatientService {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 20),
                         ElevatedButton(
                           onPressed: () => Navigator.pop(
                             context,

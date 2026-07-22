@@ -1,10 +1,11 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:flutter/material.dart' show BuildContext, Locale;
+import 'package:flutter/material.dart' show BuildContext, Color, Locale;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../shared/pdf_loading_overlay.dart';
 
 /// Type de fiche à exporter
 enum StatsExportType {
@@ -255,100 +256,111 @@ class StatsPdfGenerator {
     Map<String, dynamic>? financeData,
     Map<String, dynamic>? patientsData,
   }) async {
-    final doc = pw.Document();
-    final l10n = StatsPdfL10n.forLocale(locale);
-    final localeTag = locale.languageCode == 'en' ? 'en_US' : 'fr_FR';
-    final agentName = await _getAgentNameFromDb(locale);
+    // Verrouille l'écran pendant la phase de construction du document.
+    final doc = await runWithPdfLoadingOverlay<pw.Document>(
+      context: context,
+      spinnerColor: const Color(0xFF1565C0),
+      work: () async {
+        final doc = pw.Document();
+        final l10n = StatsPdfL10n.forLocale(locale);
+        final localeTag = locale.languageCode == 'en' ? 'en_US' : 'fr_FR';
+        final agentName = await _getAgentNameFromDb(locale);
 
-    // Polices
-    final ttf = await PdfGoogleFonts.notoSansRegular();
-    final ttfBold = await PdfGoogleFonts.notoSansBold();
-    final ttfItalic = await PdfGoogleFonts.notoSansItalic();
+        // Polices
+        final ttf = await PdfGoogleFonts.notoSansRegular();
+        final ttfBold = await PdfGoogleFonts.notoSansBold();
+        final ttfItalic = await PdfGoogleFonts.notoSansItalic();
 
-    // Logo (silencieux si l'asset est introuvable)
-    pw.MemoryImage? logoImage;
-    try {
-      final bytes = await rootBundle.load('assets/images/logo.png');
-      logoImage = pw.MemoryImage(bytes.buffer.asUint8List());
-    } catch (_) {
-      logoImage = null;
-    }
+        // Logo (silencieux si l'asset est introuvable)
+        pw.MemoryImage? logoImage;
+        try {
+          final bytes = await rootBundle.load('assets/images/logo.png');
+          logoImage = pw.MemoryImage(bytes.buffer.asUint8List());
+        } catch (_) {
+          logoImage = null;
+        }
 
-    final now = DateTime.now();
-    final dateImpression = DateFormat(
-      l10n.dateFormatPrintedAt,
-      localeTag,
-    ).format(now);
-    final periodLabel =
-        '${DateFormat(l10n.dateFormatLong, localeTag).format(periodStart)}  →  ${DateFormat(l10n.dateFormatLong, localeTag).format(periodEnd)}';
+        final now = DateTime.now();
+        final dateImpression = DateFormat(
+          l10n.dateFormatPrintedAt,
+          localeTag,
+        ).format(now);
+        final periodLabel =
+            '${DateFormat(l10n.dateFormatLong, localeTag).format(periodStart)}  →  ${DateFormat(l10n.dateFormatLong, localeTag).format(periodEnd)}';
 
-    // Sections à inclure
-    final sections = <_PdfSection>[];
-    if ((type == StatsExportType.overview || type == StatsExportType.full) &&
-        overviewData != null) {
-      sections.add(_PdfSection.overview(overviewData, l10n));
-    }
-    if ((type == StatsExportType.finance || type == StatsExportType.full) &&
-        financeData != null) {
-      sections.add(_PdfSection.finance(financeData, l10n));
-    }
-    if ((type == StatsExportType.patients || type == StatsExportType.full) &&
-        patientsData != null) {
-      sections.add(_PdfSection.patients(patientsData, l10n));
-    }
+        // Sections à inclure
+        final sections = <_PdfSection>[];
+        if ((type == StatsExportType.overview ||
+                type == StatsExportType.full) &&
+            overviewData != null) {
+          sections.add(_PdfSection.overview(overviewData, l10n));
+        }
+        if ((type == StatsExportType.finance || type == StatsExportType.full) &&
+            financeData != null) {
+          sections.add(_PdfSection.finance(financeData, l10n));
+        }
+        if ((type == StatsExportType.patients ||
+                type == StatsExportType.full) &&
+            patientsData != null) {
+          sections.add(_PdfSection.patients(patientsData, l10n));
+        }
 
-    // Une page par section
-    for (int i = 0; i < sections.length; i++) {
-      final section = sections[i];
-      doc.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(28),
-          build: (ctx) => pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(
-                ttf: ttf,
-                ttfBold: ttfBold,
-                ttfItalic: ttfItalic,
-                docType: section.title,
-                periodLabel: periodLabel,
-                l10n: l10n,
-                logo: logoImage,
+        // Une page par section
+        for (int i = 0; i < sections.length; i++) {
+          final section = sections[i];
+          doc.addPage(
+            pw.Page(
+              pageFormat: PdfPageFormat.a4,
+              margin: const pw.EdgeInsets.all(28),
+              build: (ctx) => pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(
+                    ttf: ttf,
+                    ttfBold: ttfBold,
+                    ttfItalic: ttfItalic,
+                    docType: section.title,
+                    periodLabel: periodLabel,
+                    l10n: l10n,
+                    logo: logoImage,
+                  ),
+                  pw.SizedBox(height: 14),
+                  _buildTitleBanner(
+                    ttfBold: ttfBold,
+                    title: section.title,
+                    l10n: l10n,
+                  ),
+                  pw.SizedBox(height: 14),
+                  pw.Expanded(
+                    child: section.builder(
+                      ttf: ttf,
+                      ttfBold: ttfBold,
+                      ttfItalic: ttfItalic,
+                      l10n: l10n,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+                  _buildFooter(
+                    ttf: ttf,
+                    ttfItalic: ttfItalic,
+                    dateImpression: dateImpression,
+                    agentName: agentName,
+                    pageNumber: i + 1,
+                    totalPages: sections.length,
+                    l10n: l10n,
+                  ),
+                ],
               ),
-              pw.SizedBox(height: 14),
-              _buildTitleBanner(
-                ttfBold: ttfBold,
-                title: section.title,
-                l10n: l10n,
-              ),
-              pw.SizedBox(height: 14),
-              pw.Expanded(
-                child: section.builder(
-                  ttf: ttf,
-                  ttfBold: ttfBold,
-                  ttfItalic: ttfItalic,
-                  l10n: l10n,
-                ),
-              ),
-              pw.SizedBox(height: 6),
-              _buildFooter(
-                ttf: ttf,
-                ttfItalic: ttfItalic,
-                dateImpression: dateImpression,
-                agentName: agentName,
-                pageNumber: i + 1,
-                totalPages: sections.length,
-                l10n: l10n,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+            ),
+          );
+        }
+
+        return doc;
+      },
+    );
 
     final fileName =
-        'Statistiques_${type.name}_${DateFormat('yyyyMMdd').format(now)}.pdf';
+        'Statistiques_${type.name}_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
     await Printing.layoutPdf(
       onLayout: (format) async => doc.save(),
       name: fileName,

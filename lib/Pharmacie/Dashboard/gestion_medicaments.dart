@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hostoman/shared/responsive_wrapper.dart';
 import '../shared/pharmacie_theme.dart';
+import '../Stock/stock_entree_service.dart';
 import 'listemedicament_service.dart';
 
 class GestionMedicaments extends StatefulWidget {
@@ -14,11 +15,14 @@ class GestionMedicaments extends StatefulWidget {
 
 class _GestionMedicamentsState extends State<GestionMedicaments> {
   final _service = ListeMedicamentService(Supabase.instance.client);
+  final _stockService = StockEntreeService(Supabase.instance.client);
 
   List<Map<String, dynamic>> _items = [];
+  Map<int, List<Map<String, dynamic>>> _expiredLotsByMed = {};
   bool _loading = true;
   String _search = '';
-  String? _filter; // null=tous, 'actifs', 'inactifs', 'stock_bas'
+  String?
+  _filter; // null=tous, 'actifs', 'inactifs', 'stock_bas', 'rupture', 'perimés'
 
   @override
   void initState() {
@@ -30,14 +34,32 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
     setState(() => _loading = true);
     try {
       final data = await _service.getAll();
-      if (mounted) {
+      if (mounted)
         setState(() {
           _items = data;
           _loading = false;
         });
-      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
+      return;
+    }
+    // Chargement lots périmés avec détails (date, qty, lot)
+    try {
+      final todayStr = DateTime.now().toIso8601String().split('T').first;
+      final expired = await Supabase.instance.client
+          .from('stock_entree')
+          .select('id_medicament, quantite, date_peremption, numero_lot')
+          .not('date_peremption', 'is', null)
+          .lt('date_peremption', todayStr)
+          .order('date_peremption', ascending: false);
+      final Map<int, List<Map<String, dynamic>>> lotsByMed = {};
+      for (final lot in (expired as List<dynamic>)) {
+        final id = (lot as Map<String, dynamic>)['id_medicament'] as int;
+        lotsByMed.putIfAbsent(id, () => []).add(lot);
+      }
+      if (mounted) setState(() => _expiredLotsByMed = lotsByMed);
+    } catch (_) {
+      // stock_entree absente — filtre périmés désactivé silencieusement
     }
   }
 
@@ -61,7 +83,20 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
       list = list.where((m) {
         final s = (m['stock'] as num?)?.toInt() ?? 0;
         final a = (m['seuil_alerte'] as num?)?.toInt() ?? 0;
-        return s <= a;
+        return s <= a && s > 0;
+      }).toList();
+    } else if (_filter == 'rupture') {
+      list = list
+          .where((m) => ((m['stock'] as num?)?.toInt() ?? 0) == 0)
+          .toList();
+    } else if (_filter == 'perimés') {
+      list = list.where((m) {
+        final lots = _expiredLotsByMed[m['id_medicament'] as int] ?? [];
+        final total = lots.fold<int>(
+          0,
+          (s, l) => s + ((l['quantite'] as num?)?.toInt() ?? 0),
+        );
+        return total > 0;
       }).toList();
     }
     return list;
@@ -70,7 +105,11 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
   Future<void> _showForm({Map<String, dynamic>? edit}) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (_) => _MedicamentFormDialog(edit: edit, service: _service),
+      builder: (_) => _MedicamentFormDialog(
+        edit: edit,
+        service: _service,
+        stockService: _stockService,
+      ),
     );
     if (result == true) await _load();
   }
@@ -119,57 +158,12 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
   }
 
   Future<void> _ajouterStockDialog(Map<String, dynamic> m) async {
-    final ctrl = TextEditingController();
-    final added = await showDialog<int>(
+    final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Text(
-          'phar_med_add_stock_title'.tr(
-            namedArgs: {'name': (m['nom_medicament'] ?? '').toString()},
-          ),
-        ),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            labelText: 'phar_med_quantity_to_add'.tr(),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, null),
-            child: Text('att_cancel_no'.tr()),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: PharmacieTheme.primary,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              final n = int.tryParse(ctrl.text.trim());
-              if (n != null && n > 0) Navigator.pop(ctx, n);
-            },
-            child: Text('phar_save'.tr()),
-          ),
-        ],
-      ),
+      builder: (_) =>
+          _AjouterStockDialog(medicament: m, stockService: _stockService),
     );
-    if (added == null) return;
-    try {
-      await _service.ajouterStock(m['id_medicament'] as int, added);
-      await _load();
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: PharmacieTheme.danger,
-            content: Text('phar_action_error'.tr()),
-          ),
-        );
-      }
-    }
+    if (ok == true) await _load();
   }
 
   @override
@@ -180,14 +174,9 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
   Widget _buildMobile() {
     return Scaffold(
       backgroundColor: PharmacieTheme.background,
-      drawer: const PharmacieDrawer(
-        activeRoute: '/Dashboard_Pharmacie/Catalogue',
-      ),
       appBar: PharmacieAppBar(
         title: 'phar_cat_title'.tr(),
-        actions: [
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-        ],
+        backRoute: '/Dashboard_Pharmacie',
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: PharmacieTheme.primary,
@@ -294,6 +283,8 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
                     _filterChip(null, 'phar_filter_all'.tr()),
                     _filterChip('actifs', 'phar_filter_actifs'.tr()),
                     _filterChip('stock_bas', 'phar_filter_stock_bas'.tr()),
+                    _filterChip('rupture', 'phar_filter_rupture'.tr()),
+                    _filterChip('perimés', 'phar_filter_perimés'.tr()),
                     _filterChip('inactifs', 'phar_filter_inactifs'.tr()),
                   ],
                 ),
@@ -322,7 +313,15 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
                     padding: const EdgeInsets.all(16),
                     itemCount: _filtered.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) => _buildCard(_filtered[i]),
+                    itemBuilder: (_, i) {
+                      final m = _filtered[i];
+                      if (_filter == 'perimés') {
+                        final lots =
+                            _expiredLotsByMed[m['id_medicament'] as int] ?? [];
+                        return _buildExpiredCard(m, lots);
+                      }
+                      return _buildCard(m);
+                    },
                   ),
                 ),
         ),
@@ -346,6 +345,323 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
         ),
         side: const BorderSide(color: PharmacieTheme.border),
         backgroundColor: Colors.white,
+      ),
+    );
+  }
+
+  // ── Helpers périmés ─────────────────────────────────────────────────────
+
+  static String _nomMois(int m) {
+    const n = [
+      '',
+      'Janv',
+      'Févr',
+      'Mars',
+      'Avr',
+      'Mai',
+      'Juin',
+      'Juil',
+      'Août',
+      'Sept',
+      'Oct',
+      'Nov',
+      'Déc',
+    ];
+    return n[m];
+  }
+
+  static Map<String, List<Map<String, dynamic>>> _groupByMonth(
+    List<Map<String, dynamic>> lots,
+  ) {
+    final Map<String, List<Map<String, dynamic>>> groups = {};
+    for (final lot in lots) {
+      final date = DateTime.tryParse(lot['date_peremption'] ?? '');
+      if (date == null) continue;
+      final key = '${_nomMois(date.month)} ${date.year}';
+      groups.putIfAbsent(key, () => []).add(lot);
+    }
+    return groups;
+  }
+
+  Widget _statBadge(IconData icon, String label, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpiredCard(
+    Map<String, dynamic> m,
+    List<Map<String, dynamic>> lots,
+  ) {
+    final stock = (m['stock'] as num?)?.toInt() ?? 0;
+    final prix = (m['prix_unitaire'] as num?)?.toDouble() ?? 0;
+    final totalPerime = lots.fold<int>(
+      0,
+      (s, l) => s + ((l['quantite'] as num?)?.toInt() ?? 0),
+    );
+    final utilisable = (stock - totalPerime).clamp(0, stock);
+    final grouped = _groupByMonth(lots);
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showForm(edit: m),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: PharmacieTheme.danger.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Titre
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: PharmacieTheme.danger.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.medication_outlined,
+                      color: PharmacieTheme.danger,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          (m['nom_medicament'] ?? '').toString(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            color: PharmacieTheme.textDark,
+                          ),
+                        ),
+                        Text(
+                          [
+                            m['forme'] ?? '',
+                            m['dosage'] ?? '',
+                          ].where((s) => s.isNotEmpty).join(' • '),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: PharmacieTheme.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'phar_amount_fcfa'.tr(
+                          namedArgs: {'amount': prix.toStringAsFixed(0)},
+                        ),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: PharmacieTheme.primary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(
+                          Icons.more_vert,
+                          color: PharmacieTheme.textMuted,
+                          size: 18,
+                        ),
+                        onSelected: (v) {
+                          if (v == 'edit')
+                            _showForm(edit: m);
+                          else if (v == 'add_stock')
+                            _ajouterStockDialog(m);
+                          else if (v == 'delete')
+                            _confirmDelete(m);
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.edit_outlined, size: 16),
+                                const SizedBox(width: 8),
+                                Text('phar_med_edit'.tr()),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'add_stock',
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.add_box_outlined,
+                                  size: 16,
+                                  color: PharmacieTheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text('phar_med_add_stock'.tr()),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.delete_outline,
+                                  size: 16,
+                                  color: PharmacieTheme.danger,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'phar_med_delete'.tr(),
+                                  style: const TextStyle(
+                                    color: PharmacieTheme.danger,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+              // Résumé
+              Row(
+                children: [
+                  _statBadge(
+                    Icons.warning_amber_rounded,
+                    '$totalPerime unité${totalPerime > 1 ? 's' : ''} périmée${totalPerime > 1 ? 's' : ''}',
+                    PharmacieTheme.danger,
+                  ),
+                  const SizedBox(width: 8),
+                  _statBadge(
+                    utilisable > 0 ? Icons.check_circle_outline : Icons.block,
+                    '$utilisable utilisable${utilisable > 1 ? 's' : ''}',
+                    utilisable > 0 ? PharmacieTheme.success : Colors.grey,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Lots par mois
+              ...grouped.entries.map(
+                (entry) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.key,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: PharmacieTheme.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ...entry.value.map((lot) {
+                      final date = DateTime.tryParse(
+                        lot['date_peremption'] ?? '',
+                      );
+                      final fmtDate = date != null
+                          ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}'
+                          : '—';
+                      final qty = (lot['quantite'] as num?)?.toInt() ?? 0;
+                      final lotNum = (lot['numero_lot'] ?? '').toString();
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8, bottom: 3),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.circle,
+                              size: 5,
+                              color: PharmacieTheme.danger,
+                            ),
+                            const SizedBox(width: 6),
+                            if (lotNum.isNotEmpty) ...[
+                              Text(
+                                'Lot $lotNum',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: PharmacieTheme.textDark,
+                                ),
+                              ),
+                              const Text(
+                                ' • ',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: PharmacieTheme.textMuted,
+                                ),
+                              ),
+                            ],
+                            Text(
+                              fmtDate,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: PharmacieTheme.textMuted,
+                              ),
+                            ),
+                            const Text(
+                              ' • ',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: PharmacieTheme.textMuted,
+                              ),
+                            ),
+                            Text(
+                              '$qty unité${qty > 1 ? 's' : ''}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: PharmacieTheme.danger,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 6),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -530,11 +846,240 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
   }
 }
 
+// ─── Dialog ajout de stock rapide ────────────────────────────────────────────
+
+class _AjouterStockDialog extends StatefulWidget {
+  final Map<String, dynamic> medicament;
+  final StockEntreeService stockService;
+  const _AjouterStockDialog({
+    required this.medicament,
+    required this.stockService,
+  });
+
+  @override
+  State<_AjouterStockDialog> createState() => _AjouterStockDialogState();
+}
+
+class _AjouterStockDialogState extends State<_AjouterStockDialog> {
+  final _qtyCtrl = TextEditingController(text: '1');
+  final _lotCtrl = TextEditingController();
+  final _fournCtrl = TextEditingController();
+  DateTime? _datePeremption;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _qtyCtrl.dispose();
+    _lotCtrl.dispose();
+    _fournCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final p = await showDatePicker(
+      context: context,
+      initialDate: _datePeremption ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(primary: PharmacieTheme.primary),
+        ),
+        child: child!,
+      ),
+    );
+    if (p != null) setState(() => _datePeremption = p);
+  }
+
+  Future<void> _save() async {
+    final qty = int.tryParse(_qtyCtrl.text.trim());
+    if (qty == null || qty <= 0) return;
+    setState(() => _saving = true);
+    try {
+      await widget.stockService.creerEntree(
+        idMedicament: widget.medicament['id_medicament'] as int,
+        quantite: qty,
+        numeroLot: _lotCtrl.text.trim(),
+        datePeremption: _datePeremption,
+        fournisseur: _fournCtrl.text.trim(),
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nom = (widget.medicament['nom_medicament'] ?? '').toString();
+    final stockActuel = (widget.medicament['stock'] as num?)?.toInt() ?? 0;
+    final fmtDate = _datePeremption == null
+        ? 'phar_stock_pick_date'.tr()
+        : '${_datePeremption!.day.toString().padLeft(2, '0')}/${_datePeremption!.month.toString().padLeft(2, '0')}/${_datePeremption!.year}';
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          const Icon(Icons.add_box_outlined, color: PharmacieTheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'phar_med_add_stock_title'.tr(namedArgs: {'name': nom}),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: PharmacieTheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'phar_stock_actuel'.tr(namedArgs: {'n': '$stockActuel'}),
+                style: const TextStyle(
+                  color: PharmacieTheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _qtyCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'phar_med_quantity_to_add'.tr(),
+                prefixIcon: const Icon(
+                  Icons.add_circle_outline,
+                  color: PharmacieTheme.primary,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _lotCtrl,
+              decoration: InputDecoration(
+                labelText: 'phar_stock_lot_label'.tr(),
+                prefixIcon: const Icon(
+                  Icons.tag,
+                  color: PharmacieTheme.primary,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: _pickDate,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: PharmacieTheme.border),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.event,
+                      color: PharmacieTheme.primary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      fmtDate,
+                      style: TextStyle(
+                        color: _datePeremption == null
+                            ? PharmacieTheme.textMuted
+                            : PharmacieTheme.textDark,
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (_datePeremption != null) ...[
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => setState(() => _datePeremption = null),
+                        child: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: PharmacieTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _fournCtrl,
+              decoration: InputDecoration(
+                labelText: 'phar_stock_fournisseur'.tr(),
+                prefixIcon: const Icon(
+                  Icons.local_shipping_outlined,
+                  color: PharmacieTheme.primary,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('att_cancel_no'.tr()),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: PharmacieTheme.primary,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text('phar_save'.tr()),
+        ),
+      ],
+    );
+  }
+}
+
 /// Formulaire de création/édition d'un médicament.
 class _MedicamentFormDialog extends StatefulWidget {
   final Map<String, dynamic>? edit;
   final ListeMedicamentService service;
-  const _MedicamentFormDialog({this.edit, required this.service});
+  final StockEntreeService stockService;
+  const _MedicamentFormDialog({
+    this.edit,
+    required this.service,
+    required this.stockService,
+  });
 
   @override
   State<_MedicamentFormDialog> createState() => _MedicamentFormDialogState();
@@ -548,6 +1093,8 @@ class _MedicamentFormDialogState extends State<_MedicamentFormDialog> {
   late TextEditingController _prixCtrl;
   late TextEditingController _stockCtrl;
   late TextEditingController _seuilCtrl;
+  final _lotCtrl = TextEditingController();
+  DateTime? _datePeremption;
   bool _actif = true;
   bool _saving = false;
 
@@ -576,7 +1123,24 @@ class _MedicamentFormDialogState extends State<_MedicamentFormDialog> {
     _prixCtrl.dispose();
     _stockCtrl.dispose();
     _seuilCtrl.dispose();
+    _lotCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final p = await showDatePicker(
+      context: context,
+      initialDate: _datePeremption ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(primary: PharmacieTheme.primary),
+        ),
+        child: child!,
+      ),
+    );
+    if (p != null) setState(() => _datePeremption = p);
   }
 
   Future<void> _save() async {
@@ -588,7 +1152,7 @@ class _MedicamentFormDialogState extends State<_MedicamentFormDialog> {
       final seuil = int.parse(_seuilCtrl.text.trim());
 
       if (widget.edit == null) {
-        await widget.service.create(
+        final newId = await widget.service.create(
           nom: _nomCtrl.text.trim(),
           forme: _formeCtrl.text.trim().isEmpty ? null : _formeCtrl.text.trim(),
           dosage: _dosageCtrl.text.trim().isEmpty
@@ -598,6 +1162,17 @@ class _MedicamentFormDialogState extends State<_MedicamentFormDialog> {
           stock: stock,
           seuilAlerte: seuil,
         );
+        // Créer un stock_entree si stock initial > 0
+        if (stock > 0) {
+          await widget.stockService.creerEntree(
+            idMedicament: newId,
+            quantite: stock,
+            numeroLot: _lotCtrl.text.trim().isEmpty
+                ? null
+                : _lotCtrl.text.trim(),
+            datePeremption: _datePeremption,
+          );
+        }
       } else {
         await widget.service.update(
           idMedicament: widget.edit!['id_medicament'] as int,
@@ -728,6 +1303,60 @@ class _MedicamentFormDialogState extends State<_MedicamentFormDialog> {
                       ),
                     ],
                   ),
+                  if (!isEdit) ...[
+                    _field(
+                      controller: _lotCtrl,
+                      label: 'phar_stock_lot_label'.tr(),
+                      required: false,
+                    ),
+                    GestureDetector(
+                      onTap: _pickDate,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: PharmacieTheme.border),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.event,
+                              color: PharmacieTheme.primary,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _datePeremption == null
+                                  ? 'phar_stock_pick_date'.tr()
+                                  : '${_datePeremption!.day.toString().padLeft(2, '0')}/${_datePeremption!.month.toString().padLeft(2, '0')}/${_datePeremption!.year}',
+                              style: TextStyle(
+                                color: _datePeremption == null
+                                    ? PharmacieTheme.textMuted
+                                    : PharmacieTheme.textDark,
+                                fontSize: 14,
+                              ),
+                            ),
+                            if (_datePeremption != null) ...[
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: () =>
+                                    setState(() => _datePeremption = null),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: PharmacieTheme.textMuted,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   if (isEdit)
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,

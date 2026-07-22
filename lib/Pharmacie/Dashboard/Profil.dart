@@ -192,29 +192,6 @@ class _ProfilPharmacienState extends State<ProfilPharmacien> {
               _user!.age?.toString() ?? '—',
             ),
           ]),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              if (context.mounted) {
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil('/Authen_Personnel', (_) => false);
-              }
-            },
-            icon: const Icon(Icons.logout, color: PharmacieTheme.danger),
-            label: Text(
-              'phar_menu_logout'.tr(),
-              style: const TextStyle(color: PharmacieTheme.danger),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: PharmacieTheme.danger),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
         ],
       ),
     );

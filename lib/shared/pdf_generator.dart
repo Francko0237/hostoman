@@ -1,10 +1,11 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:flutter/material.dart' show BuildContext;
+import 'package:flutter/material.dart' show BuildContext, Color;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'pdf_loading_overlay.dart';
 
 /// Modèle universel pour un patient dans la liste PDF
 class PatientPdfData {
@@ -85,192 +86,205 @@ class PatientListPdfGenerator {
     bool showCategorie = false,
     String? categorieLabel,
   }) async {
-    final doc = pw.Document();
-    final agentName = await _getAgentNameFromDb();
-    final effectiveCategorieLabel =
-        categorieLabel ?? 'pdf_default_category'.tr();
+    // Verrouille l'écran pendant la phase de construction du document
+    // (chargement des polices Google + logo + pages). Le loader sera fermé
+    // automatiquement avant l'ouverture de la prévisualisation native.
+    final result = await runWithPdfLoadingOverlay<_BuiltDoc>(
+      context: context,
+      spinnerColor: const Color(0xFF0D47A1),
+      work: () async {
+        final doc = pw.Document();
+        final agentName = await _getAgentNameFromDb();
+        final effectiveCategorieLabel =
+            categorieLabel ?? 'pdf_default_category'.tr();
 
-    // Polices
-    final ttf = await PdfGoogleFonts.notoSansRegular();
-    final ttfBold = await PdfGoogleFonts.notoSansBold();
-    final ttfItalic = await PdfGoogleFonts.notoSansItalic();
+        // Polices
+        final ttf = await PdfGoogleFonts.notoSansRegular();
+        final ttfBold = await PdfGoogleFonts.notoSansBold();
+        final ttfItalic = await PdfGoogleFonts.notoSansItalic();
 
-    // Logo (silencieux si l'asset est introuvable)
-    pw.MemoryImage? logoImage;
-    try {
-      final bytes = await rootBundle.load('assets/images/logo.png');
-      logoImage = pw.MemoryImage(bytes.buffer.asUint8List());
-    } catch (_) {
-      logoImage = null;
-    }
+        // Logo (silencieux si l'asset est introuvable)
+        pw.MemoryImage? logoImage;
+        try {
+          final bytes = await rootBundle.load('assets/images/logo.png');
+          logoImage = pw.MemoryImage(bytes.buffer.asUint8List());
+        } catch (_) {
+          logoImage = null;
+        }
 
-    // Découpage en pages de 25 patients
-    const int perPage = 25;
-    final pages = <List<PatientPdfData>>[];
-    for (int i = 0; i < patients.length; i += perPage) {
-      pages.add(
-        patients.sublist(
-          i,
-          i + perPage > patients.length ? patients.length : i + perPage,
-        ),
-      );
-    }
-    if (pages.isEmpty) pages.add([]);
+        // Découpage en pages de 25 patients
+        const int perPage = 25;
+        final pages = <List<PatientPdfData>>[];
+        for (int i = 0; i < patients.length; i += perPage) {
+          pages.add(
+            patients.sublist(
+              i,
+              i + perPage > patients.length ? patients.length : i + perPage,
+            ),
+          );
+        }
+        if (pages.isEmpty) pages.add([]);
 
-    final now = DateTime.now();
-    final dateImpression = DateFormat("dd/MM/yyyy 'à' HH:mm").format(now);
-    final int totalPages = pages.length;
+        final now = DateTime.now();
+        final dateImpression = DateFormat("dd/MM/yyyy 'à' HH:mm").format(now);
+        final int totalPages = pages.length;
 
-    for (int pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-      final pagePatients = pages[pageIndex];
-      final startIndex = pageIndex * perPage;
+        for (int pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+          final pagePatients = pages[pageIndex];
+          final startIndex = pageIndex * perPage;
 
-      doc.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(28),
-          build: (pw.Context ctx) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-              children: [
-                // ========== EN-TÊTE ==========
-                _buildHeader(
-                  ttf: ttf,
-                  ttfBold: ttfBold,
-                  ttfItalic: ttfItalic,
-                  serviceName: serviceName,
-                  logo: logoImage,
-                ),
-                pw.SizedBox(height: 14),
-
-                // ========== BANDEAU TITRE ==========
-                pw.Container(
-                  decoration: const pw.BoxDecoration(
-                    color: PdfColor.fromInt(0xFF0D47A1),
-                  ),
-                  padding: const pw.EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 16,
-                  ),
-                  child: pw.Text(
-                    'pdf_title_banner'.tr(
-                      namedArgs: {'service': serviceName.toUpperCase()},
+          doc.addPage(
+            pw.Page(
+              pageFormat: PdfPageFormat.a4,
+              margin: const pw.EdgeInsets.all(28),
+              build: (pw.Context ctx) {
+                return pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                  children: [
+                    // ========== EN-TÊTE ==========
+                    _buildHeader(
+                      ttf: ttf,
+                      ttfBold: ttfBold,
+                      ttfItalic: ttfItalic,
+                      serviceName: serviceName,
+                      logo: logoImage,
                     ),
-                    style: pw.TextStyle(
-                      font: ttfBold,
-                      fontSize: 11,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  decoration: const pw.BoxDecoration(
-                    color: PdfColor.fromInt(0xFF1565C0),
-                  ),
-                  padding: const pw.EdgeInsets.symmetric(
-                    vertical: 4,
-                    horizontal: 16,
-                  ),
-                  child: pw.Text(
-                    (patients.length > 1
-                            ? 'pdf_period_total_many'
-                            : 'pdf_period_total_one')
-                        .tr(
-                          namedArgs: {
-                            'periode': periodeLabel,
-                            'count': '${patients.length}',
-                          },
+                    pw.SizedBox(height: 14),
+
+                    // ========== BANDEAU TITRE ==========
+                    pw.Container(
+                      decoration: const pw.BoxDecoration(
+                        color: PdfColor.fromInt(0xFF0D47A1),
+                      ),
+                      padding: const pw.EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 16,
+                      ),
+                      child: pw.Text(
+                        'pdf_title_banner'.tr(
+                          namedArgs: {'service': serviceName.toUpperCase()},
                         ),
-                    style: pw.TextStyle(
-                      font: ttf,
-                      fontSize: 8,
-                      color: PdfColors.white,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.SizedBox(height: 10),
-
-                // ========== TABLEAU ==========
-                _buildTable(
-                  ttf: ttf,
-                  ttfBold: ttfBold,
-                  patients: pagePatients,
-                  startIndex: startIndex,
-                  showMontant: showMontant,
-                  showCategorie: showCategorie,
-                  categorieLabel: effectiveCategorieLabel,
-                ),
-
-                pw.Spacer(),
-
-                // ========== RÉCAPITULATIF TOTAL (dernière page) ==========
-                if (pageIndex == totalPages - 1) ...[
-                  pw.SizedBox(height: 8),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(
-                      vertical: 6,
-                      horizontal: 12,
-                    ),
-                    decoration: pw.BoxDecoration(
-                      color: const PdfColor.fromInt(0xFFE3F2FD),
-                      border: pw.Border.all(
-                        color: const PdfColor.fromInt(0xFF1565C0),
-                        width: 0.5,
+                        style: pw.TextStyle(
+                          font: ttfBold,
+                          fontSize: 11,
+                          color: PdfColors.white,
+                        ),
+                        textAlign: pw.TextAlign.center,
                       ),
                     ),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text(
-                          (patients.length > 1
-                                  ? 'pdf_total_many'
-                                  : 'pdf_total_one')
-                              .tr(namedArgs: {'count': '${patients.length}'}),
-                          style: pw.TextStyle(
-                            font: ttfBold,
-                            fontSize: 9,
-                            color: const PdfColor.fromInt(0xFF0D47A1),
+                    pw.Container(
+                      decoration: const pw.BoxDecoration(
+                        color: PdfColor.fromInt(0xFF1565C0),
+                      ),
+                      padding: const pw.EdgeInsets.symmetric(
+                        vertical: 4,
+                        horizontal: 16,
+                      ),
+                      child: pw.Text(
+                        (patients.length > 1
+                                ? 'pdf_period_total_many'
+                                : 'pdf_period_total_one')
+                            .tr(
+                              namedArgs: {
+                                'periode': periodeLabel,
+                                'count': '${patients.length}',
+                              },
+                            ),
+                        style: pw.TextStyle(
+                          font: ttf,
+                          fontSize: 8,
+                          color: PdfColors.white,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                    pw.SizedBox(height: 10),
+
+                    // ========== TABLEAU ==========
+                    _buildTable(
+                      ttf: ttf,
+                      ttfBold: ttfBold,
+                      patients: pagePatients,
+                      startIndex: startIndex,
+                      showMontant: showMontant,
+                      showCategorie: showCategorie,
+                      categorieLabel: effectiveCategorieLabel,
+                    ),
+
+                    pw.Spacer(),
+
+                    // ========== RÉCAPITULATIF TOTAL (dernière page) ==========
+                    if (pageIndex == totalPages - 1) ...[
+                      pw.SizedBox(height: 8),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 12,
+                        ),
+                        decoration: pw.BoxDecoration(
+                          color: const PdfColor.fromInt(0xFFE3F2FD),
+                          border: pw.Border.all(
+                            color: const PdfColor.fromInt(0xFF1565C0),
+                            width: 0.5,
                           ),
                         ),
-                        if (showMontant)
-                          pw.Text(
-                            'pdf_amounts_included'.tr(),
-                            style: pw.TextStyle(
-                              font: ttfItalic,
-                              fontSize: 8,
-                              color: const PdfColor.fromInt(0xFF1565C0),
+                        child: pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text(
+                              (patients.length > 1
+                                      ? 'pdf_total_many'
+                                      : 'pdf_total_one')
+                                  .tr(
+                                    namedArgs: {'count': '${patients.length}'},
+                                  ),
+                              style: pw.TextStyle(
+                                font: ttfBold,
+                                fontSize: 9,
+                                color: const PdfColor.fromInt(0xFF0D47A1),
+                              ),
                             ),
-                          ),
-                      ],
+                            if (showMontant)
+                              pw.Text(
+                                'pdf_amounts_included'.tr(),
+                                style: pw.TextStyle(
+                                  font: ttfItalic,
+                                  fontSize: 8,
+                                  color: const PdfColor.fromInt(0xFF1565C0),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    pw.SizedBox(height: 6),
+
+                    // ========== PIED DE PAGE ==========
+                    _buildFooter(
+                      ttf: ttf,
+                      ttfItalic: ttfItalic,
+                      totalPatients: patients.length,
+                      dateImpression: dateImpression,
+                      agentName: agentName,
+                      pageNumber: pageIndex + 1,
+                      totalPages: totalPages,
                     ),
-                  ),
-                ],
+                  ],
+                );
+              },
+            ),
+          );
+        }
 
-                pw.SizedBox(height: 6),
-
-                // ========== PIED DE PAGE ==========
-                _buildFooter(
-                  ttf: ttf,
-                  ttfItalic: ttfItalic,
-                  totalPatients: patients.length,
-                  dateImpression: dateImpression,
-                  agentName: agentName,
-                  pageNumber: pageIndex + 1,
-                  totalPages: totalPages,
-                ),
-              ],
-            );
-          },
-        ),
-      );
-    }
+        return _BuiltDoc(doc: doc, fileDate: now);
+      },
+    );
 
     await Printing.layoutPdf(
-      onLayout: (format) async => doc.save(),
+      onLayout: (format) async => result.doc.save(),
       name:
-          '${'pdf_filename_prefix'.tr()}_${serviceName}_${DateFormat('yyyyMMdd').format(now)}.pdf',
+          '${'pdf_filename_prefix'.tr()}_${serviceName}_${DateFormat('yyyyMMdd').format(result.fileDate)}.pdf',
     );
   }
 
@@ -608,4 +622,12 @@ class PatientListPdfGenerator {
       ],
     );
   }
+}
+
+/// Conteneur interne : document PDF construit + date de fin de génération
+/// (utilisée pour nommer le fichier).
+class _BuiltDoc {
+  final pw.Document doc;
+  final DateTime fileDate;
+  _BuiltDoc({required this.doc, required this.fileDate});
 }

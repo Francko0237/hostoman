@@ -53,4 +53,38 @@ class HistoriqueConsultationService {
         .map((e) => e as Map<String, dynamic>)
         .toList();
   }
+
+  /// 📅 Récupère l'historique des consultations d'un patient (tous statuts).
+  /// [excludeIdConsultation] permet d'exclure la consultation en cours.
+  Future<List<Map<String, dynamic>>> getHistoriqueParPatient(
+    String idPatient, {
+    int? excludeIdConsultation,
+  }) async {
+    final response = await supabase
+        .from('Consultation')
+        .select('''
+          id_consultation,
+          date_derniere_mise_ajour,
+          Statut_Consultation,
+          antecedents,
+          signes_symptomes,
+          diagnostic_initial,
+          diagnostic_final,
+          traitement_prescrit,
+          Parametres_vitaux(motif_de_consultation)
+        ''')
+        .eq('id_patient', idPatient)
+        .order('date_derniere_mise_ajour', ascending: false);
+
+    var results = (response as List<dynamic>)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+
+    if (excludeIdConsultation != null) {
+      results = results
+          .where((c) => c['id_consultation'] != excludeIdConsultation)
+          .toList();
+    }
+    return results;
+  }
 }

@@ -104,6 +104,40 @@ class HomeDirecteurService {
           .eq('Statut_Consultation', 'en-attente-consultation')
           .count(CountOption.exact);
 
+      // ── Pharmacie (non-fatal si table absente) ──────────────────────────
+      int stockRupture = 0, stockBas = 0, lotsPerimes = 0;
+      try {
+        final ruptureRes = await supabase
+            .from('listemedicament')
+            .select('id_medicament')
+            .eq('actif', true)
+            .eq('stock', 0)
+            .count(CountOption.exact);
+        stockRupture = ruptureRes.count;
+
+        final stockBasList = await supabase
+            .from('listemedicament')
+            .select('stock, seuil_alerte')
+            .eq('actif', true)
+            .gt('stock', 0);
+        stockBas = (stockBasList as List).where((m) {
+          final s = (m['stock'] as num?)?.toInt() ?? 0;
+          final a = (m['seuil_alerte'] as num?)?.toInt() ?? 0;
+          return s <= a;
+        }).length;
+
+        final todayStr = DateTime.now().toIso8601String().split('T').first;
+        final lotsPerimesRaw = await supabase
+            .from('stock_entree')
+            .select('id_medicament')
+            .not('date_peremption', 'is', null)
+            .lt('date_peremption', todayStr);
+        lotsPerimes = (lotsPerimesRaw as List)
+            .map((e) => e['id_medicament'])
+            .toSet()
+            .length;
+      } catch (_) {}
+
       return {
         'revenuJour': revenuJour,
         'nbTransactionsJour': paiementsJour.length,
@@ -114,6 +148,9 @@ class HomeDirecteurService {
         'paiementsAttente': paiementsAttente.count,
         'examensAttente': patientsAttenteExam,
         'patientsAttenteConsult': patientsAttenteConsult.count,
+        'stockRupture': stockRupture,
+        'stockBas': stockBas,
+        'lotsPerimes': lotsPerimes,
       };
     } catch (_) {
       return {
@@ -126,6 +163,9 @@ class HomeDirecteurService {
         'paiementsAttente': 0,
         'examensAttente': 0,
         'patientsAttenteConsult': 0,
+        'stockRupture': 0,
+        'stockBas': 0,
+        'lotsPerimes': 0,
       };
     }
   }
