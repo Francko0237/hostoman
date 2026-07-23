@@ -12,8 +12,13 @@ const Color darkBackground = Color(0xFF2C3E50);
 
 class DetailHistoriqueLaboUI extends StatefulWidget {
   final int idConsultation;
+  final String? nomPatient;
 
-  const DetailHistoriqueLaboUI({super.key, required this.idConsultation});
+  const DetailHistoriqueLaboUI({
+    super.key,
+    required this.idConsultation,
+    this.nomPatient,
+  });
 
   @override
   State<DetailHistoriqueLaboUI> createState() => _DetailHistoriqueLaboUIState();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 /// Couleurs et styles partagés du module Pharmacie.
 class PharmacieTheme {
@@ -125,8 +126,8 @@ class PharmacieSidebar extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Text(
-                  'auth_hospital_name'.tr(),
+                ConnectedUserText(
+                  fallback: 'auth_hospital_name'.tr(),
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 11,
@@ -157,13 +158,17 @@ class PharmacieSidebar extends StatelessWidget {
                 await Supabase.instance.client.auth.signOut();
                 if (context.mounted) context.go('/Authen_Personnel');
               },
-              icon: const Icon(Icons.logout, color: Colors.white70, size: 18),
+              icon: const Icon(Icons.logout, color: Color(0xFFEF5350), size: 18),
               label: Text(
                 'phar_menu_logout'.tr(),
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: const TextStyle(
+                  color: Color(0xFFEF5350),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+                side: const BorderSide(color: Color(0xFFEF5350), width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -313,8 +318,8 @@ class PharmacieDrawer extends StatelessWidget {
                             fontSize: 16,
                           ),
                         ),
-                        Text(
-                          'auth_hospital_name'.tr(),
+                        ConnectedUserText(
+                          fallback: 'auth_hospital_name'.tr(),
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.7),
                             fontSize: 11,
@@ -456,14 +461,14 @@ class PharmaciePcLayout extends StatelessWidget {
                               color: PharmacieTheme.primary,
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              'auth_hospital_name'.tr(),
-                              style: const TextStyle(
-                                color: PharmacieTheme.primary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                             ConnectedUserText(
+                               fallback: 'auth_hospital_name'.tr(),
+                               style: const TextStyle(
+                                 color: PharmacieTheme.primary,
+                                 fontSize: 12,
+                                 fontWeight: FontWeight.w600,
+                               ),
+                             ),
                           ],
                         ),
                       ),

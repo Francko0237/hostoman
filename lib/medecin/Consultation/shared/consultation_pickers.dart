@@ -72,6 +72,8 @@ Future<List<Map<String, dynamic>>?> showExamensPickerDialog({
             final added = await showDialog<bool>(
               context: ctx,
               builder: (ctx2) => AlertDialog(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -155,6 +157,8 @@ Future<List<Map<String, dynamic>>?> showExamensPickerDialog({
           }
 
           return Dialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
@@ -496,6 +500,8 @@ Future<List<Map<String, dynamic>>?> showMedicamentsPickerDialog({
             final added = await showDialog<bool>(
               context: ctx,
               builder: (ctx2) => AlertDialog(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -593,6 +599,8 @@ Future<List<Map<String, dynamic>>?> showMedicamentsPickerDialog({
           }
 
           return Dialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),

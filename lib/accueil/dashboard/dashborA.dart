@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'Nbr_patient_service.dart';
 import 'package:hostoman/shared/responsive_wrapper.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 const Color npPrimaryColor = Color(0xFF1565C0);
 const Color npAccentColor = Color(0xFF2196F3);
@@ -99,8 +100,8 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
             ),
           ),
         ),
-        title: Text(
-          'auth_hospital_name'.tr(),
+        title: ConnectedUserText(
+          fallback: 'auth_hospital_name'.tr(),
           style: TextStyle(
             color: npPrimaryColor,
             fontSize: isDesktop ? 20 : 20,
@@ -395,8 +396,8 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                     letterSpacing: 0.5,
                   ),
                 ),
-                Text(
-                  'auth_hospital_name'.tr(),
+                ConnectedUserText(
+                  fallback: 'auth_hospital_name'.tr(),
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.65),
                     fontSize: 11,
@@ -452,6 +453,12 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                   'acc_nav_profil'.tr(),
                   '/Dashboard_Accueil/profil',
                 ),
+                _pcNavItem(
+                  context,
+                  Icons.settings_outlined,
+                  'acc_settings_menu'.tr(),
+                  '/Dashboard_Accueil/parametre',
+                ),
               ],
             ),
           ),
@@ -463,13 +470,17 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                 await Supabase.instance.client.auth.signOut();
                 if (context.mounted) context.go('/Authen_Personnel');
               },
-              icon: const Icon(Icons.logout, color: Colors.white70, size: 18),
+              icon: const Icon(Icons.logout, color: Color(0xFFEF5350), size: 18),
               label: Text(
                 'acc_logout_menu'.tr(),
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: const TextStyle(
+                  color: Color(0xFFEF5350),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                side: const BorderSide(color: Color(0xFFEF5350), width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -572,15 +583,10 @@ class _DashboardAccueilState extends State<DashboardAccueil> {
                 ),
                 child: Row(
                   children: [
-                    Image.asset(
-                      'assets/images/logo.png',
-                      width: 20,
-                      height: 20,
-                      fit: BoxFit.contain,
-                    ),
+                    const Icon(Icons.person_outline, size: 16, color: npPrimaryColor),
                     const SizedBox(width: 6),
-                    Text(
-                      'auth_hospital_name'.tr(),
+                    ConnectedUserText(
+                      fallback: 'auth_hospital_name'.tr(),
                       style: const TextStyle(
                         color: npPrimaryColor,
                         fontSize: 12,

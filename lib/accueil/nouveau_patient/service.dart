@@ -26,27 +26,27 @@ class PatientService {
   PatientService(this.supabase);
 
   /// Méthode principale pour enregistrer ou mettre à jour un patient
-  Future<void> patientSave({
+  Future<bool> patientSave({
     required BuildContext context,
     String? idMedecin,
   }) async {
     // 🔒 Validation des champs obligatoires
     if (sexe == null || sexe!.isEmpty) {
       showMessage(context, 'np_field_sex_required'.tr(), isError: true);
-      return;
+      return false;
     }
     if (StatutMatrimonial == null || StatutMatrimonial!.isEmpty) {
       showMessage(context, 'np_field_marital_required'.tr(), isError: true);
-      return;
+      return false;
     }
     if (type_service == null || type_service!.isEmpty) {
       showMessage(context, 'np_field_service_required'.tr(), isError: true);
-      return;
+      return false;
     }
     if ((type_service == 'Consultation' || type_service == 'Rendez-vous') &&
         idMedecin == null) {
       showMessage(context, 'np_field_doctor_required'.tr(), isError: true);
-      return;
+      return false;
     }
 
     // 📦 Récupération des données saisies
@@ -378,6 +378,10 @@ class PatientService {
                       ),
                     ),
                     child: Wrap(
+                      spacing: 12,
+                      runSpacing: 10,
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, 'cancel'),
@@ -458,9 +462,9 @@ class PatientService {
       );
 
       // 🚫 Annulation
-      if (choix == 'cancel') {
+      if (choix == null || choix == 'cancel') {
         showMessage(context, 'np_msg_cancelled'.tr(), isWarning: true);
-        return;
+        return false;
       }
 
       // 🆕 Création d'un nouveau patient malgré doublon
@@ -579,6 +583,7 @@ class PatientService {
 
     // 🧹 Nettoyage du formulaire
     _clearFormFields();
+    return true;
   }
 
   /// Widget pour afficher une ligne d'information

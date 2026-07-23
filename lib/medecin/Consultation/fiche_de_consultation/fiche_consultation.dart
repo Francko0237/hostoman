@@ -36,6 +36,17 @@ class _ConsultationPageState extends State<ConsultationPage> {
   final TextEditingController _rdvDateController = TextEditingController();
   final TextEditingController _rdvHeureController = TextEditingController();
 
+  // FocusNodes pour le focus et défilement automatique lors de la validation
+  final FocusNode _antecedentsFocusNode = FocusNode();
+  final FocusNode _signesSymptomesFocusNode = FocusNode();
+  final FocusNode _diagnosticInitialFocusNode = FocusNode();
+  final FocusNode _statutConsultationFocusNode = FocusNode();
+  final FocusNode _diagnosticFinalFocusNode = FocusNode();
+  final FocusNode _traitementPrescritFocusNode = FocusNode();
+  final FocusNode _programmationRdvFocusNode = FocusNode();
+  final FocusNode _rdvDateFocusNode = FocusNode();
+  final FocusNode _rdvHeureFocusNode = FocusNode();
+
   // --- Variables d'État du Formulaire ---
   String? _statutConsultation;
   String? _programmationRdv;
@@ -78,6 +89,16 @@ class _ConsultationPageState extends State<ConsultationPage> {
     _traitementPrescritController.dispose();
     _rdvDateController.dispose();
     _rdvHeureController.dispose();
+
+    _antecedentsFocusNode.dispose();
+    _signesSymptomesFocusNode.dispose();
+    _diagnosticInitialFocusNode.dispose();
+    _statutConsultationFocusNode.dispose();
+    _diagnosticFinalFocusNode.dispose();
+    _traitementPrescritFocusNode.dispose();
+    _programmationRdvFocusNode.dispose();
+    _rdvDateFocusNode.dispose();
+    _rdvHeureFocusNode.dispose();
     super.dispose();
   }
 
@@ -171,33 +192,82 @@ class _ConsultationPageState extends State<ConsultationPage> {
   }
 
   void _showPatientInfoModal(BuildContext context) {
-    // ... (Logique inchangée pour le modal d'information patient)
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
+        return Dialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(16),
           ),
-          title: Text('fiche_modal_title'.tr()),
-          content: SingleChildScrollView(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 460,
+            ),
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: medecinService.infosPatient(widget.idConsultation),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const SizedBox(
+                    height: 180,
+                    child: Center(
+                      child: CircularProgressIndicator(color: Color(0xFF6A5ACD)),
+                    ),
+                  );
                 }
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'fiche_modal_load_error'.tr(
-                        namedArgs: {'msg': '${snapshot.error}'},
-                      ),
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                        const SizedBox(height: 12),
+                        Text(
+                          'fiche_modal_load_error'.tr(
+                            namedArgs: {'msg': '${snapshot.error}'},
+                          ),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6A5ACD),
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('fiche_modal_close'.tr()),
+                        ),
+                      ],
                     ),
                   );
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Text('fiche_modal_no_info'.tr()));
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.info_outline, color: Colors.grey, size: 40),
+                        const SizedBox(height: 12),
+                        Text(
+                          'fiche_modal_no_info'.tr(),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text('fiche_modal_close'.tr()),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 final consultationData = snapshot.data![0];
@@ -222,95 +292,158 @@ class _ConsultationPageState extends State<ConsultationPage> {
                 final int? age = patient['age'] as int?;
                 final profesion =
                     patient['profession'] ?? 'fiche_value_unknown'.tr();
-                final StatutMatrimonial = patient['statut_matrimonial'];
-                final temperature = parametresVitaux['temperature'] ?? 0;
-                final poid = parametresVitaux['poid'] ?? 0;
+                final statutMatrimonial = patient['statut_matrimonial'] ?? 'fiche_value_unknown'.tr();
+
+                final temperature = parametresVitaux['temperature'];
+                final poid = parametresVitaux['poid'];
                 final systolique = parametresVitaux['systolique'];
                 final diastolique = parametresVitaux['diastolique'];
                 final statutVih = parametresVitaux['statut_VIH'];
                 final vaccination = parametresVitaux['vaccination'];
                 final motif = parametresVitaux['motif_de_consultation'];
 
+                Widget buildSimpleInfoRow(String label, String value) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 150,
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            value,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'fiche_modal_admin_section'.tr(),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const Divider(),
-                    Text(
-                      'fiche_modal_full_name'.tr(
-                        namedArgs: {'value': nomComplet},
+                    // Header Simple
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'fiche_modal_title'.tr(),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.close, color: Colors.black54),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
                       ),
                     ),
-                    Text('fiche_modal_sex'.tr(namedArgs: {'value': sexe})),
-                    Text(
-                      'fiche_modal_age'.tr(
-                        namedArgs: {
-                          'value':
-                              age?.toString() ?? 'fiche_value_unknown'.tr(),
-                        },
+                    const Divider(height: 1),
+
+                    // Body
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Section 1: Admin
+                            Text(
+                              'fiche_modal_admin_section'.tr(),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF6A5ACD),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            buildSimpleInfoRow('Nom complet', nomComplet),
+                            buildSimpleInfoRow('Sexe', sexe),
+                            buildSimpleInfoRow('Âge', age != null ? '$age ans' : 'fiche_value_unknown'.tr()),
+                            buildSimpleInfoRow('Téléphone', telephone),
+                            buildSimpleInfoRow('Statut matrimonial', '$statutMatrimonial'),
+                            buildSimpleInfoRow('Profession', '$profesion'),
+                            buildSimpleInfoRow('Adresse', adresse),
+
+                            const SizedBox(height: 20),
+                            const Divider(height: 1),
+                            const SizedBox(height: 15),
+
+                            // Section 2: Vitals
+                            Text(
+                              'fiche_modal_vitals_section'.tr(),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF6A5ACD),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            buildSimpleInfoRow('Température', temperature != null ? '$temperature °C' : 'fiche_value_na'.tr()),
+                            buildSimpleInfoRow(
+                              'Tension (mmHg)',
+                              (systolique != null && diastolique != null)
+                                  ? '$systolique/$diastolique'
+                                  : 'fiche_value_na'.tr(),
+                            ),
+                            buildSimpleInfoRow('Poids', poid != null ? '$poid kg' : 'fiche_value_na'.tr()),
+                            buildSimpleInfoRow('Statut VIH', statutVih != null ? '$statutVih' : 'fiche_value_na'.tr()),
+                            buildSimpleInfoRow('Vaccination', vaccination != null ? '$vaccination' : 'fiche_value_na'.tr()),
+                            buildSimpleInfoRow('Motif de consultation', motif != null ? '$motif' : 'fiche_value_na'.tr()),
+                          ],
+                        ),
                       ),
                     ),
-                    Text(
-                      'fiche_modal_phone'.tr(namedArgs: {'value': telephone}),
-                    ),
-                    Text(
-                      'fiche_modal_profession'.tr(
-                        namedArgs: {'value': '$profesion'},
+                    const Divider(height: 1),
+
+                    // Actions / Footer
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF6A5ACD),
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            ),
+                            child: Text(
+                              'fiche_modal_close'.tr(),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Text(
-                      'fiche_modal_marital'.tr(
-                        namedArgs: {'value': '$StatutMatrimonial'},
-                      ),
-                    ),
-                    Text(
-                      'fiche_modal_address'.tr(namedArgs: {'value': adresse}),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'fiche_modal_vitals_section'.tr(),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const Divider(),
-                    Text(
-                      'fiche_modal_temperature'.tr(
-                        namedArgs: {'value': '$temperature'},
-                      ),
-                    ),
-                    Text(
-                      'fiche_modal_tension'.tr(
-                        namedArgs: {'value': '$systolique/$diastolique'},
-                      ),
-                    ),
-                    Text(
-                      'fiche_modal_weight'.tr(namedArgs: {'value': '$poid'}),
-                    ),
-                    Text(
-                      'fiche_modal_hiv'.tr(namedArgs: {'value': '$statutVih'}),
-                    ),
-                    Text(
-                      'fiche_modal_vaccination'.tr(
-                        namedArgs: {'value': '$vaccination'},
-                      ),
-                    ),
-                    Text(
-                      'fiche_modal_motif'.tr(namedArgs: {'value': '$motif'}),
                     ),
                   ],
                 );
               },
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('fiche_modal_close'.tr()),
-            ),
-          ],
         );
       },
     );
@@ -323,12 +456,14 @@ class _ConsultationPageState extends State<ConsultationPage> {
     required String hint,
     required TextEditingController controller,
     String? Function(String?)? validator,
+    FocusNode? focusNode,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
         // 🛑 Utilisation de TextFormField pour la validation
         controller: controller,
+        focusNode: focusNode,
         minLines: 3,
         maxLines: 5,
         validator: validator, // 🛑 Ajout du validateur
@@ -425,11 +560,62 @@ class _ConsultationPageState extends State<ConsultationPage> {
     );
   }
 
-  // --- FONCTION DE SOUMISSION AVEC VALIDATION ---
+  void _focusAndScrollTo(FocusNode node) {
+    node.requestFocus();
+    if (node.context != null) {
+      Scrollable.ensureVisible(
+        node.context!,
+        duration: const Duration(milliseconds: 300),
+        alignment: 0.5,
+      );
+    }
+  }
+
+  void _focusOnFirstInvalidField() {
+    if (_antecedentsController.text.trim().isEmpty) {
+      _focusAndScrollTo(_antecedentsFocusNode);
+      return;
+    }
+    if (_signesSymptomesController.text.trim().isEmpty) {
+      _focusAndScrollTo(_signesSymptomesFocusNode);
+      return;
+    }
+    if (_diagnosticInitialController.text.trim().isEmpty) {
+      _focusAndScrollTo(_diagnosticInitialFocusNode);
+      return;
+    }
+    if (_statutConsultation == null) {
+      _focusAndScrollTo(_statutConsultationFocusNode);
+      return;
+    }
+    if (_diagnosticFinalController.text.trim().isEmpty) {
+      _focusAndScrollTo(_diagnosticFinalFocusNode);
+      return;
+    }
+    if (_traitementPrescritController.text.trim().isEmpty) {
+      _focusAndScrollTo(_traitementPrescritFocusNode);
+      return;
+    }
+    if (_programmationRdv == null) {
+      _focusAndScrollTo(_programmationRdvFocusNode);
+      return;
+    }
+    if (_programmationRdv == 'programmer') {
+      if (_rdvDateController.text.trim().isEmpty) {
+        _focusAndScrollTo(_rdvDateFocusNode);
+        return;
+      }
+      if (_rdvHeureController.text.trim().isEmpty) {
+        _focusAndScrollTo(_rdvHeureFocusNode);
+        return;
+      }
+    }
+  }
 
   Future<void> _finalizeConsultation() async {
     // 🛑 VALIDATION: Tente de valider tous les champs du formulaire
     if (!_formKey.currentState!.validate()) {
+      _focusOnFirstInvalidField();
       // Si la validation échoue (champs obligatoires vides), arrêter l'exécution
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -545,6 +731,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
         _buildFormField(
           hint: 'fiche_hint_antecedents'.tr(),
           controller: _antecedentsController,
+          focusNode: _antecedentsFocusNode,
           validator: (value) => value == null || value.isEmpty
               ? 'fiche_field_required'.tr()
               : null,
@@ -552,6 +739,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
         _buildFormField(
           hint: 'fiche_hint_signs'.tr(),
           controller: _signesSymptomesController,
+          focusNode: _signesSymptomesFocusNode,
           validator: (value) => value == null || value.isEmpty
               ? 'fiche_field_required'.tr()
               : null,
@@ -559,6 +747,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
         _buildFormField(
           hint: 'fiche_hint_diag_initial'.tr(),
           controller: _diagnosticInitialController,
+          focusNode: _diagnosticInitialFocusNode,
           validator: (value) => value == null || value.isEmpty
               ? 'fiche_field_required'.tr()
               : null,
@@ -570,7 +759,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
   Widget _buildExamStatusDropdown() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: DropdownButtonFormField<String>(
+      child: Focus(
+        focusNode: _statutConsultationFocusNode,
+        child: DropdownButtonFormField<String>(
         decoration: InputDecoration(
           hintStyle: const TextStyle(color: Colors.grey),
           filled: true,
@@ -610,6 +801,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
           });
         },
       ),
+      ),
     );
   }
 
@@ -630,6 +822,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
         _buildFormField(
           hint: 'fiche_hint_diag_final'.tr(),
           controller: _diagnosticFinalController,
+          focusNode: _diagnosticFinalFocusNode,
           validator: (value) => value == null || value.isEmpty
               ? 'fiche_field_required'.tr()
               : null,
@@ -637,6 +830,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
         _buildFormField(
           hint: 'fiche_hint_treatment'.tr(),
           controller: _traitementPrescritController,
+          focusNode: _traitementPrescritFocusNode,
           validator: (value) => value == null || value.isEmpty
               ? 'fiche_field_required'.tr()
               : null,
@@ -648,7 +842,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
   Widget _buildRdvDropdown() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: DropdownButtonFormField<String>(
+      child: Focus(
+        focusNode: _programmationRdvFocusNode,
+        child: DropdownButtonFormField<String>(
         decoration: InputDecoration(
           hintStyle: const TextStyle(color: Colors.grey),
           filled: true,
@@ -695,6 +891,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
           });
         },
       ),
+      ),
     );
   }
 
@@ -728,6 +925,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
                 child: TextFormField(
                   // 🛑 Utilisation de TextFormField
                   controller: _rdvDateController,
+                  focusNode: _rdvDateFocusNode,
                   validator:
                       rdvValidator, // 🛑 Ajout de la validation contextuelle
                   decoration: InputDecoration(
@@ -780,6 +978,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
                 child: TextFormField(
                   // 🛑 Utilisation de TextFormField
                   controller: _rdvHeureController,
+                  focusNode: _rdvHeureFocusNode,
                   validator:
                       rdvValidator, // 🛑 Ajout de la validation contextuelle
                   decoration: InputDecoration(

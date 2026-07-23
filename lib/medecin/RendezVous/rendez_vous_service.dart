@@ -32,4 +32,38 @@ class RendezVousService {
       return [];
     }
   }
+
+  /// ❌ Annule un rendez-vous
+  Future<bool> annulerRendezVous(int idConsultation) async {
+    try {
+      await supabase
+          .from('Consultation')
+          .update({
+            'programmation_rdv': 'pas_programmer',
+            'date_rdv_prevu': null,
+          })
+          .eq('id_consultation', idConsultation);
+      return true;
+    } catch (e) {
+      print('Erreur lors de l\'annulation du rendez-vous: $e');
+      return false;
+    }
+  }
+
+  /// 📅 Reprogramme un rendez-vous
+  Future<bool> reprogrammerRendezVous(int idConsultation, DateTime nouvelleDate) async {
+    try {
+      await supabase
+          .from('Consultation')
+          .update({
+            'date_rdv_prevu': nouvelleDate.toIso8601String(),
+            'programmation_rdv': 'RDV_programmer',
+          })
+          .eq('id_consultation', idConsultation);
+      return true;
+    } catch (e) {
+      print('Erreur lors de la reprogrammation du rendez-vous: $e');
+      return false;
+    }
+  }
 }

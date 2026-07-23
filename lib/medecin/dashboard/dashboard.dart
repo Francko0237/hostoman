@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dashboard_service.dart';
 import 'package:hostoman/shared/responsive_wrapper.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 // Couleurs
 const Color medPrimaryColor = Color(0xFF5A47C9);
@@ -103,8 +104,8 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
             ),
           ),
         ),
-        title: Text(
-          'auth_hospital_name'.tr(),
+        title: ConnectedUserText(
+          fallback: 'auth_hospital_name'.tr(),
           style: TextStyle(
             color: Colors.white,
             fontSize: isDesktop ? 20 : 18,
@@ -418,8 +419,8 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Text(
-                  'auth_hospital_name'.tr(),
+                ConnectedUserText(
+                  fallback: 'auth_hospital_name'.tr(),
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.65),
                     fontSize: 11,
@@ -501,13 +502,17 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                 await Supabase.instance.client.auth.signOut();
                 if (context.mounted) context.go('/Authen_Personnel');
               },
-              icon: const Icon(Icons.logout, color: Colors.white70, size: 18),
+              icon: const Icon(Icons.logout, color: Color(0xFFEF5350), size: 18),
               label: Text(
                 'mdash_menu_logout'.tr(),
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: const TextStyle(
+                  color: Color(0xFFEF5350),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                side: const BorderSide(color: Color(0xFFEF5350), width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -610,10 +615,10 @@ class _DashboardMedecinState extends State<DashboardMedecin> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.local_hospital, size: 14, color: purple),
+                    const Icon(Icons.person_outline, size: 14, color: purple),
                     const SizedBox(width: 6),
-                    Text(
-                      'auth_hospital_name'.tr(),
+                    ConnectedUserText(
+                      fallback: 'auth_hospital_name'.tr(),
                       style: const TextStyle(
                         color: purple,
                         fontSize: 12,

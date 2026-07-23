@@ -36,10 +36,18 @@ class DashboardStatsService {
         }
       }
 
+      // Récupérer le nombre total de paiements en attente (toutes dates confondues)
+      final pendingResponse = await supabase
+          .from('paiement')
+          .select('id_paiement')
+          .eq('statut_paiement', 'en_attente');
+      final pendingCount = (pendingResponse as List).length;
+
       return {
         'personnes_recues':
             data.length, // Compte total des paiements (transactions)
         'total_encaisse': totalEncaisse.toInt(),
+        'en_attente': pendingCount,
         'date_recuperation': DateTime.now().toIso8601String(),
       };
     } catch (e) {
@@ -47,6 +55,7 @@ class DashboardStatsService {
       return {
         'personnes_recues': 0,
         'total_encaisse': 0,
+        'en_attente': 0,
         'date_recuperation': DateTime.now().toIso8601String(),
       };
     }

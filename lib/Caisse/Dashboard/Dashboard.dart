@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'Nbr&Caisse.dart';
 import 'package:hostoman/shared/responsive_wrapper.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 // Couleurs
 const Color npPrimaryColor = Color(0xFF4CAF50);
@@ -27,6 +28,7 @@ class _DashboardCaisseState extends State<DashboardCaisse> {
 
   int personnesRecues = 0;
   int totalEncaisse = 0;
+  int paiementsEnAttente = 0;
   Timer? _timer;
 
   @override
@@ -52,6 +54,7 @@ class _DashboardCaisseState extends State<DashboardCaisse> {
       setState(() {
         personnesRecues = stats['personnes_recues'] as int;
         totalEncaisse = stats['total_encaisse'] as int;
+        paiementsEnAttente = stats['en_attente'] as int? ?? 0;
       });
     }
   }
@@ -105,8 +108,8 @@ class _DashboardCaisseState extends State<DashboardCaisse> {
             ),
           ),
         ),
-        title: Text(
-          'auth_hospital_name'.tr(),
+        title: ConnectedUserText(
+          fallback: 'auth_hospital_name'.tr(),
           style: TextStyle(
             color: Color(0xFF26AE6C),
             fontSize: isDesktop ? 20 : 18,
@@ -396,8 +399,8 @@ class _DashboardCaisseState extends State<DashboardCaisse> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Text(
-                  'auth_hospital_name'.tr(),
+                ConnectedUserText(
+                  fallback: 'auth_hospital_name'.tr(),
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.65),
                     fontSize: 11,
@@ -467,13 +470,17 @@ class _DashboardCaisseState extends State<DashboardCaisse> {
                 await Supabase.instance.client.auth.signOut();
                 if (context.mounted) context.go('/Authen_Personnel');
               },
-              icon: const Icon(Icons.logout, color: Colors.white70, size: 18),
+              icon: const Icon(Icons.logout, color: Color(0xFFEF5350), size: 18),
               label: Text(
                 'cdash_menu_logout'.tr(),
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: const TextStyle(
+                  color: Color(0xFFEF5350),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                side: const BorderSide(color: Color(0xFFEF5350), width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -578,10 +585,10 @@ class _DashboardCaisseState extends State<DashboardCaisse> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.local_hospital, size: 14, color: green),
+                    const Icon(Icons.person_outline, size: 14, color: green),
                     const SizedBox(width: 6),
-                    Text(
-                      'auth_hospital_name'.tr(),
+                    ConnectedUserText(
+                      fallback: 'auth_hospital_name'.tr(),
                       style: const TextStyle(
                         color: green,
                         fontSize: 12,
@@ -749,56 +756,89 @@ class _DashboardCaisseState extends State<DashboardCaisse> {
     required Color color,
     required String route,
   }) {
+    final bool isPending = route.endsWith('paiementlist') && paiementsEnAttente > 0;
+
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () => context.push(route),
-        child: Container(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 14),
-              Row(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: color, size: 28),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
-                    'cdash_open'.tr(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: color,
-                      fontWeight: FontWeight.w600,
+                    label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward, size: 14, color: color),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Text(
+                        'cdash_open'.tr(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_forward, size: 14, color: color),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+            if (isPending)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD32F2F),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 20,
+                    minHeight: 20,
+                  ),
+                  child: Text(
+                    '$paiementsEnAttente',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -884,6 +924,8 @@ class _DashboardCaisseState extends State<DashboardCaisse> {
     required Color color,
     required Function(BuildContext, String) onTap,
   }) {
+    final bool isPending = action == 'paiementlist' && paiementsEnAttente > 0;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -903,35 +945,66 @@ class _DashboardCaisseState extends State<DashboardCaisse> {
           onTap: () => onTap(context, action),
           splashColor: color.withOpacity(0.2),
           highlightColor: color.withOpacity(0.1),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: color.withOpacity(0.3), width: 2),
-                  ),
-                  child: Icon(icon, size: 36, color: color),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: color.withOpacity(0.3), width: 2),
+                      ),
+                      child: Icon(icon, size: 36, color: color),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey[800],
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey[800],
-                    fontWeight: FontWeight.w700,
-                    height: 1.3,
-                    letterSpacing: 0.3,
+              ),
+              if (isPending)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD32F2F),
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 20,
+                    ),
+                    child: Text(
+                      '$paiementsEnAttente',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       ),

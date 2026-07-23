@@ -653,41 +653,6 @@ class _EnattenteExamState extends State<EnattenteExam> {
                                                   ),
                                                 ],
                                               ),
-                                              if (examensList.isNotEmpty) ...[
-                                                const SizedBox(height: 6),
-                                                Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.biotech,
-                                                      size: 14,
-                                                      color: statutColor
-                                                          .withOpacity(0.7),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Expanded(
-                                                      child: Text(
-                                                        'att_exams_label'.tr(
-                                                          namedArgs: {
-                                                            'list': examensList,
-                                                          },
-                                                        ),
-                                                        style: TextStyle(
-                                                          fontSize: 11,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          color:
-                                                              Colors.grey[800],
-                                                          fontStyle:
-                                                              FontStyle.italic,
-                                                        ),
-                                                        maxLines: 2,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
                                               const SizedBox(height: 6),
                                               // Badge statut ici pour
                                               // éviter le débordement

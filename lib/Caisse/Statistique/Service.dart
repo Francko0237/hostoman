@@ -8,17 +8,18 @@ class StatsService {
   Future<Map<String, dynamic>> getStatsByPeriod({
     required DateTime dateDebut,
     required DateTime dateFin,
-    String statutPaiement =
-        'payer', // Nouveau paramètre pour filtrer par statut
+    String statutPaiement = 'tous', // Par défaut 'tous' pour récupérer tout
   }) async {
     // Récupération des consultations avec jointures Patient et Paiement
-    final response = await supabase
+    var query = supabase
         .from('Consultation')
-        .select('*, Patient(*), paiement!inner(*)')
-        .eq(
-          'paiement.statut_paiement',
-          statutPaiement,
-        ) // Utilisation du paramètre
+        .select('*, Patient(*), paiement!inner(*)');
+
+    if (statutPaiement != 'tous') {
+      query = query.eq('paiement.statut_paiement', statutPaiement);
+    }
+
+    final response = await query
         .gte('date_enregistrement', dateDebut.toIso8601String())
         .lte('date_enregistrement', dateFin.toIso8601String())
         .order('date_enregistrement', ascending: false);
@@ -33,8 +34,11 @@ class StatsService {
       // Calcul du revenu réel via la table paiement liée
       final listPaiements = con['paiement'] as List;
       if (listPaiements.isNotEmpty) {
-        // Prendre seulement le premier paiement (il n'y a qu'un paiement par consultation)
-        sommeTotale += (listPaiements[0]['prix_a_paye'] as num).toDouble();
+        final statut = listPaiements[0]['statut_paiement']?.toString().toLowerCase();
+        // Le revenu ne prend en compte que les paiements validés/payés
+        if (statut == 'payer') {
+          sommeTotale += (listPaiements[0]['prix_a_paye'] as num).toDouble();
+        }
       }
 
       // Calcul Démographie (Sexe)
@@ -56,7 +60,7 @@ class StatsService {
   }
 
   Future<Map<String, dynamic>> getStatsToday({
-    String statutPaiement = 'payer',
+    String statutPaiement = 'tous',
   }) async {
     final now = DateTime.now();
     return await getStatsByPeriod(
@@ -67,7 +71,7 @@ class StatsService {
   }
 
   Future<Map<String, dynamic>> getStatsThisWeek({
-    String statutPaiement = 'payer',
+    String statutPaiement = 'tous',
   }) async {
     final now = DateTime.now();
     final debut = now.subtract(Duration(days: now.weekday - 1));
@@ -79,7 +83,7 @@ class StatsService {
   }
 
   Future<Map<String, dynamic>> getStatsThisMonth({
-    String statutPaiement = 'payer',
+    String statutPaiement = 'tous',
   }) async {
     final now = DateTime.now();
     return await getStatsByPeriod(

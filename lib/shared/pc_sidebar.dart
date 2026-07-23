@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'user_profile_helper.dart';
 
 /// Configuration d'un élément de navigation dans la sidebar PC
 class SidebarItem {
@@ -198,14 +199,14 @@ class PcSidebar extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  Icons.local_hospital,
+                  Icons.person_outline,
                   size: 14,
                   color: Colors.white.withValues(alpha: 0.4),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    'Hôp. District Manjo',
+                  child: ConnectedUserText(
+                    fallback: 'Hôp. District Manjo',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.4),
                       fontSize: 10,
@@ -263,11 +264,11 @@ class PcSidebar extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.local_hospital,
+                Icon(Icons.person_outline,
                     size: 14, color: primaryColor),
                 const SizedBox(width: 6),
-                Text(
-                  'Hôp. District de Manjo',
+                ConnectedUserText(
+                  fallback: 'Hôp. District de Manjo',
                   style: TextStyle(
                     color: primaryColor,
                     fontSize: 12,

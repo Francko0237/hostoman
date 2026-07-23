@@ -34,9 +34,8 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
   Map<String, int> statistiques = {'termines': 0, 'annules': 0};
   List<Map<String, dynamic>> patients = [];
   bool isLoading = true;
-  bool showFilters = false;
-  String? statutFiltre; // null = tous, 'Terminé', 'Annulé'
   String? errorMessage;
+  String? statutFiltre; // null = tout, 'Terminé', 'Annulé'
 
   @override
   void initState() {
@@ -165,7 +164,8 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
                 ],
               ),
             )
-          : Center(
+          : Align(
+              alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: isDesktop ? 900 : double.infinity,
@@ -176,8 +176,6 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
                     children: [
                       const SizedBox(height: 16),
                       _buildPeriodeSection(),
-                      const SizedBox(height: 16),
-                      _buildFiltresSection(),
                       const SizedBox(height: 16),
                       _buildStatistiquesCards(),
                       const SizedBox(height: 24),
@@ -293,82 +291,49 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
     );
   }
 
-  Widget _buildFiltresSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () {
-          setState(() => showFilters = !showFilters);
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Icon(Icons.filter_list, size: 20, color: labPrimaryColor),
-              const SizedBox(width: 8),
-              Text(
-                'lstat_filters_title'.tr(),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const Spacer(),
-              Icon(
-                showFilters ? Icons.expand_less : Icons.expand_more,
-                color: Colors.grey,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatistiquesCards() {
+    final int nbTermines = statistiques['termines'] ?? 0;
+    final int nbAnnules = statistiques['annules'] ?? 0;
+    final int nbTotal = nbTermines + nbAnnules;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           Expanded(
-            child: _buildStatCard(
-              label: 'lstat_card_done'.tr(),
-              count: statistiques['termines'] ?? 0,
-              color: labGreenColor,
-              icon: Icons.check_circle,
-              isActive: statutFiltre == 'Terminé',
+            child: _buildFilterButton(
+              label: 'Tout',
+              count: nbTotal,
+              color: labPrimaryColor,
+              isSelected: statutFiltre == null,
               onTap: () {
-                setState(() {
-                  statutFiltre = statutFiltre == 'Terminé' ? null : 'Terminé';
-                });
+                setState(() => statutFiltre = null);
                 chargerDonnees();
               },
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
-            child: _buildStatCard(
-              label: 'lstat_card_cancelled'.tr(),
-              count: statistiques['annules'] ?? 0,
-              color: Colors.red,
-              icon: Icons.cancel,
-              isActive: statutFiltre == 'Annulé',
+            child: _buildFilterButton(
+              label: 'Valider',
+              count: nbTermines,
+              color: labGreenColor,
+              isSelected: statutFiltre == 'Terminé',
               onTap: () {
-                setState(() {
-                  statutFiltre = statutFiltre == 'Annulé' ? null : 'Annulé';
-                });
+                setState(() => statutFiltre = 'Terminé');
+                chargerDonnees();
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildFilterButton(
+              label: 'Annuler',
+              count: nbAnnules,
+              color: Colors.red,
+              isSelected: statutFiltre == 'Annulé',
+              onTap: () {
+                setState(() => statutFiltre = 'Annulé');
                 chargerDonnees();
               },
             ),
@@ -378,46 +343,45 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
     );
   }
 
-  Widget _buildStatCard({
+  Widget _buildFilterButton({
     required String label,
     required int count,
     required Color color,
-    required IconData icon,
-    required bool isActive,
+    required bool isSelected,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(20),
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: isActive ? color : color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? color.withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isActive ? color : color.withOpacity(0.3),
-            width: 2,
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 1.5 : 1.0,
           ),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: isActive ? Colors.white : color),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                color: isActive ? Colors.white : color,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
             Text(
               '$count',
               style: TextStyle(
-                fontSize: 32,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isActive ? Colors.white : color,
+                color: isSelected ? color : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? color : Colors.grey[600],
               ),
             ),
           ],
@@ -427,23 +391,31 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
   }
 
   Widget _buildPatientsSection() {
+    // Grouper les patients : un seul enregistrement par id_patient
+    final Map<dynamic, Map<String, dynamic>> uniquePatients = {};
+    for (var item in patients) {
+      final idPatient = item['id_patient'];
+      if (!uniquePatients.containsKey(idPatient)) {
+        uniquePatients[idPatient] = {
+          ...item,
+          'nombre_sessions': 1,
+        };
+      } else {
+        uniquePatients[idPatient]!['nombre_sessions'] =
+            (uniquePatients[idPatient]!['nombre_sessions'] as int) + 1;
+      }
+    }
+    final patientsList = uniquePatients.values.toList();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            statutFiltre == null
-                ? 'lstat_section_all'.tr(
-                    namedArgs: {'count': '${patients.length}'},
-                  )
-                : (statutFiltre == 'Terminé'
-                      ? 'lstat_section_done'.tr(
-                          namedArgs: {'count': '${patients.length}'},
-                        )
-                      : 'lstat_section_cancelled'.tr(
-                          namedArgs: {'count': '${patients.length}'},
-                        )),
+            'lstat_section_all'.tr(
+              namedArgs: {'count': '${patientsList.length}'},
+            ),
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -451,25 +423,31 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
             ),
           ),
           const SizedBox(height: 12),
-          if (patients.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Center(
-                child: Text(
-                  'lstat_empty'.tr(),
-                  style: TextStyle(color: Colors.grey[600]),
+          if (patientsList.isEmpty)
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 40),
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.person_search, size: 48, color: Colors.grey.shade400),
+                    const SizedBox(height: 12),
+                    Text(
+                      'lstat_empty'.tr(),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             )
           else
-            ...patients.map((item) {
-              final patientMap = item['Patient'] as Map<String, dynamic>;
+            ...patientsList.map((item) {
+              final patientMap = Map<String, dynamic>.from(
+                item['Patient'] as Map<String, dynamic>,
+              );
               patientMap['id_patient'] = item['id_patient'];
-              // Ajouter date_enregistrement depuis la consultation si absent
               if (!patientMap.containsKey('date_enregistrement') ||
                   patientMap['date_enregistrement'] == null) {
                 patientMap['date_enregistrement'] =
@@ -477,18 +455,15 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
                     DateTime.now().toIso8601String();
               }
               final patient = Patient.fromMap(patientMap);
-              final nombreExamens = item['nombre_examens'] ?? 0;
-              final dateEnregistrement = item['date_enregistrement'];
-              final idConsultation = item['id_consultation'] as int;
+              final sessions = item['nombre_sessions'] as int? ?? 1;
 
               return _buildPatientCard(
                 patient: patient,
-                nombreExamens: nombreExamens,
-                dateEnregistrement: dateEnregistrement,
-                idConsultation: idConsultation,
+                nombreSessions: sessions,
+                idPatient: item['id_patient']?.toString() ?? '',
               );
             }),
-          const SizedBox(height: 80), // Space for bottom nav
+          const SizedBox(height: 80),
         ],
       ),
     );
@@ -496,49 +471,55 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
 
   Widget _buildPatientCard({
     required Patient patient,
-    required int nombreExamens,
-    required String dateEnregistrement,
-    required int idConsultation,
+    required int nombreSessions,
+    required String idPatient,
   }) {
-    final date = DateTime.parse(dateEnregistrement);
-    final dateFormatted = DateFormat('dd/MM/yyyy').format(date);
+    final initial = patient.nom_complet.isNotEmpty
+        ? patient.nom_complet[0].toUpperCase()
+        : 'P';
 
     return InkWell(
       onTap: () {
-        context.push('/Dashboard_Laboratoire/HistoriqueDetail/$idConsultation');
+        context.push(
+          '/Dashboard_Laboratoire/HistoriquePatient/$idPatient',
+          extra: {
+            'nom': patient.nom_complet,
+            'sexe': patient.sexe,
+            'age': patient.age,
+          },
+        );
       },
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200),
         ),
         child: Row(
           children: [
             // Avatar
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: labGreenColor,
-              child: Text(
-                patient.nom_complet[0].toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: labGreenColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: labGreenColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-
             const SizedBox(width: 12),
-
             // Infos patient
             Expanded(
               child: Column(
@@ -558,7 +539,7 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
                       Icon(
                         patient.sexe == 'Homme' ? Icons.male : Icons.female,
                         size: 14,
-                        color: Colors.grey[600],
+                        color: Colors.grey[500],
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -568,41 +549,37 @@ class _StatistiqueLaboUIState extends State<StatistiqueLaboUI> {
                             'age': '${patient.age}',
                           },
                         ),
-                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 12,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        dateFormatted,
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(width: 12),
-                      Icon(Icons.science, size: 12, color: labGreenColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        (nombreExamens > 1
-                                ? 'lstat_exams_many'
-                                : 'lstat_exams_one')
-                            .tr(namedArgs: {'count': '$nombreExamens'}),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: labGreenColor,
-                          fontWeight: FontWeight.w600,
-                        ),
                       ),
                     ],
                   ),
                 ],
               ),
+            ),
+            // Badge sessions
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: labGreenColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$nombreSessions session${nombreSessions > 1 ? 's' : ''}',
+                    style: const TextStyle(
+                      color: labGreenColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              ],
             ),
           ],
         ),

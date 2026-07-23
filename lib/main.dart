@@ -36,6 +36,7 @@ import 'package:hostoman/medecin/Consultation/liste_patients_consultation/liste_
 import 'package:hostoman/medecin/Consultation/fiche_de_consultation/fiche_consultation.dart';
 import 'package:hostoman/medecin/Consultation/finalisation_consultation/finalisation.dart';
 import 'package:hostoman/medecin/Consultation/historique_consultation/historique_liste.dart';
+import 'package:hostoman/medecin/Consultation/historique_consultation/historique_patient_page.dart';
 import 'package:hostoman/medecin/Consultation/historique_consultation/historique_detail.dart';
 import 'package:hostoman/medecin/Consultation/statistiques/statistiques_ui.dart';
 import 'package:hostoman/medecin/Consultation/liste_patient_attente_examen/liste_patient_attente.dart';
@@ -53,6 +54,7 @@ import 'package:hostoman/Labo/Examen_a_faire/Detail.dart';
 import 'package:hostoman/Labo/resultats_des_examens/resultat_des_examens.dart';
 import 'package:hostoman/Labo/resultats_des_examens/Detail.dart';
 import 'package:hostoman/Labo/historique/historique_ui.dart';
+import 'package:hostoman/Labo/historique/labo_dates_patient_page.dart';
 import 'package:hostoman/Labo/historique/detail/detail_historique_ui.dart';
 import 'package:hostoman/Labo/statistique/statistique_ui.dart';
 
@@ -210,6 +212,17 @@ final GoRouter _router = GoRouter(
           },
         ),
         GoRoute(
+          path: 'HistoriquePatient/:idPatient',
+          builder: (context, state) {
+            final idPatient = state.pathParameters['idPatient']!;
+            final extra = state.extra as Map<String, dynamic>?;
+            return HistoriquePatientPage(
+              idPatient: idPatient,
+              patientName: extra?['nom']?.toString() ?? 'Patient',
+            );
+          },
+        ),
+        GoRoute(
           path: 'Statistiques',
           builder: (context, state) => const StatistiquesPage(),
         ),
@@ -295,12 +308,29 @@ final GoRouter _router = GoRouter(
           builder: (context, state) => const HistoriqueLaboUI(),
         ),
         GoRoute(
+          path: 'HistoriquePatient/:idPatient',
+          builder: (context, state) {
+            final idPatient = state.pathParameters['idPatient']!;
+            final extra = state.extra as Map<String, dynamic>?;
+            return LaboPatientDatesPage(
+              idPatient: idPatient,
+              nomPatient: extra?['nom']?.toString() ?? 'Patient',
+              sexe: extra?['sexe']?.toString(),
+              age: extra?['age'] as int?,
+            );
+          },
+        ),
+        GoRoute(
           path: 'HistoriqueDetail/:idConsultation',
           builder: (context, state) {
             final idConsultation = int.parse(
               state.pathParameters['idConsultation']!,
             );
-            return DetailHistoriqueLaboUI(idConsultation: idConsultation);
+            final extra = state.extra as Map<String, dynamic>?;
+            return DetailHistoriqueLaboUI(
+              idConsultation: idConsultation,
+              nomPatient: extra?['nom']?.toString(),
+            );
           },
         ),
         GoRoute(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'rendez_vous_service.dart';
 
 class ListeRendezVousPage extends StatefulWidget {
@@ -17,9 +16,12 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
   List<Map<String, dynamic>> _rendezVousList = [];
   bool _isLoading = true;
 
-  // Couleurs
-  final Color primaryPurple = const Color(0xFF6A5ACD);
+  // Couleurs unifiées du Thème Médecin
+  final Color primaryPurple = const Color(0xFF5A47C9);
   final Color lightPurple = const Color(0xFF8A7DF0);
+  final Color medSuccessColor = const Color(0xFF4CAF50);
+  final Color medErrorColor = const Color(0xFFD32F2F);
+  final Color medOrangeColor = const Color(0xFFFF9800);
 
   @override
   void initState() {
@@ -49,10 +51,214 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
     }
   }
 
+  /// 📅 Reprogrammer un rendez-vous (Date & Heure)
+  Future<void> _showReprogrammerDialog(int idConsultation, String patientName, DateTime? currentDate) async {
+    DateTime selectedDate = currentDate ?? DateTime.now().add(const Duration(days: 1));
+    TimeOfDay selectedTime = currentDate != null ? TimeOfDay.fromDateTime(currentDate) : TimeOfDay.now();
+
+    final dateController = TextEditingController(
+      text: '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+    );
+    final timeController = TextEditingController(
+      text: selectedTime.format(context),
+    );
+
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                'Reprogrammer le RDV',
+                style: TextStyle(fontWeight: FontWeight.bold, color: primaryPurple),
+              ),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Modifier la date et l\'heure du rendez-vous de $patientName.',
+                      style: const TextStyle(fontSize: 14, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 20),
+                    // Champ Date
+                    TextFormField(
+                      controller: dateController,
+                      decoration: InputDecoration(
+                        labelText: 'Date de rendez-vous',
+                        prefixIcon: const Icon(Icons.calendar_today),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8F9FA),
+                      ),
+                      readOnly: true,
+                      validator: (value) => value == null || value.isEmpty ? 'Veuillez choisir une date' : null,
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime(2030),
+                        );
+                        if (date != null) {
+                          setDialogState(() {
+                            selectedDate = date;
+                            dateController.text = '${date.day}/${date.month}/${date.year}';
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 15),
+                    // Champ Heure
+                    TextFormField(
+                      controller: timeController,
+                      decoration: InputDecoration(
+                        labelText: 'Heure de rendez-vous',
+                        prefixIcon: const Icon(Icons.access_time),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8F9FA),
+                      ),
+                      readOnly: true,
+                      validator: (value) => value == null || value.isEmpty ? 'Veuillez choisir une heure' : null,
+                      onTap: () async {
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: selectedTime,
+                        );
+                        if (time != null) {
+                          setDialogState(() {
+                            selectedTime = time;
+                            timeController.text = time.format(context);
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Annuler', style: TextStyle(color: Colors.grey[600])),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      final newDateTime = DateTime(
+                        selectedDate.year,
+                        selectedDate.month,
+                        selectedDate.day,
+                        selectedTime.hour,
+                        selectedTime.minute,
+                      );
+                      Navigator.pop(context);
+                      setState(() => _isLoading = true);
+                      final success = await _rendezVousService.reprogrammerRendezVous(idConsultation, newDateTime);
+                      if (!mounted) return;
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Le rendez-vous a bien été reprogrammé.'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Erreur lors de la reprogrammation.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                      _loadRendezVous();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryPurple,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Confirmer'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// ❌ Annuler un rendez-vous (Confirmation)
+  Future<void> _showAnnulerDialog(int idConsultation, String patientName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            'Annuler le RDV',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+          ),
+          content: Text(
+            'Voulez-vous vraiment annuler le rendez-vous de $patientName ?',
+            style: const TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Garder le RDV', style: TextStyle(color: Colors.grey[600])),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Oui, annuler'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      final success = await _rendezVousService.annulerRendezVous(idConsultation);
+      if (!mounted) return;
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Le rendez-vous a été annulé avec succès.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur lors de l\'annulation du rendez-vous.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      _loadRendezVous();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3F3),
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(
           'rdv_title'.tr(),
@@ -84,7 +290,7 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
               : _rendezVousList.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
                   itemCount: _rendezVousList.length,
                   itemBuilder: (context, index) {
                     final rdv = _rendezVousList[index];
@@ -104,12 +310,12 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
           Icon(
             Icons.calendar_today_outlined,
             size: 80,
-            color: Colors.grey[400],
+            color: Colors.grey[300],
           ),
           const SizedBox(height: 16),
           Text(
             'rdv_empty'.tr(),
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 16, color: Colors.grey[500], fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -131,15 +337,22 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
         : null;
 
     final bool isPast = rdvDate != null && rdvDate.isBefore(DateTime.now());
-    final Color dateColor = isPast ? Colors.red : Colors.green;
+    final Color dateColor = isPast ? medErrorColor : medSuccessColor;
+
+    final String initial = nom.isNotEmpty ? nom[0].toUpperCase() : 'P';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
       child: InkWell(
         onTap: () {
-          // Navigation vers la page de finalisation
+          // Action par défaut : Consulter / Finaliser
           context.push(
             '/Dashboard_Medecin/FinalisationConsultation/${rdv['id_consultation']}',
           );
@@ -147,83 +360,174 @@ class _ListeRendezVousPageState extends State<ListeRendezVousPage> {
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      nom,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (isPast)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'rdv_late_badge'.tr(),
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.monitor_heart_outlined,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'rdv_sex_age'.tr(
-                      namedArgs: {
-                        'sexe': sexe,
-                        'age': age?.toString() ?? 'rdv_age_unknown'.tr(),
-                      },
-                    ),
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.phone, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text(telephone, style: TextStyle(color: Colors.grey[600])),
-                ],
-              ),
-              const Divider(height: 20),
-              Row(
-                children: [
-                  Icon(Icons.access_time_filled, color: dateColor),
-                  const SizedBox(width: 8),
-                  Text(
-                    rdvDate != null
-                        ? DateFormat(
-                            'rdv_date_format'.tr(),
-                            context.locale.toString(),
-                          ).format(rdvDate)
-                        : 'rdv_date_unknown'.tr(),
+              // Avatar stylé
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: primaryPurple.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    initial,
                     style: TextStyle(
-                      color: dateColor,
-                      fontSize: 16,
+                      color: primaryPurple,
                       fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Contenu principal
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            nom,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isPast)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: medErrorColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'rdv_late_badge'.tr(),
+                              style: TextStyle(
+                                color: medErrorColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    // Infos additionnelles
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.wc,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'rdv_sex_age'.tr(
+                            namedArgs: {
+                              'sexe': sexe,
+                              'age': age?.toString() ?? 'rdv_age_unknown'.tr(),
+                            },
+                          ),
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(
+                          Icons.phone,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          telephone,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Date & Heure
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_filled,
+                          color: dateColor,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          rdvDate != null
+                              ? DateFormat(
+                                  'rdv_date_format'.tr(),
+                                  context.locale.toString(),
+                                ).format(rdvDate)
+                              : 'rdv_date_unknown'.tr(),
+                          style: TextStyle(
+                            color: dateColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Menu 3 boutons (Trois points verticaux)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.black54),
+                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                onSelected: (value) {
+                  if (value == 'consulter') {
+                    context.push(
+                      '/Dashboard_Medecin/FinalisationConsultation/${rdv['id_consultation']}',
+                    );
+                  } else if (value == 'reprogrammer') {
+                    _showReprogrammerDialog(rdv['id_consultation'], nom, rdvDate);
+                  } else if (value == 'annuler') {
+                    _showAnnulerDialog(rdv['id_consultation'], nom);
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem(
+                    value: 'consulter',
+                    child: Row(
+                      children: [
+                        Icon(Icons.medical_services_outlined, size: 18, color: primaryPurple),
+                        const SizedBox(width: 8),
+                        const Text('Finaliser la consultation', style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'reprogrammer',
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined, size: 18, color: medOrangeColor),
+                        const SizedBox(width: 8),
+                        const Text('Reprogrammer', style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'annuler',
+                    child: Row(
+                      children: [
+                        Icon(Icons.cancel_outlined, size: 18, color: medErrorColor),
+                        const SizedBox(width: 8),
+                        Text('Annuler', style: TextStyle(fontSize: 13, color: medErrorColor)),
+                      ],
                     ),
                   ),
                 ],

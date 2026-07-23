@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'historique_service.dart';
+import 'historique_detail.dart';
 
 const Color _primary = Color(0xFF6A5ACD);
 const Color _lightPurple = Color(0xFF8A7DF0);
@@ -243,6 +244,8 @@ class _HistoriquePatientPageState extends State<HistoriquePatientPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -355,16 +358,17 @@ class _HistoriquePatientPageState extends State<HistoriquePatientPage> {
   }
 
   void _openDetail(BuildContext context, Map<String, dynamic> c) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _HistoriquePatientDetailPage(
-          consultation: c,
-          patientName: widget.patientName,
-          service: _service,
+    final idConsultation = c['id_consultation'] as int?;
+    if (idConsultation != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HistoriqueDetailPage(
+            idConsultation: idConsultation,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 }
 

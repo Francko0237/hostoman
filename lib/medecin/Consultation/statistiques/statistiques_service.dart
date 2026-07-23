@@ -42,27 +42,32 @@ class StatistiquesService {
     return (response as List).length;
   }
 
-  /// 📋 Récupère la liste des patients pour un statut donné
+  /// 📋 Récupère la liste des patients pour un statut donné (ou tous si statut est nul ou 'tous')
   Future<List<Map<String, dynamic>>> getPatientsParStatut(
-    String statut,
+    String? statut,
     DateTime debut,
     DateTime fin,
   ) async {
-    final response = await supabase
+    var query = supabase
         .from('Consultation')
         .select('''
           id_consultation,
           date_derniere_mise_ajour,
           Patient(
+            id_patient,
             nom_complet,
             sexe,
             age
           )
         ''')
-        .eq('Statut_Consultation', statut)
         .gte('date_derniere_mise_ajour', debut.toIso8601String())
-        .lte('date_derniere_mise_ajour', fin.toIso8601String())
-        .order('date_derniere_mise_ajour', ascending: false);
+        .lte('date_derniere_mise_ajour', fin.toIso8601String());
+
+    if (statut != null && statut != 'tous') {
+      query = query.eq('Statut_Consultation', statut);
+    }
+
+    final response = await query.order('date_derniere_mise_ajour', ascending: false);
 
     return (response as List<dynamic>)
         .map((e) => e as Map<String, dynamic>)
@@ -81,6 +86,7 @@ class StatistiquesService {
           date_derniere_mise_ajour,
           date_rdv_prevu,
           Patient(
+            id_patient,
             nom_complet,
             sexe,
             age

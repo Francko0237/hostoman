@@ -76,7 +76,7 @@ class _DetailPatientPageState extends State<DetailPatientPage> {
     final isTablet = size.width > 400;
 
     final double contentWidth = isDesktop
-        ? (900 - 80) / 2
+        ? (900 - 100) / 2
         : (size.width - (isTablet ? 40 : 32) - 40 - 12) / 2;
 
     final String Sexe = _patient?.sexe ?? 'det_sex_undefined'.tr();

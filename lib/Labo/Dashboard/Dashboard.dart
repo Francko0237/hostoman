@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dashboard_service.dart';
 import '../resultats_des_examens/resultat_des_examens.dart';
 import 'package:hostoman/shared/responsive_wrapper.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 // ============================================================================
 // CONSTANTES
@@ -213,8 +214,8 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      Text(
-                        'auth_hospital_name'.tr(),
+                      ConnectedUserText(
+                        fallback: 'auth_hospital_name'.tr(),
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.6),
                           fontSize: 11,
@@ -285,20 +286,19 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                     },
                     icon: const Icon(
                       Icons.logout,
-                      color: Colors.white54,
+                      color: Color(0xFFEF5350),
                       size: 18,
                     ),
                     label: Text(
                       'labd_menu_logout'.tr(),
                       style: const TextStyle(
-                        color: Colors.white54,
+                        color: Color(0xFFEF5350),
                         fontSize: 13,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.2),
-                      ),
+                      side: const BorderSide(color: Color(0xFFEF5350), width: 1.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -364,13 +364,13 @@ class _DashboardLaboratoireState extends State<DashboardLaboratoire> {
                         child: Row(
                           children: [
                             Icon(
-                              Icons.local_hospital,
+                              Icons.person_outline,
                               size: 14,
                               color: labColor,
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              'auth_hospital_name'.tr(),
+                            ConnectedUserText(
+                              fallback: 'auth_hospital_name'.tr(),
                               style: TextStyle(
                                 color: labColor,
                                 fontSize: 12,
@@ -940,8 +940,8 @@ class _CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       // Titre avec bordure arrondie
       title: Container(
-        child: Text(
-          'auth_hospital_name'.tr(),
+        child: ConnectedUserText(
+          fallback: 'auth_hospital_name'.tr(),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 19,
@@ -949,7 +949,7 @@ class _CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ),
-      centerTitle: false,
+      centerTitle: true,
       actions: [
         Container(
           margin: const EdgeInsets.only(right: 12, top: 8, bottom: 8),

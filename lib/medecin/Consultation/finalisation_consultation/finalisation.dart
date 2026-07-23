@@ -54,6 +54,16 @@ class _FinalisationConsultationPageState
   final TextEditingController _rdvDateController = TextEditingController();
   final TextEditingController _rdvHeureController = TextEditingController();
 
+  // FocusNodes pour le focus et défilement automatique lors de la validation
+  final FocusNode _antecedentsFocusNode = FocusNode();
+  final FocusNode _signesSymptomesFocusNode = FocusNode();
+  final FocusNode _diagnosticInitialFocusNode = FocusNode();
+  final FocusNode _diagnosticFinalFocusNode = FocusNode();
+  final FocusNode _traitementPrescritFocusNode = FocusNode();
+  final FocusNode _programmationRdvFocusNode = FocusNode();
+  final FocusNode _rdvDateFocusNode = FocusNode();
+  final FocusNode _rdvHeureFocusNode = FocusNode();
+
   String? _programmationRdv;
   DateTime? _selectedRdvDate;
   TimeOfDay? _selectedRdvTime;
@@ -168,6 +178,14 @@ class _FinalisationConsultationPageState
     _traitementPrescritController.dispose();
     _rdvDateController.dispose();
     _rdvHeureController.dispose();
+    _antecedentsFocusNode.dispose();
+    _signesSymptomesFocusNode.dispose();
+    _diagnosticInitialFocusNode.dispose();
+    _diagnosticFinalFocusNode.dispose();
+    _traitementPrescritFocusNode.dispose();
+    _programmationRdvFocusNode.dispose();
+    _rdvDateFocusNode.dispose();
+    _rdvHeureFocusNode.dispose();
     super.dispose();
   }
 
@@ -277,110 +295,185 @@ class _FinalisationConsultationPageState
   void _showPatientInfoModal(BuildContext context) {
     if (_patientData == null) return;
 
+    final String nomComplet =
+        (_patientData!['nom_complet']?.toString() ??
+        'fiche_value_na'.tr());
+    final String sexe =
+        (_patientData!['sexe']?.toString() ?? 'fiche_value_unknown'.tr());
+    final String telephone =
+        (_patientData!['telephone']?.toString() ??
+        'fiche_value_unknown'.tr());
+    final String adresse =
+        (_patientData!['adresse']?.toString() ??
+        'fiche_value_unknown'.tr());
+    final int? age = _patientData!['age'] as int?;
+    final profesion =
+        _patientData!['profession'] ?? 'fiche_value_unknown'.tr();
+    final statutMatrimonial = _patientData!['statut_matrimonial'] ?? 'fiche_value_unknown'.tr();
+
+    final temperature = _parametresVitaux?['temperature'];
+    final poid = _parametresVitaux?['poid'];
+    final systolique = _parametresVitaux?['systolique'];
+    final diastolique = _parametresVitaux?['diastolique'];
+    final statutVih = _parametresVitaux?['statut_VIH'];
+    final vaccination = _parametresVitaux?['vaccination'];
+    final motif = _parametresVitaux?['motif_de_consultation'];
+
+    Widget buildSimpleInfoRow(String label, String value) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 150,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 400),
-            padding: const EdgeInsets.all(20),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'fiche_modal_title'.tr(),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    'fiche_modal_admin_section'.tr(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Divider(),
-                  _buildInfoRow(
-                    'fiche_modal_full_name_label',
-                    _patientData!['nom_complet'],
-                  ),
-                  _buildInfoRow('fiche_modal_sex_label', _patientData!['sexe']),
-                  _buildInfoRow(
-                    'fiche_modal_age_label',
-                    '${_patientData!['age']} ${_yearsSuffix()}',
-                  ),
-                  _buildInfoRow(
-                    'fiche_modal_phone_label',
-                    _patientData!['telephone'],
-                  ),
-                  _buildInfoRow(
-                    'fiche_modal_profession_label',
-                    _patientData!['profession'],
-                  ),
-                  _buildInfoRow(
-                    'fiche_modal_marital_label',
-                    _patientData!['statut_matrimonial'],
-                  ),
-                  _buildInfoRow(
-                    'fiche_modal_address_label',
-                    _patientData!['adresse'],
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    'fiche_modal_vitals_section'.tr(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Divider(),
-                  if (_parametresVitaux != null) ...[
-                    _buildInfoRow(
-                      'fiche_modal_temperature_label',
-                      _parametresVitaux!['temperature'],
-                    ),
-                    _buildInfoRow(
-                      'fiche_modal_tension_label',
-                      '${_parametresVitaux!['systolique']}/${_parametresVitaux!['diastolique']}',
-                    ),
-                    _buildInfoRow(
-                      'fiche_modal_weight_label',
-                      _parametresVitaux!['poid'],
-                    ),
-                    _buildInfoRow(
-                      'fiche_modal_hiv_label',
-                      _parametresVitaux!['statut_VIH'],
-                    ),
-                    _buildInfoRow(
-                      'fiche_modal_vaccination_label',
-                      _parametresVitaux!['vaccination'],
-                    ),
-                    _buildInfoRow(
-                      'fiche_modal_motif_label',
-                      _parametresVitaux!['motif_de_consultation'],
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'fiche_modal_close'.tr(),
-                        style: TextStyle(color: primaryPurple, fontSize: 16),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 460,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header Simple
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'fiche_modal_title'.tr(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close, color: Colors.black54),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+
+                // Body
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Section 1: Admin
+                        Text(
+                          'fiche_modal_admin_section'.tr(),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF6A5ACD),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        buildSimpleInfoRow('Nom complet', nomComplet),
+                        buildSimpleInfoRow('Sexe', sexe),
+                        buildSimpleInfoRow('Âge', age != null ? '$age ans' : 'fiche_value_unknown'.tr()),
+                        buildSimpleInfoRow('Téléphone', telephone),
+                        buildSimpleInfoRow('Statut matrimonial', '$statutMatrimonial'),
+                        buildSimpleInfoRow('Profession', '$profesion'),
+                        buildSimpleInfoRow('Adresse', adresse),
+
+                        const SizedBox(height: 20),
+                        const Divider(height: 1),
+                        const SizedBox(height: 15),
+
+                        // Section 2: Vitals
+                        Text(
+                          'fiche_modal_vitals_section'.tr(),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF6A5ACD),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        buildSimpleInfoRow('Température', temperature != null ? '$temperature °C' : 'fiche_value_na'.tr()),
+                        buildSimpleInfoRow(
+                          'Tension (mmHg)',
+                          (systolique != null && diastolique != null)
+                              ? '$systolique/$diastolique'
+                              : 'fiche_value_na'.tr(),
+                        ),
+                        buildSimpleInfoRow('Poids', poid != null ? '$poid kg' : 'fiche_value_na'.tr()),
+                        buildSimpleInfoRow('Statut VIH', statutVih != null ? '$statutVih' : 'fiche_value_na'.tr()),
+                        buildSimpleInfoRow('Vaccination', vaccination != null ? '$vaccination' : 'fiche_value_na'.tr()),
+                        buildSimpleInfoRow('Motif de consultation', motif != null ? '$motif' : 'fiche_value_na'.tr()),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+                const Divider(height: 1),
+
+                // Actions / Footer
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF6A5ACD),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: Text(
+                          'fiche_modal_close'.tr(),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -403,75 +496,7 @@ class _FinalisationConsultationPageState
     }
   }
 
-  String _yearsSuffix() {
-    final s = 'pay_field_age_value'.tr(namedArgs: {'age': ''});
-    return s.trim();
-  }
 
-  Widget _buildInfoRow(String labelKey, dynamic value) {
-    final label = _modalRowLabel(labelKey);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Text('$label : ${value ?? 'fiche_value_na'.tr()}'),
-    );
-  }
-
-  String _modalRowLabel(String key) {
-    switch (key) {
-      case 'fiche_modal_full_name_label':
-        return 'pdf_col_name'.tr();
-      case 'fiche_modal_sex_label':
-        return 'pay_field_sex'.tr();
-      case 'fiche_modal_age_label':
-        return 'pay_field_age'.tr();
-      case 'fiche_modal_phone_label':
-        return 'pay_field_phone'.tr();
-      case 'fiche_modal_profession_label':
-        return 'pay_field_profession'.tr();
-      case 'fiche_modal_marital_label':
-        return 'pay_field_marital'.tr();
-      case 'fiche_modal_address_label':
-        return 'pay_field_address'.tr();
-      case 'fiche_modal_temperature_label':
-        return 'fiche_modal_temperature'
-            .tr(namedArgs: {'value': ''})
-            .split(':')
-            .first
-            .trim();
-      case 'fiche_modal_tension_label':
-        return 'fiche_modal_tension'
-            .tr(namedArgs: {'value': ''})
-            .split(':')
-            .first
-            .trim();
-      case 'fiche_modal_weight_label':
-        return 'fiche_modal_weight'
-            .tr(namedArgs: {'value': ''})
-            .split(':')
-            .first
-            .trim();
-      case 'fiche_modal_hiv_label':
-        return 'fiche_modal_hiv'
-            .tr(namedArgs: {'value': ''})
-            .split(':')
-            .first
-            .trim();
-      case 'fiche_modal_vaccination_label':
-        return 'fiche_modal_vaccination'
-            .tr(namedArgs: {'value': ''})
-            .split(':')
-            .first
-            .trim();
-      case 'fiche_modal_motif_label':
-        return 'fiche_modal_motif'
-            .tr(namedArgs: {'value': ''})
-            .split(':')
-            .first
-            .trim();
-      default:
-        return key;
-    }
-  }
 
   // --- WIDGETS DE FORMULAIRE ---
 
@@ -479,11 +504,13 @@ class _FinalisationConsultationPageState
     required String hint,
     required TextEditingController controller,
     String? Function(String?)? validator,
+    FocusNode? focusNode,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
         controller: controller,
+        focusNode: focusNode,
         minLines: 3,
         maxLines: 5,
         validator: validator,
@@ -521,7 +548,9 @@ class _FinalisationConsultationPageState
   Widget _buildRdvDropdown() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: DropdownButtonFormField<String>(
+      child: Focus(
+        focusNode: _programmationRdvFocusNode,
+        child: DropdownButtonFormField<String>(
         decoration: InputDecoration(
           filled: true,
           fillColor: fieldBackgroundColor,
@@ -566,6 +595,7 @@ class _FinalisationConsultationPageState
           });
         },
       ),
+      ),
     );
   }
 
@@ -596,6 +626,7 @@ class _FinalisationConsultationPageState
               Expanded(
                 child: TextFormField(
                   controller: _rdvDateController,
+                  focusNode: _rdvDateFocusNode,
                   validator: rdvValidator,
                   decoration: InputDecoration(
                     hintText: 'fiche_hint_date'.tr(),
@@ -640,6 +671,7 @@ class _FinalisationConsultationPageState
               Expanded(
                 child: TextFormField(
                   controller: _rdvHeureController,
+                  focusNode: _rdvHeureFocusNode,
                   validator: rdvValidator,
                   decoration: InputDecoration(
                     hintText: 'fiche_hint_time'.tr(),
@@ -765,10 +797,61 @@ class _FinalisationConsultationPageState
     }
   }
 
+  // --- SCROLL VERS L'ERREUR ---
+
+  void _focusAndScrollTo(FocusNode node) {
+    node.requestFocus();
+    if (node.context != null) {
+      Scrollable.ensureVisible(
+        node.context!,
+        duration: const Duration(milliseconds: 300),
+        alignment: 0.5,
+      );
+    }
+  }
+
+  void _focusOnFirstInvalidField() {
+    if (_antecedentsController.text.trim().isEmpty) {
+      _focusAndScrollTo(_antecedentsFocusNode);
+      return;
+    }
+    if (_signesSymptomesController.text.trim().isEmpty) {
+      _focusAndScrollTo(_signesSymptomesFocusNode);
+      return;
+    }
+    if (_diagnosticInitialController.text.trim().isEmpty) {
+      _focusAndScrollTo(_diagnosticInitialFocusNode);
+      return;
+    }
+    if (_diagnosticFinalController.text.trim().isEmpty) {
+      _focusAndScrollTo(_diagnosticFinalFocusNode);
+      return;
+    }
+    if (_traitementPrescritController.text.trim().isEmpty) {
+      _focusAndScrollTo(_traitementPrescritFocusNode);
+      return;
+    }
+    if (_programmationRdv == null) {
+      _focusAndScrollTo(_programmationRdvFocusNode);
+      return;
+    }
+    if (_programmationRdv == 'programmer') {
+      if (_rdvDateController.text.trim().isEmpty) {
+        _focusAndScrollTo(_rdvDateFocusNode);
+        return;
+      }
+      if (_rdvHeureController.text.trim().isEmpty) {
+        _focusAndScrollTo(_rdvHeureFocusNode);
+        return;
+      }
+    }
+  }
+
   // --- SOUMISSION ---
 
   Future<void> _finalizeConsultation() async {
     if (!_formKey.currentState!.validate()) {
+      _focusOnFirstInvalidField();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('final_validation_error'.tr()),
@@ -899,6 +982,7 @@ class _FinalisationConsultationPageState
               _buildFormField(
                 hint: 'final_hint_antecedent'.tr(),
                 controller: _antecedentsController,
+                focusNode: _antecedentsFocusNode,
                 validator: (value) => value == null || value.isEmpty
                     ? 'fiche_field_required'.tr()
                     : null,
@@ -906,6 +990,7 @@ class _FinalisationConsultationPageState
               _buildFormField(
                 hint: 'final_hint_signs'.tr(),
                 controller: _signesSymptomesController,
+                focusNode: _signesSymptomesFocusNode,
                 validator: (value) => value == null || value.isEmpty
                     ? 'fiche_field_required'.tr()
                     : null,
@@ -913,6 +998,7 @@ class _FinalisationConsultationPageState
               _buildFormField(
                 hint: 'fiche_hint_diag_initial'.tr(),
                 controller: _diagnosticInitialController,
+                focusNode: _diagnosticInitialFocusNode,
                 validator: (value) => value == null || value.isEmpty
                     ? 'fiche_field_required'.tr()
                     : null,
@@ -929,6 +1015,7 @@ class _FinalisationConsultationPageState
               _buildFormField(
                 hint: 'fiche_hint_diag_final'.tr(),
                 controller: _diagnosticFinalController,
+                focusNode: _diagnosticFinalFocusNode,
                 validator: (value) => value == null || value.isEmpty
                     ? 'fiche_field_required'.tr()
                     : null,
@@ -936,6 +1023,7 @@ class _FinalisationConsultationPageState
               _buildFormField(
                 hint: 'fiche_hint_treatment'.tr(),
                 controller: _traitementPrescritController,
+                focusNode: _traitementPrescritFocusNode,
                 validator: (value) => value == null || value.isEmpty
                     ? 'fiche_field_required'.tr()
                     : null,

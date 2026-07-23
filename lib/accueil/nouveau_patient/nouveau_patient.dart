@@ -80,8 +80,122 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
     Supabase.instance.client,
   );
 
+  // FocusNodes pour le focus et défilement automatique lors de la validation
+  final FocusNode _nomCompletFocusNode = FocusNode();
+  final FocusNode _sexeFocusNode = FocusNode();
+  final FocusNode _ageFocusNode = FocusNode();
+  final FocusNode _telephoneFocusNode = FocusNode();
+  final FocusNode _adresseFocusNode = FocusNode();
+  final FocusNode _professionFocusNode = FocusNode();
+  final FocusNode _statutMatrimonialFocusNode = FocusNode();
+  final FocusNode _temperatureFocusNode = FocusNode();
+  final FocusNode _poidsFocusNode = FocusNode();
+  final FocusNode _systoliqueFocusNode = FocusNode();
+  final FocusNode _diastoliqueFocusNode = FocusNode();
+  final FocusNode _testHivFocusNode = FocusNode();
+  final FocusNode _vaccinationFocusNode = FocusNode();
+  final FocusNode _motifFocusNode = FocusNode();
+  final FocusNode _serviceFocusNode = FocusNode();
+  final FocusNode _medecinFocusNode = FocusNode();
+
+  void _focusAndScrollTo(FocusNode node) {
+    node.requestFocus();
+    if (node.context != null) {
+      Scrollable.ensureVisible(
+        node.context!,
+        duration: const Duration(milliseconds: 300),
+        alignment: 0.5,
+      );
+    }
+  }
+
+  void _focusOnFirstInvalidField() {
+    if (PatientFormConfig.nomComplet.validator(nom_completController.text) != null) {
+      _focusAndScrollTo(_nomCompletFocusNode);
+      return;
+    }
+    if (_value == null || _value!.isEmpty) {
+      _focusAndScrollTo(_sexeFocusNode);
+      return;
+    }
+    if (PatientFormConfig.age.validator(age.text) != null) {
+      _focusAndScrollTo(_ageFocusNode);
+      return;
+    }
+    if (PatientFormConfig.telephone.validator(telephone.text) != null) {
+      _focusAndScrollTo(_telephoneFocusNode);
+      return;
+    }
+    if (PatientFormConfig.adresse.validator(adresse.text) != null) {
+      _focusAndScrollTo(_adresseFocusNode);
+      return;
+    }
+    if (PatientFormConfig.profession.validator(profession.text) != null) {
+      _focusAndScrollTo(_professionFocusNode);
+      return;
+    }
+    if (_statutMatrimonialSelectionne == null) {
+      _focusAndScrollTo(_statutMatrimonialFocusNode);
+      return;
+    }
+    if (PatientFormConfig.temperature.validator(temperature.text) != null) {
+      _focusAndScrollTo(_temperatureFocusNode);
+      return;
+    }
+    if (PatientFormConfig.poids.validator(poid.text) != null) {
+      _focusAndScrollTo(_poidsFocusNode);
+      return;
+    }
+    if (PatientFormConfig.tensionSystolique.validator(systolique.text) != null) {
+      _focusAndScrollTo(_systoliqueFocusNode);
+      return;
+    }
+    if (PatientFormConfig.tensionDiastolique.validator(diastolique.text) != null) {
+      _focusAndScrollTo(_diastoliqueFocusNode);
+      return;
+    }
+    if (PatientFormConfig.testVIH.validator(test_VIH.text) != null) {
+      _focusAndScrollTo(_testHivFocusNode);
+      return;
+    }
+    if (PatientFormConfig.vaccination.validator(vaccination.text) != null) {
+      _focusAndScrollTo(_vaccinationFocusNode);
+      return;
+    }
+    if (PatientFormConfig.motifConsultation.validator(motif_consultation.text) != null) {
+      _focusAndScrollTo(_motifFocusNode);
+      return;
+    }
+    if (_typeServiceSelectionne == null) {
+      _focusAndScrollTo(_serviceFocusNode);
+      return;
+    }
+    if ((_typeServiceSelectionne == 'Consultation' ||
+            _typeServiceSelectionne == 'Rendez-vous') &&
+        _idMedecinSelectionne == null) {
+      _focusAndScrollTo(_medecinFocusNode);
+      return;
+    }
+  }
+
   @override
   void dispose() {
+    _nomCompletFocusNode.dispose();
+    _sexeFocusNode.dispose();
+    _ageFocusNode.dispose();
+    _telephoneFocusNode.dispose();
+    _adresseFocusNode.dispose();
+    _professionFocusNode.dispose();
+    _statutMatrimonialFocusNode.dispose();
+    _temperatureFocusNode.dispose();
+    _poidsFocusNode.dispose();
+    _systoliqueFocusNode.dispose();
+    _diastoliqueFocusNode.dispose();
+    _testHivFocusNode.dispose();
+    _vaccinationFocusNode.dispose();
+    _motifFocusNode.dispose();
+    _serviceFocusNode.dispose();
+    _medecinFocusNode.dispose();
     super.dispose();
   }
 
@@ -169,23 +283,34 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
   }
 
   Future<void> _onSubmit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _focusOnFirstInvalidField();
+      return;
+    }
 
     String? errorMessage;
+    FocusNode? errorFocusNode;
     if (_value == null || _value!.isEmpty) {
       errorMessage = 'np_select_sex'.tr();
+      errorFocusNode = _sexeFocusNode;
     } else if (_statutMatrimonialSelectionne == null) {
       errorMessage = 'np_select_marital'.tr();
+      errorFocusNode = _statutMatrimonialFocusNode;
     } else if (_typeServiceSelectionne == null) {
       errorMessage = 'np_select_service'.tr();
+      errorFocusNode = _serviceFocusNode;
     } else if ((_typeServiceSelectionne == 'Consultation' ||
             _typeServiceSelectionne == 'Rendez-vous') &&
         _idMedecinSelectionne == null) {
       errorMessage = 'np_select_doctor'.tr();
+      errorFocusNode = _medecinFocusNode;
     }
 
     if (errorMessage != null) {
       _showMessage(errorMessage, background: npErrorColor);
+      if (errorFocusNode != null) {
+        _focusAndScrollTo(errorFocusNode);
+      }
       return;
     }
 
@@ -250,12 +375,15 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
     );
 
     try {
-      await patientService.patientSave(
+      final success = await patientService.patientSave(
         context: context,
         idMedecin: _idMedecinSelectionne,
       );
 
       Navigator.pop(context);
+
+      if (!success) return;
+
       _showMessage('np_saved_success'.tr(), background: npSuccessColor);
 
       setState(() {
@@ -300,9 +428,11 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
     int maxLines = 1,
     int? maxLength,
     String? prefixText,
+    FocusNode? focusNode,
   }) {
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       maxLines: maxLines,
       maxLength: maxLength,
       keyboardType: keyboardType,
@@ -538,6 +668,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 icon: Icons.person,
                                 validator:
                                     PatientFormConfig.nomComplet.validator,
+                                focusNode: _nomCompletFocusNode,
                               ),
                               const SizedBox(height: 16),
 
@@ -549,66 +680,69 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: _value == 'Homme'
-                                            ? npAccentColor.withOpacity(0.1)
-                                            : Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
+                              Focus(
+                                focusNode: _sexeFocusNode,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        decoration: BoxDecoration(
                                           color: _value == 'Homme'
-                                              ? npAccentColor
-                                              : Colors.grey.shade300,
-                                          width: _value == 'Homme' ? 2 : 1,
+                                              ? npAccentColor.withOpacity(0.1)
+                                              : Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: _value == 'Homme'
+                                                ? npAccentColor
+                                                : Colors.grey.shade300,
+                                            width: _value == 'Homme' ? 2 : 1,
+                                          ),
                                         ),
-                                      ),
-                                      child: RadioListTile<String>(
-                                        value: 'Homme',
-                                        title: Text(
-                                          'np_sex_male'.tr(),
-                                          style: const TextStyle(fontSize: 15),
+                                        child: RadioListTile<String>(
+                                          value: 'Homme',
+                                          title: Text(
+                                            'np_sex_male'.tr(),
+                                            style: const TextStyle(fontSize: 15),
+                                          ),
+                                          groupValue: _value,
+                                          onChanged: (v) =>
+                                              setState(() => _value = v),
+                                          activeColor: npAccentColor,
+                                          dense: true,
                                         ),
-                                        groupValue: _value,
-                                        onChanged: (v) =>
-                                            setState(() => _value = v),
-                                        activeColor: npAccentColor,
-                                        dense: true,
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: _value == 'Femme'
-                                            ? npAccentColor.withOpacity(0.1)
-                                            : Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Container(
+                                        decoration: BoxDecoration(
                                           color: _value == 'Femme'
-                                              ? npAccentColor
-                                              : Colors.grey.shade300,
-                                          width: _value == 'Femme' ? 2 : 1,
+                                              ? npAccentColor.withOpacity(0.1)
+                                              : Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: _value == 'Femme'
+                                                ? npAccentColor
+                                                : Colors.grey.shade300,
+                                            width: _value == 'Femme' ? 2 : 1,
+                                          ),
                                         ),
-                                      ),
-                                      child: RadioListTile<String>(
-                                        value: 'Femme',
-                                        title: Text(
-                                          'np_sex_female'.tr(),
-                                          style: const TextStyle(fontSize: 15),
+                                        child: RadioListTile<String>(
+                                          value: 'Femme',
+                                          title: Text(
+                                            'np_sex_female'.tr(),
+                                            style: const TextStyle(fontSize: 15),
+                                          ),
+                                          groupValue: _value,
+                                          onChanged: (v) =>
+                                              setState(() => _value = v),
+                                          activeColor: npAccentColor,
+                                          dense: true,
                                         ),
-                                        groupValue: _value,
-                                        onChanged: (v) =>
-                                            setState(() => _value = v),
-                                        activeColor: npAccentColor,
-                                        dense: true,
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 16),
 
@@ -623,6 +757,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       keyboardType: TextInputType.number,
                                       validator:
                                           PatientFormConfig.age.validator,
+                                      focusNode: _ageFocusNode,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -637,6 +772,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       maxLength: 9,
                                       validator:
                                           PatientFormConfig.telephone.validator,
+                                      focusNode: _telephoneFocusNode,
                                     ),
                                   ),
                                 ],
@@ -649,6 +785,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 hint: 'np_address_hint'.tr(),
                                 icon: Icons.house,
                                 validator: PatientFormConfig.adresse.validator,
+                                focusNode: _adresseFocusNode,
                               ),
                               const SizedBox(height: 16),
 
@@ -659,6 +796,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 icon: Icons.work,
                                 validator:
                                     PatientFormConfig.profession.validator,
+                                focusNode: _professionFocusNode,
                               ),
                               const SizedBox(height: 16),
 
@@ -670,42 +808,46 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
+                              Focus(
+                                focusNode: _statutMatrimonialFocusNode,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
-                                ),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: _statutMatrimonialSelectionne,
-                                    isExpanded: true,
-                                    hint: Padding(
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      dropdownColor: Colors.white,
+                                      value: _statutMatrimonialSelectionne,
+                                      isExpanded: true,
+                                      hint: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        child: Text('np_marital_select'.tr()),
+                                      ),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 16,
+                                        vertical: 4,
                                       ),
-                                      child: Text('np_marital_select'.tr()),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 4,
-                                    ),
-                                    items: _statutsMatrimoniaux
-                                        .map(
-                                          (s) => DropdownMenuItem(
-                                            value: s,
-                                            child: Text(
-                                              (_kMaritalLabels[s] ?? s).tr(),
+                                      items: _statutsMatrimoniaux
+                                          .map(
+                                            (s) => DropdownMenuItem(
+                                              value: s,
+                                              child: Text(
+                                                (_kMaritalLabels[s] ?? s).tr(),
+                                              ),
                                             ),
-                                          ),
-                                        )
-                                        .toList(),
-                                    onChanged: (v) => setState(
-                                      () => _statutMatrimonialSelectionne = v,
+                                          )
+                                          .toList(),
+                                      onChanged: (v) => setState(
+                                        () => _statutMatrimonialSelectionne = v,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
                               ),
@@ -731,6 +873,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       validator: PatientFormConfig
                                           .temperature
                                           .validator,
+                                      focusNode: _temperatureFocusNode,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -746,6 +889,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           ),
                                       validator:
                                           PatientFormConfig.poids.validator,
+                                      focusNode: _poidsFocusNode,
                                     ),
                                   ),
                                 ],
@@ -772,6 +916,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       validator: PatientFormConfig
                                           .tensionSystolique
                                           .validator,
+                                      focusNode: _systoliqueFocusNode,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -785,6 +930,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       validator: PatientFormConfig
                                           .tensionDiastolique
                                           .validator,
+                                      focusNode: _diastoliqueFocusNode,
                                     ),
                                   ),
                                 ],
@@ -796,6 +942,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 label: 'np_test_hiv'.tr(),
                                 icon: Icons.bloodtype,
                                 validator: PatientFormConfig.testVIH.validator,
+                                focusNode: _testHivFocusNode,
                               ),
                               const SizedBox(height: 16),
 
@@ -805,6 +952,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 icon: Icons.vaccines,
                                 validator:
                                     PatientFormConfig.vaccination.validator,
+                                focusNode: _vaccinationFocusNode,
                               ),
                               const SizedBox(height: 16),
 
@@ -817,6 +965,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 validator: PatientFormConfig
                                     .motifConsultation
                                     .validator,
+                                focusNode: _motifFocusNode,
                               ),
                             ],
                           ),
@@ -833,50 +982,54 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
+                              Focus(
+                                focusNode: _serviceFocusNode,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
-                                ),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: _typeServiceSelectionne,
-                                    isExpanded: true,
-                                    hint: Padding(
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      dropdownColor: Colors.white,
+                                      value: _typeServiceSelectionne,
+                                      isExpanded: true,
+                                      hint: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        child: Text('np_service_select'.tr()),
+                                      ),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 16,
+                                        vertical: 4,
                                       ),
-                                      child: Text('np_service_select'.tr()),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 4,
-                                    ),
-                                    items: _services
-                                        .map(
-                                          (s) => DropdownMenuItem(
-                                            value: s,
-                                            child: Text(
-                                              (_kServiceLabels[s] ?? s).tr(),
+                                      items: _services
+                                          .map(
+                                            (s) => DropdownMenuItem(
+                                              value: s,
+                                              child: Text(
+                                                (_kServiceLabels[s] ?? s).tr(),
+                                              ),
                                             ),
-                                          ),
-                                        )
-                                        .toList(),
-                                    onChanged: (service) async {
-                                      setState(() {
-                                        _typeServiceSelectionne = service;
-                                        _idMedecinSelectionne = null;
-                                        _medecins = [];
-                                      });
-                                      if (service == 'Consultation' ||
-                                          service == 'Rendez-vous') {
-                                        await _chargerMedecins();
-                                      }
-                                    },
-                                    borderRadius: BorderRadius.circular(12),
+                                          )
+                                          .toList(),
+                                      onChanged: (service) async {
+                                        setState(() {
+                                          _typeServiceSelectionne = service;
+                                          _idMedecinSelectionne = null;
+                                          _medecins = [];
+                                        });
+                                        if (service == 'Consultation' ||
+                                            service == 'Rendez-vous') {
+                                          await _chargerMedecins();
+                                        }
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -884,45 +1037,53 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
 
                               if (_typeServiceSelectionne == 'Consultation' ||
                                   _typeServiceSelectionne == 'Rendez-vous') ...[
-                                Text(
-                                  'np_doctor_responsible'.tr(),
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                if (_medecins.isEmpty)
-                                  Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.shade50,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.orange.shade200,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.warning_amber,
-                                          color: Colors.orange.shade700,
+                                Focus(
+                                  focusNode: _medecinFocusNode,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Text(
+                                        'np_doctor_responsible'.tr(),
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            'np_doctor_none'.tr(),
-                                            style: TextStyle(
-                                              fontStyle: FontStyle.italic,
-                                              color: Colors.orange.shade700,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      if (_medecins.isEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.shade50,
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: Colors.orange.shade200,
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                else
-                                  ..._medecins.map(_buildMedecinTile),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.warning_amber,
+                                                color: Colors.orange.shade700,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Text(
+                                                  'np_doctor_none'.tr(),
+                                                  style: TextStyle(
+                                                    fontStyle: FontStyle.italic,
+                                                    color: Colors.orange.shade700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      else
+                                        ..._medecins.map(_buildMedecinTile),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ],
                           ),

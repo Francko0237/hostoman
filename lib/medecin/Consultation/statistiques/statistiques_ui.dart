@@ -29,7 +29,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
   int _nbAnnulees = 0;
   int _nbRdvTermines = 0;
 
-  String _selectedCategory = 'terminees';
+  String _selectedCategory = 'tous';
   List<Map<String, dynamic>> _patients = [];
 
   // ---- Logique métier inchangée ----
@@ -41,6 +41,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
     final now = DateTime.now();
     _dateDebut = DateTime(now.year, now.month, now.day - 7);
     _dateFin = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    _selectedCategory = 'tous';
     _loadStatistiques();
   }
 
@@ -84,7 +85,13 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
     setState(() => _isLoading = true);
     try {
       List<Map<String, dynamic>> patients;
-      if (_selectedCategory == 'terminees') {
+      if (_selectedCategory == 'tous') {
+        patients = await _service.getPatientsParStatut(
+          'tous',
+          _dateDebut!,
+          _dateFin!,
+        );
+      } else if (_selectedCategory == 'terminees') {
         patients = await _service.getPatientsParStatut(
           'terminer',
           _dateDebut!,
@@ -217,7 +224,8 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
             ),
         ],
       ),
-      body: Center(
+      body: Align(
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: isDesktop ? 900 : double.infinity,
@@ -408,144 +416,103 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
   // ---- Cartes statistiques ----
 
   Widget _buildStatCards() {
+    final int nbTotal = _nbTerminees + _nbAnnulees;
+
     return Column(
       children: [
         Row(
           children: [
             Expanded(
-              child: _buildStatCard(
-                title: 'stats_card_completed'.tr(),
+              child: _buildFilterButton(
+                label: 'Tout',
+                count: nbTotal,
+                color: medPrimaryColor,
+                category: 'tous',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildFilterButton(
+                label: 'Valider',
                 count: _nbTerminees,
-                icon: Icons.check_circle_rounded,
                 color: medSuccessColor,
                 category: 'terminees',
               ),
             ),
-            const SizedBox(width: 12),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
             Expanded(
-              child: _buildStatCard(
-                title: 'stats_card_cancelled'.tr(),
+              child: _buildFilterButton(
+                label: 'Annuler',
                 count: _nbAnnulees,
-                icon: Icons.cancel_rounded,
                 color: medErrorColor,
                 category: 'annulees',
               ),
             ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildFilterButton(
+                label: 'Rendez-vous',
+                count: _nbRdvTermines,
+                color: medInfoColor,
+                category: 'rdv',
+              ),
+            ),
           ],
-        ),
-        const SizedBox(height: 12),
-        _buildStatCard(
-          title: 'stats_card_rdv'.tr(),
-          count: _nbRdvTermines,
-          icon: Icons.event_available_rounded,
-          color: medInfoColor,
-          category: 'rdv',
         ),
       ],
     );
   }
 
-  Widget _buildStatCard({
-    required String title,
+  Widget _buildFilterButton({
+    required String label,
     required int count,
-    required IconData icon,
     required Color color,
     required String category,
   }) {
     final isSelected = _selectedCategory == category;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          setState(() => _selectedCategory = category);
-          _loadPatients();
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? color : Colors.transparent,
-              width: 2,
+    return InkWell(
+      onTap: () {
+        setState(() => _selectedCategory = category);
+        _loadPatients();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? color : Colors.black87,
+              ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: isSelected
-                    ? color.withOpacity(0.2)
-                    : Colors.black.withOpacity(0.08),
-                blurRadius: 15,
-                offset: const Offset(0, 4),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? color : Colors.grey[600],
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Icône dégradé
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color, color.withOpacity(0.7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: Colors.white, size: 26),
-              ),
-              const SizedBox(width: 14),
-
-              // Texte
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      count.toString(),
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        color: color,
-                        height: 1.1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Indicateur sélection
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? color.withOpacity(0.1)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  isSelected
-                      ? Icons.visibility_rounded
-                      : Icons.visibility_off_rounded,
-                  size: 16,
-                  color: isSelected ? color : Colors.grey[400],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -554,56 +521,53 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
   // ---- Liste patients ----
 
   Widget _buildPatientList() {
-    // Label selon catégorie
+    // Grouper par patient unique
+    final Map<dynamic, Map<String, dynamic>> uniquePatients = {};
+    for (var c in _patients) {
+      final patient = c['Patient'] as Map<String, dynamic>?;
+      final idPatient = patient?['id_patient']?.toString();
+      if (idPatient == null) continue;
+      if (!uniquePatients.containsKey(idPatient)) {
+        uniquePatients[idPatient] = {...c, 'nombre_sessions': 1};
+      } else {
+        uniquePatients[idPatient]!['nombre_sessions'] =
+            (uniquePatients[idPatient]!['nombre_sessions'] as int) + 1;
+      }
+    }
+    final patientsList = uniquePatients.values.toList();
+
     String categoryLabel = 'stats_label_completed'.tr();
     if (_selectedCategory == 'annulees') {
       categoryLabel = 'stats_label_cancelled'.tr();
     }
     if (_selectedCategory == 'rdv') categoryLabel = 'stats_label_rdv'.tr();
 
-    if (_patients.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: medPrimaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
+    if (patientsList.isEmpty) {
+      return Center(
+        child: Container(
+          margin: const EdgeInsets.only(top: 40),
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person_search, size: 48, color: Colors.grey.shade400),
+              const SizedBox(height: 12),
+              Text(
+                'stats_empty_title'.tr(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
               ),
-              child: const Icon(
-                Icons.people_outline_rounded,
-                size: 56,
-                color: medPrimaryColor,
+              const SizedBox(height: 4),
+              Text(
+                'stats_empty_msg'.tr(),
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'stats_empty_title'.tr(),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: medPrimaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'stats_empty_msg'.tr(),
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -646,7 +610,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: '${_patients.length} ',
+                        text: '${patientsList.length} ',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -673,8 +637,9 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: _patients.length,
-          itemBuilder: (context, index) => _buildPatientCard(_patients[index]),
+          itemCount: patientsList.length,
+          itemBuilder: (context, index) =>
+              _buildPatientCard(patientsList[index]),
         ),
       ],
     );
@@ -685,13 +650,10 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
     final nom = patient?['nom_complet'] ?? 'pay_value_na'.tr();
     final sexe = patient?['sexe'] ?? '';
     final age = patient?['age']?.toString() ?? '';
-    final idConsultation = consultation['id_consultation'];
-    final date = _formatDate(
-      DateTime.tryParse(
-        consultation['date_derniere_mise_ajour']?.toString() ?? '',
-      ),
-    );
+    final idPatient = patient?['id_patient']?.toString() ?? '';
+    final sessions = consultation['nombre_sessions'] as int? ?? 1;
     final color = _categoryColor;
+    final initial = nom.isNotEmpty ? nom[0].toUpperCase() : '?';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -711,13 +673,14 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () => context.push(
-            '/Dashboard_Medecin/HistoriqueDetail/$idConsultation',
+            '/Dashboard_Medecin/HistoriquePatient/$idPatient',
+            extra: {'nom': nom},
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Avatar cercle dégradé (couleur de catégorie)
+                // Avatar
                 Container(
                   width: 50,
                   height: 50,
@@ -731,7 +694,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
                   ),
                   child: Center(
                     child: Text(
-                      nom.isNotEmpty ? nom[0].toUpperCase() : '?',
+                      initial,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
@@ -792,7 +755,7 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
                   ),
                 ),
 
-                // Badge date + flèche
+                // Badge sessions + flèche
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -805,31 +768,34 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
                         color: color.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.history_rounded,
-                            size: 12,
-                            color: color.withOpacity(0.8),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            date,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: color.withOpacity(0.9),
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        '$sessions consultation${sessions > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: color.withOpacity(0.9),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
-                      color: Colors.black26,
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Voir les consultations',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: color.withOpacity(0.7),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 11,
+                          color: color.withOpacity(0.6),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -840,6 +806,8 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
       ),
     );
   }
+
+
 
   Future<void> _printPatientList() async {
     final dateFormat = DateFormat('dd/MM/yyyy');

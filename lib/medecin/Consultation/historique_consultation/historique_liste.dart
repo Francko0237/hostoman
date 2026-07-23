@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:go_router/go_router.dart';
 import 'historique_service.dart';
+
+import 'historique_patient_page.dart';
 
 const Color medPrimaryColor = Color(0xFF6A5ACD);
 const Color medAccentColor = Color(0xFF6A5ACD);
@@ -66,6 +67,28 @@ class _HistoriqueConsultationPageState
         return nom.contains(_searchQuery.toLowerCase());
       }).toList();
     }
+
+    // Regrouper par patient unique (ne conserver que la visite la plus récente)
+    final Map<String, Map<String, dynamic>> uniquePatients = {};
+    for (var c in filtered) {
+      final patient = c['Patient'] as Map<String, dynamic>?;
+      if (patient != null) {
+        final idPatient = patient['id_patient']?.toString();
+        if (idPatient != null) {
+          if (!uniquePatients.containsKey(idPatient)) {
+            uniquePatients[idPatient] = c;
+          } else {
+            final dateA = DateTime.tryParse(c['date_derniere_mise_ajour']?.toString() ?? '') ?? DateTime(2000);
+            final dateB = DateTime.tryParse(uniquePatients[idPatient]!['date_derniere_mise_ajour']?.toString() ?? '') ?? DateTime(2000);
+            if (dateA.isAfter(dateB)) {
+              uniquePatients[idPatient] = c;
+            }
+          }
+        }
+      }
+    }
+    filtered = uniquePatients.values.toList();
+
     if (_sortOrder == 'a-z') {
       filtered.sort(
         (a, b) => ((a['Patient'] as Map?)?['nom_complet'] ?? '').compareTo(
@@ -363,7 +386,6 @@ class _HistoriqueConsultationPageState
     final nom = patient?['nom_complet'] ?? 'pay_value_na'.tr();
     final sexe = patient?['sexe'] ?? '';
     final age = patient?['age']?.toString() ?? '';
-    final id = consultation['id_consultation'];
     final date = _formatDate(consultation['date_derniere_mise_ajour']);
 
     return Container(
@@ -383,7 +405,19 @@ class _HistoriqueConsultationPageState
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => context.push('/Dashboard_Medecin/HistoriqueDetail/$id'),
+          onTap: () {
+            if (patient != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HistoriquePatientPage(
+                    idPatient: patient['id_patient']?.toString() ?? '',
+                    patientName: nom,
+                  ),
+                ),
+              );
+            }
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -395,8 +429,8 @@ class _HistoriqueConsultationPageState
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        medSuccessColor,
-                        medSuccessColor.withOpacity(0.7),
+                        medPrimaryColor,
+                        medPrimaryColor.withOpacity(0.7),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -466,7 +500,7 @@ class _HistoriqueConsultationPageState
                   ),
                 ),
 
-                // Badge date VERT + flèche
+                // Badge dernière visite (violet) + flèche
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -476,8 +510,11 @@ class _HistoriqueConsultationPageState
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: medSuccessColor.withOpacity(0.1),
+                        color: medPrimaryColor.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: medPrimaryColor.withOpacity(0.2),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -485,7 +522,7 @@ class _HistoriqueConsultationPageState
                           Icon(
                             Icons.history_rounded,
                             size: 12,
-                            color: medSuccessColor.withOpacity(0.8),
+                            color: medPrimaryColor.withOpacity(0.8),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -493,17 +530,31 @@ class _HistoriqueConsultationPageState
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: medSuccessColor.withOpacity(0.9),
+                              color: medPrimaryColor.withOpacity(0.9),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
-                      color: Colors.black26,
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Voir les consultations',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: medPrimaryColor.withOpacity(0.7),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 11,
+                          color: medPrimaryColor.withOpacity(0.6),
+                        ),
+                      ],
                     ),
                   ],
                 ),

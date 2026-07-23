@@ -26,7 +26,7 @@ class _StatsPageState extends State<StatsPage> {
 
   bool isLoading = true;
   String periodeSelectorionnee = 'today';
-  String typePaiement = 'payer'; // Type de paiement : 'payer' ou 'annuler'
+  String typePaiement = 'tous'; // Type de paiement : 'tous', 'payer' ou 'annuler'
   Map<String, dynamic>? statsData;
   List<Map<String, dynamic>> consultations = [];
   List<Map<String, dynamic>> filteredConsultations = [];
@@ -196,6 +196,9 @@ class _StatsPageState extends State<StatsPage> {
       final montant = listPaiements.isNotEmpty
           ? listPaiements[0]['prix_a_paye']
           : 0;
+      final currentStatut = listPaiements.isNotEmpty
+          ? listPaiements[0]['statut_paiement']
+          : 'payer';
 
       return PatientPdfData(
         nom: patient.nom_complet,
@@ -203,7 +206,7 @@ class _StatsPageState extends State<StatsPage> {
         age: 'pay_field_age_value'.tr(namedArgs: {'age': '${patient.age}'}),
         telephone: patient.telephone.toString(),
         dateEnregistrement: dateFormat.format(date),
-        categorie: typePaiement == 'payer'
+        categorie: currentStatut == 'payer'
             ? 'hist_badge_paid'.tr()
             : 'hist_badge_cancelled'.tr(),
         montant: 'cstat_amount_fcfa'.tr(
@@ -231,6 +234,7 @@ class _StatsPageState extends State<StatsPage> {
       child: Column(
         children: [
           Wrap(
+            alignment: WrapAlignment.center,
             spacing: 8,
             runSpacing: 8,
             children: [
@@ -273,10 +277,33 @@ class _StatsPageState extends State<StatsPage> {
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () {
+                setState(() => typePaiement = 'tous');
+                chargerStats();
+              },
+              icon: const Icon(Icons.apps, size: 18),
+              label: Text('cstat_btn_all'.tr()),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: typePaiement == 'tous'
+                    ? npPrimaryColor
+                    : Colors.grey.shade300,
+                foregroundColor: typePaiement == 'tous'
+                    ? Colors.white
+                    : Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
                 setState(() => typePaiement = 'payer');
                 chargerStats();
               },
-              icon: const Icon(Icons.check_circle, size: 20),
+              icon: const Icon(Icons.check_circle, size: 18),
               label: Text('cstat_btn_paid'.tr()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: typePaiement == 'payer'
@@ -285,21 +312,21 @@ class _StatsPageState extends State<StatsPage> {
                 foregroundColor: typePaiement == 'payer'
                     ? Colors.white
                     : Colors.black87,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () {
                 setState(() => typePaiement = 'annuler');
                 chargerStats();
               },
-              icon: const Icon(Icons.cancel, size: 20),
+              icon: const Icon(Icons.cancel, size: 18),
               label: Text('cstat_btn_cancelled'.tr()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: typePaiement == 'annuler'
@@ -308,7 +335,7 @@ class _StatsPageState extends State<StatsPage> {
                 foregroundColor: typePaiement == 'annuler'
                     ? Colors.white
                     : Colors.black87,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -417,6 +444,9 @@ class _StatsPageState extends State<StatsPage> {
         ? listPaiements[0]['prix_a_paye']
         : 0;
     final idConsultation = item['id_consultation'].toString();
+    final bool isCancelled = listPaiements.isNotEmpty &&
+        listPaiements[0]['statut_paiement'] == 'annuler';
+    final Color statusColor = isCancelled ? npErrorColor : npSuccessColor;
 
     return InkWell(
       onTap: () {
@@ -442,7 +472,7 @@ class _StatsPageState extends State<StatsPage> {
         ),
         child: ListTile(
           leading: CircleAvatar(
-            backgroundColor: npPrimaryColor,
+            backgroundColor: statusColor,
             child: Text(
               patient.nom_complet[0].toUpperCase(),
               style: const TextStyle(color: Colors.white),
@@ -456,15 +486,15 @@ class _StatsPageState extends State<StatsPage> {
           trailing: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: npSuccessColor.withOpacity(0.1),
+              color: statusColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               'cstat_amount_fcfa'.tr(
                 namedArgs: {'value': _formatNumber(montant.toInt())},
               ),
-              style: const TextStyle(
-                color: npSuccessColor,
+              style: TextStyle(
+                color: statusColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -565,26 +595,193 @@ class _StatsPageState extends State<StatsPage> {
     );
   }
 
-  // (Code pour showDateRangePicker identique à ton original)
-  Widget _buildCustomButton() {
-    return ElevatedButton.icon(
-      onPressed: () async {
-        final picked = await showDateRangePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-        );
-        if (picked != null) {
-          setState(() {
-            dateDebutPersonnalisee = picked.start;
-            dateFinPersonnalisee = picked.end;
-            periodeSelectorionnee = 'custom';
-          });
-          chargerStats();
-        }
+  Future<void> _showCustomDateDialog() async {
+    DateTime? tempStart = dateDebutPersonnalisee;
+    DateTime? tempEnd = dateFinPersonnalisee;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setDlg) {
+          Future<void> pickDate(bool isStart) async {
+            final picked = await showDatePicker(
+              context: ctx,
+              initialDate: isStart
+                  ? (tempStart ?? DateTime.now())
+                  : (tempEnd ?? DateTime.now()),
+              firstDate: DateTime(2020),
+              lastDate: DateTime.now(),
+              builder: (context, child) => Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: const ColorScheme.light(
+                    primary: npPrimaryColor,
+                    onPrimary: Colors.white,
+                    surface: Colors.white,
+                    onSurface: Colors.black87,
+                  ),
+                ),
+                child: child!,
+              ),
+            );
+            if (picked != null) {
+              setDlg(() {
+                if (isStart) {
+                  tempStart = picked;
+                } else {
+                  tempEnd = picked;
+                }
+              });
+            }
+          }
+
+          Widget dateChip(String label, DateTime? date, bool isStart) {
+            final has = date != null;
+            return Expanded(
+              child: InkWell(
+                onTap: () => pickDate(isStart),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: has
+                        ? npPrimaryColor.withOpacity(0.07)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: has ? npPrimaryColor : Colors.grey.shade300,
+                      width: has ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Icon(Icons.calendar_today_rounded,
+                            size: 14,
+                            color: has ? npPrimaryColor : Colors.grey.shade500),
+                        const SizedBox(width: 6),
+                        Text(label,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade500,
+                                fontWeight: FontWeight.w500)),
+                      ]),
+                      const SizedBox(height: 4),
+                      Text(
+                        has
+                            ? DateFormat('dd/MM/yyyy').format(date)
+                            : 'accstat_pick_date'.tr(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: has ? Colors.black87 : Colors.grey.shade400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final dateError = tempStart != null &&
+              tempEnd != null &&
+              tempEnd!.isBefore(tempStart!);
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20)),
+            backgroundColor: Colors.white,
+            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            title: Row(children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                    color: npPrimaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.tune_rounded,
+                    color: npPrimaryColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'accstat_custom_period'.tr(),
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87),
+              ),
+            ]),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
+                Row(children: [
+                  dateChip('accstat_date_start'.tr(), tempStart, true),
+                  const SizedBox(width: 10),
+                  dateChip('accstat_date_end'.tr(), tempEnd, false),
+                ]),
+                if (dateError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(
+                      'accstat_date_error'.tr(),
+                      style: const TextStyle(
+                          color: Colors.redAccent, fontSize: 12),
+                    ),
+                  ),
+              ],
+            ),
+            actionsAlignment: MainAxisAlignment.end,
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey.shade600),
+                child: Text('accstat_cancel'.tr()),
+              ),
+              ElevatedButton(
+                onPressed: (tempStart == null || tempEnd == null || dateError)
+                    ? null
+                    : () => Navigator.of(ctx).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: npPrimaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+                child: Text('accstat_apply'.tr()),
+              ),
+            ],
+          );
+        });
       },
+    );
+
+    if (confirmed == true && tempStart != null && tempEnd != null) {
+      setState(() {
+        dateDebutPersonnalisee = tempStart;
+        dateFinPersonnalisee = DateTime(
+            tempEnd!.year, tempEnd!.month, tempEnd!.day, 23, 59, 59);
+        periodeSelectorionnee = 'custom';
+      });
+      chargerStats();
+    }
+  }
+
+  Widget _buildCustomButton() {
+    bool isSelected = periodeSelectorionnee == 'custom';
+    return ElevatedButton.icon(
+      onPressed: _showCustomDateDialog,
       icon: const Icon(Icons.date_range),
       label: Text('cstat_period_calendar'.tr()),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? npPrimaryColor : Colors.grey.shade300,
+        foregroundColor: isSelected ? Colors.white : Colors.black87,
+      ),
     );
   }
 
