@@ -5,9 +5,12 @@ class RendezVousService {
 
   RendezVousService(this.supabase);
 
-  /// 📅 Récupère la liste des rendez-vous programmés
+  /// 📅 Récupère la liste des rendez-vous programmés du médecin connecté
   Future<List<Map<String, dynamic>>> getRendezVous() async {
     try {
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) return [];
+
       final response = await supabase
           .from('Consultation')
           .select('''
@@ -24,6 +27,7 @@ class RendezVousService {
             )
           ''')
           .eq('programmation_rdv', 'RDV_programmer')
+          .eq('id_personnel', userId)
           .order('date_rdv_prevu', ascending: true);
 
       return List<Map<String, dynamic>>.from(response);
@@ -51,7 +55,10 @@ class RendezVousService {
   }
 
   /// 📅 Reprogramme un rendez-vous
-  Future<bool> reprogrammerRendezVous(int idConsultation, DateTime nouvelleDate) async {
+  Future<bool> reprogrammerRendezVous(
+    int idConsultation,
+    DateTime nouvelleDate,
+  ) async {
     try {
       await supabase
           .from('Consultation')

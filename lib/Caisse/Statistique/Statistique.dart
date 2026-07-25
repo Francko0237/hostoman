@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:hostoman/model_unifier.dart';
+
 import 'Service.dart';
 import '../HistoriquePaiement/detail/detail_historique_ui.dart';
 import 'package:hostoman/shared/pdf_generator.dart';
@@ -28,8 +28,8 @@ class _StatsPageState extends State<StatsPage> {
   String periodeSelectorionnee = 'today';
   String typePaiement = 'tous'; // Type de paiement : 'tous', 'payer' ou 'annuler'
   Map<String, dynamic>? statsData;
-  List<Map<String, dynamic>> consultations = [];
-  List<Map<String, dynamic>> filteredConsultations = [];
+  List<Map<String, dynamic>> paiements = [];
+  List<Map<String, dynamic>> filteredPaiements = [];
   String searchQuery = '';
 
   DateTime? dateDebutPersonnalisee;
@@ -72,8 +72,8 @@ class _StatsPageState extends State<StatsPage> {
 
       setState(() {
         statsData = data;
-        consultations = List<Map<String, dynamic>>.from(data['consultations']);
-        filteredConsultations = consultations;
+        paiements = List<Map<String, dynamic>>.from(data['paiements']);
+        filteredPaiements = paiements;
         isLoading = false;
       });
       _applyFilters();
@@ -85,9 +85,9 @@ class _StatsPageState extends State<StatsPage> {
 
   void _applyFilters() {
     setState(() {
-      filteredConsultations = consultations.where((item) {
-        final patientMap = item['Patient'] as Map<String, dynamic>;
-        final nom = (patientMap['nom_complet'] ?? '').toString().toLowerCase();
+      filteredPaiements = paiements.where((item) {
+        final patientMap = StatsService.getPatientFromPaiement(item);
+        final nom = (patientMap?['nom_complet'] ?? '').toString().toLowerCase();
         return nom.contains(searchQuery.toLowerCase());
       }).toList();
     });
@@ -118,7 +118,7 @@ class _StatsPageState extends State<StatsPage> {
             icon: const Icon(Icons.refresh, color: npSuccessColor),
             onPressed: chargerStats,
           ),
-          if (filteredConsultations.isNotEmpty)
+          if (filteredPaiements.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.print, color: npSuccessColor),
               tooltip: 'cstat_print_tooltip'.tr(),
@@ -188,31 +188,29 @@ class _StatsPageState extends State<StatsPage> {
         periodeLabel = 'cstat_period_all'.tr();
     }
 
-    final pdfPatients = filteredConsultations.map((item) {
-      final patientMap = item['Patient'] as Map<String, dynamic>;
-      final patient = Patient.fromMap(patientMap);
-      final date = DateTime.parse(item['date_enregistrement']);
-      final listPaiements = item['paiement'] as List;
-      final montant = listPaiements.isNotEmpty
-          ? listPaiements[0]['prix_a_paye']
-          : 0;
-      final currentStatut = listPaiements.isNotEmpty
-          ? listPaiements[0]['statut_paiement']
-          : 'payer';
+    final pdfPatients = filteredPaiements.map((item) {
+      final patientMap = StatsService.getPatientFromPaiement(item) ?? {};
+      final nom = (patientMap['nom_complet'] ?? 'Inconnu').toString();
+      final sexe = (patientMap['sexe'] ?? '').toString();
+      final age = (patientMap['age'] ?? 0).toString();
+      final tel = (patientMap['telephone'] ?? '').toString();
+      final date = StatsService.getPaiementDate(item);
+      final montant = (item['prix_a_paye'] as num? ?? 0).toInt();
+      final currentStatut = (item['statut_paiement'] ?? '').toString();
+      final motif = (item['motif'] ?? '').toString();
 
       return PatientPdfData(
-        nom: patient.nom_complet,
-        sexe: patient.sexe,
-        age: 'pay_field_age_value'.tr(namedArgs: {'age': '${patient.age}'}),
-        telephone: patient.telephone.toString(),
+        nom: nom,
+        sexe: sexe,
+        age: 'pay_field_age_value'.tr(namedArgs: {'age': age}),
+        telephone: tel,
         dateEnregistrement: dateFormat.format(date),
-        categorie: currentStatut == 'payer'
-            ? 'hist_badge_paid'.tr()
-            : 'hist_badge_cancelled'.tr(),
+        categorie: motif.isNotEmpty ? motif
+            : (currentStatut == 'payer' || currentStatut == 'paye'
+                ? 'hist_badge_paid'.tr()
+                : 'hist_badge_cancelled'.tr()),
         montant: 'cstat_amount_fcfa'.tr(
-          namedArgs: {
-            'value': _formatNumber(montant is int ? montant : montant.toInt()),
-          },
+          namedArgs: {'value': _formatNumber(montant)},
         ),
       );
     }).toList();
@@ -356,9 +354,9 @@ class _StatsPageState extends State<StatsPage> {
             children: [
               Expanded(
                 child: _buildStatCard(
-                  'cstat_card_patients'.tr(),
-                  '${statsData?['nombre_patients']}',
-                  Icons.people,
+                  'Transactions',
+                  '${statsData?['nombre_transactions'] ?? 0}',
+                  Icons.receipt_long,
                   npBlueColor,
                 ),
               ),
@@ -388,6 +386,11 @@ class _StatsPageState extends State<StatsPage> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildSmallInfo(
+                  Icons.people,
+                  '${statsData?['nombre_patients'] ?? 0} patients',
+                  npBlueColor,
+                ),
+                _buildSmallInfo(
                   Icons.male,
                   'cstat_men'.tr(
                     namedArgs: {'count': '${statsData?['hommes']}'},
@@ -415,89 +418,133 @@ class _StatsPageState extends State<StatsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'cstat_patient_list'.tr(),
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: npAccentColor,
-            ),
+          Row(
+            children: [
+              Text(
+                'Transactions',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: npAccentColor,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: npBlueColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${filteredPaiements.length}',
+                  style: const TextStyle(color: npBlueColor, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _buildSearchBar(),
           const SizedBox(height: 16),
-          if (filteredConsultations.isEmpty)
-            _buildEmptyState()
+          if (filteredPaiements.isEmpty)
+            Center(child: _buildEmptyState())
           else
-            ...filteredConsultations.map((item) => _buildPatientTile(item)),
+            ...filteredPaiements.map((item) => _buildPatientTile(item)),
         ],
       ),
     );
   }
 
   Widget _buildPatientTile(Map<String, dynamic> item) {
-    final patientMap = item['Patient'] as Map<String, dynamic>;
-    final patient = Patient.fromMap(patientMap);
-    final date = DateTime.parse(item['date_enregistrement']);
-    final listPaiements = item['paiement'] as List;
-    final montant = listPaiements.isNotEmpty
-        ? listPaiements[0]['prix_a_paye']
-        : 0;
-    final idConsultation = item['id_consultation'].toString();
-    final bool isCancelled = listPaiements.isNotEmpty &&
-        listPaiements[0]['statut_paiement'] == 'annuler';
+    final patientMap = StatsService.getPatientFromPaiement(item);
+    final nom = (patientMap?['nom_complet'] ?? 'Inconnu').toString();
+    final initiale = nom.isNotEmpty ? nom[0].toUpperCase() : '?';
+    final date = StatsService.getPaiementDate(item);
+    final montant = (item['prix_a_paye'] as num? ?? 0).toInt();
+    final statut = (item['statut_paiement'] ?? '').toString().toLowerCase();
+    final motif = (item['motif'] ?? '').toString();
+    final idConsultation = StatsService.getIdConsultation(item);
+
+    final bool isCancelled = statut == 'annuler';
     final Color statusColor = isCancelled ? npErrorColor : npSuccessColor;
 
+    // Icône selon le motif
+    IconData motifIcon = Icons.local_hospital;
+    if (motif == 'Medicaments') motifIcon = Icons.medication;
+    if (motif == 'Examens') motifIcon = Icons.science;
+
     return InkWell(
-      onTap: () {
-        // Note: Statistique affiche les consultations, pas les paiements individuels
-        // On utilise donc l'ancienne méthode avec idConsultation
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                DetailHistoriqueUI(idConsultation: idConsultation),
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(16),
+      onTap: idConsultation != null
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      DetailHistoriqueUI(idConsultation: idConsultation),
+                ),
+              );
+            }
+          : null,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-          ],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade100),
         ),
         child: ListTile(
           leading: CircleAvatar(
-            backgroundColor: statusColor,
+            backgroundColor: statusColor.withOpacity(0.15),
             child: Text(
-              patient.nom_complet[0].toUpperCase(),
-              style: const TextStyle(color: Colors.white),
+              initiale,
+              style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
             ),
           ),
-          title: Text(
-            patient.nom_complet,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  nom,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+              ),
+              Icon(motifIcon, size: 14, color: Colors.grey.shade400),
+              const SizedBox(width: 4),
+              Text(
+                motif.isNotEmpty ? motif : 'Transaction',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
+            ],
           ),
-          subtitle: Text(DateFormat('dd/MM/yyyy à HH:mm').format(date)),
-          trailing: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'cstat_amount_fcfa'.tr(
-                namedArgs: {'value': _formatNumber(montant.toInt())},
+          subtitle: Text(
+            DateFormat('dd/MM/yyyy à HH:mm').format(date),
+            style: const TextStyle(fontSize: 12),
+          ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${_formatNumber(montant)} FCFA',
+                style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
               ),
-              style: TextStyle(
-                color: statusColor,
-                fontWeight: FontWeight.bold,
+              Container(
+                margin: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  isCancelled ? 'Annulé' : (statut == 'en_attente' ? 'En attente' : 'Payé'),
+                  style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.w500),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

@@ -78,8 +78,18 @@ class _HistoriqueConsultationPageState
           if (!uniquePatients.containsKey(idPatient)) {
             uniquePatients[idPatient] = c;
           } else {
-            final dateA = DateTime.tryParse(c['date_derniere_mise_ajour']?.toString() ?? '') ?? DateTime(2000);
-            final dateB = DateTime.tryParse(uniquePatients[idPatient]!['date_derniere_mise_ajour']?.toString() ?? '') ?? DateTime(2000);
+            final dateA =
+                DateTime.tryParse(
+                  c['date_derniere_mise_ajour']?.toString() ?? '',
+                ) ??
+                DateTime(2000);
+            final dateB =
+                DateTime.tryParse(
+                  uniquePatients[idPatient]!['date_derniere_mise_ajour']
+                          ?.toString() ??
+                      '',
+                ) ??
+                DateTime(2000);
             if (dateA.isAfter(dateB)) {
               uniquePatients[idPatient] = c;
             }
@@ -535,26 +545,6 @@ class _HistoriqueConsultationPageState
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Voir les consultations',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: medPrimaryColor.withOpacity(0.7),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 11,
-                          color: medPrimaryColor.withOpacity(0.6),
-                        ),
-                      ],
                     ),
                   ],
                 ),

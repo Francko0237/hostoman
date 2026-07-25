@@ -6,7 +6,11 @@ class ConsultationService {
   ConsultationService(this.supabase);
 
   /// 📋 Récupère les patients en attente de consultation (qui ont payé)
+  /// Filtre uniquement les patients assignés au médecin connecté
   Future<List<Map<String, dynamic>>> getPatientsEnAttente() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
     final response = await supabase
         .from('Consultation')
         .select(
@@ -15,8 +19,8 @@ class ConsultationService {
         .eq('type_service', 'Consultation')
         .eq('paiement.statut_paiement', 'payer')
         .eq('Statut_Consultation', 'en-attente-consultation')
+        .eq('id_personnel', userId)
         .order('date_enregistrement', ascending: true);
-    print(response);
     // structure standard pour ret  ourné les données de la BD récupérer
     return (response as List<dynamic>)
         .map((e) => e as Map<String, dynamic>)

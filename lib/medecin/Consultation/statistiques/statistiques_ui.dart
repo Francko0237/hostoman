@@ -777,26 +777,6 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Voir les consultations',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: color.withOpacity(0.7),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 11,
-                          color: color.withOpacity(0.6),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ],
@@ -806,8 +786,6 @@ class _StatistiquesPageState extends State<StatistiquesPage> {
       ),
     );
   }
-
-
 
   Future<void> _printPatientList() async {
     final dateFormat = DateFormat('dd/MM/yyyy');

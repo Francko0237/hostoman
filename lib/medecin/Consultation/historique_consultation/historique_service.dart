@@ -5,8 +5,11 @@ class HistoriqueConsultationService {
 
   HistoriqueConsultationService(this.supabase);
 
-  /// 📋 Récupère toutes les consultations terminées
+  /// 📋 Récupère toutes les consultations terminées du médecin connecté
   Future<List<Map<String, dynamic>>> getConsultationsTerminees() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
     final response = await supabase
         .from('Consultation')
         .select('''
@@ -14,6 +17,7 @@ class HistoriqueConsultationService {
           Patient(*)
         ''')
         .eq('Statut_Consultation', 'terminer')
+        .eq('id_personnel', userId)
         .order('date_derniere_mise_ajour', ascending: false);
 
     return (response as List<dynamic>)
@@ -21,7 +25,7 @@ class HistoriqueConsultationService {
         .toList();
   }
 
-  /// 🔍 Récupère les détails d'une consultation terminée
+  /// 🔍 Récupère les détails d'une consultation (tous statuts)
   Future<Map<String, dynamic>?> getConsultationDetail(
     int idConsultation,
   ) async {
@@ -33,7 +37,6 @@ class HistoriqueConsultationService {
           Parametres_vitaux(*)
         ''')
         .eq('id_consultation', idConsultation)
-        .eq('Statut_Consultation', 'terminer')
         .single();
 
     return response as Map<String, dynamic>?;

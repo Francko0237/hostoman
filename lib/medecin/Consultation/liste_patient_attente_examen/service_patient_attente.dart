@@ -6,7 +6,11 @@ class ConsultationService {
   ConsultationService(this.supabase);
 
   /// 📋 Récupère les patients en attente de examen (qui ont payé)
+  /// Filtre uniquement les patients assignés au médecin connecté
   Future<List<Map<String, dynamic>>> getPatientsEnAttente() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
     final response = await supabase
         .from('Consultation')
         .select('''
@@ -18,6 +22,7 @@ class ConsultationService {
         .or(
           'Statut_Consultation.eq.en-attente-examen,Statut_Consultation.eq.en-attente-resultat,Statut_Consultation.eq.resultat-disponible,Statut_Consultation.eq.Annuler',
         )
+        .eq('id_personnel', userId)
         .order('date_enregistrement', ascending: true);
 
     // 🔄 Dédoublonnage robuste par id_consultation

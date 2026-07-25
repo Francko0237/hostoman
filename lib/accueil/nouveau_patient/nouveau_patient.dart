@@ -110,7 +110,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
   }
 
   void _focusOnFirstInvalidField() {
-    if (PatientFormConfig.nomComplet.validator(nom_completController.text) != null) {
+    if (PatientFormConfig.nomComplet.validator(nom_completController.text) !=
+        null) {
       _focusAndScrollTo(_nomCompletFocusNode);
       return;
     }
@@ -146,11 +147,13 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
       _focusAndScrollTo(_poidsFocusNode);
       return;
     }
-    if (PatientFormConfig.tensionSystolique.validator(systolique.text) != null) {
+    if (PatientFormConfig.tensionSystolique.validator(systolique.text) !=
+        null) {
       _focusAndScrollTo(_systoliqueFocusNode);
       return;
     }
-    if (PatientFormConfig.tensionDiastolique.validator(diastolique.text) != null) {
+    if (PatientFormConfig.tensionDiastolique.validator(diastolique.text) !=
+        null) {
       _focusAndScrollTo(_diastoliqueFocusNode);
       return;
     }
@@ -162,7 +165,10 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
       _focusAndScrollTo(_vaccinationFocusNode);
       return;
     }
-    if (PatientFormConfig.motifConsultation.validator(motif_consultation.text) != null) {
+    if (PatientFormConfig.motifConsultation.validator(
+          motif_consultation.text,
+        ) !=
+        null) {
       _focusAndScrollTo(_motifFocusNode);
       return;
     }
@@ -204,7 +210,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
       final response = await Supabase.instance.client
           .from('Personnel_hopital')
           .select('id_personnel, Nom, Prenom, Specialite')
-          .eq('es_medecin', true);
+          .eq('Specialite', 'Médecin Généraliste');
 
       setState(() {
         _medecins = (response as List).map((e) {
@@ -690,7 +696,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           color: _value == 'Homme'
                                               ? npAccentColor.withOpacity(0.1)
                                               : Colors.white,
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: Border.all(
                                             color: _value == 'Homme'
                                                 ? npAccentColor
@@ -702,7 +710,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           value: 'Homme',
                                           title: Text(
                                             'np_sex_male'.tr(),
-                                            style: const TextStyle(fontSize: 15),
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                            ),
                                           ),
                                           groupValue: _value,
                                           onChanged: (v) =>
@@ -719,7 +729,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           color: _value == 'Femme'
                                               ? npAccentColor.withOpacity(0.1)
                                               : Colors.white,
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: Border.all(
                                             color: _value == 'Femme'
                                                 ? npAccentColor
@@ -731,7 +743,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           value: 'Femme',
                                           title: Text(
                                             'np_sex_female'.tr(),
-                                            style: const TextStyle(fontSize: 15),
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                            ),
                                           ),
                                           groupValue: _value,
                                           onChanged: (v) =>
@@ -1040,7 +1054,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                 Focus(
                                   focusNode: _medecinFocusNode,
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
                                     children: [
                                       Text(
                                         'np_doctor_responsible'.tr(),
@@ -1055,7 +1070,9 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           padding: const EdgeInsets.all(16),
                                           decoration: BoxDecoration(
                                             color: Colors.orange.shade50,
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             border: Border.all(
                                               color: Colors.orange.shade200,
                                             ),
@@ -1072,7 +1089,8 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                                   'np_doctor_none'.tr(),
                                                   style: TextStyle(
                                                     fontStyle: FontStyle.italic,
-                                                    color: Colors.orange.shade700,
+                                                    color:
+                                                        Colors.orange.shade700,
                                                   ),
                                                 ),
                                               ),

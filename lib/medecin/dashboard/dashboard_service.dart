@@ -5,9 +5,13 @@ class DashboardService {
 
   DashboardService(this.supabase);
 
-  /// 📊 Récupère les statistiques du jour
+  /// 📊 Récupère les statistiques du jour pour le médecin connecté
   Future<Map<String, int>> getDailyStats() async {
     try {
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null)
+        return {'consultations': 0, 'en_attente': 0, 'terminer': 0};
+
       final now = DateTime.now();
       final todayStart = DateTime(
         now.year,
@@ -30,6 +34,7 @@ class DashboardService {
           .eq('type_service', 'Consultation')
           .eq('paiement.statut_paiement', 'payer')
           .eq('Statut_Consultation', 'en-attente-consultation')
+          .eq('id_personnel', userId)
           .gte('date_enregistrement', todayStart)
           .lte('date_enregistrement', todayEnd)
           .count(CountOption.exact);
@@ -37,13 +42,13 @@ class DashboardService {
       final consultationsCount = consultationsResponse.count;
 
       // 2. En Attente (En examen ou résultats pour aujourd'hui)
-      // Note: On regarde ceux qui son en cours de traitement aujourd'hui
       final enAttenteResponse = await supabase
           .from('Consultation')
           .select('id_consultation')
           .or(
             'Statut_Consultation.eq.en-attente-examen,Statut_Consultation.eq.en-attente-resultat,Statut_Consultation.eq.resultat-disponible',
           )
+          .eq('id_personnel', userId)
           .gte('date_enregistrement', todayStart)
           .lte('date_enregistrement', todayEnd)
           .count(CountOption.exact);
@@ -55,6 +60,7 @@ class DashboardService {
           .from('Consultation')
           .select('id_consultation')
           .eq('Statut_Consultation', 'terminer')
+          .eq('id_personnel', userId)
           .gte('date_enregistrement', todayStart)
           .lte('date_enregistrement', todayEnd)
           .count(CountOption.exact);

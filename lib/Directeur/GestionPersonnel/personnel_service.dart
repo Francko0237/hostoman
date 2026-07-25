@@ -7,13 +7,13 @@ import 'dart:convert';
 /// Copiez-la depuis `supabase status` (cherchez "service_role key"). Si vous êtes bloqué,
 /// le fallback avec signUp est utilisé, mais il gérera mieux les insertions locale.
 const String _serviceRoleKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Z3ljY3lheXduY2Fmb2NtZG5kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTg0NDI0MiwiZXhwIjoyMDkxNDIwMjQyfQ.kP8VFJipmsN6T9wO13etVWjhmm79SGPve4JbXNP63M8';
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q';
 
 class PersonnelService {
   final SupabaseClient supabase;
 
   // URL du projet Supabase (cloud). Doit correspondre à celle de main.dart.
-  String get _supabaseUrl => 'https://mzgyccyaywncafocmdnd.supabase.co';
+  String get _supabaseUrl => 'http://localhost:8000';
 
   PersonnelService(this.supabase);
 

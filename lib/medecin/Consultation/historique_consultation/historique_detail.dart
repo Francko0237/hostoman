@@ -734,6 +734,126 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
     }
   }
 
+  /// Vérifie si la consultation n'est pas encore terminée
+  bool _isConsultationEnCours() {
+    final statut = _consultationData?['Statut_Consultation'] as String? ?? '';
+    return statut != 'terminer';
+  }
+
+  /// Écran affiché quand la consultation n'est pas encore terminée
+  Widget _buildNotAvailable() {
+    final statut = _consultationData?['Statut_Consultation'] as String? ?? '';
+
+    String statusLabel;
+    IconData statusIcon;
+    Color statusColor;
+
+    switch (statut) {
+      case 'en-attente-consultation':
+        statusLabel = 'Consultation pas encore commencée';
+        statusIcon = Icons.hourglass_empty_rounded;
+        statusColor = medPrimaryColor;
+        break;
+      case 'en-attente-examen':
+        statusLabel = 'En attente des résultats d\'examen';
+        statusIcon = Icons.biotech_outlined;
+        statusColor = const Color(0xFFFF9800);
+        break;
+      case 'en-attente-resultat':
+        statusLabel = 'Résultats d\'examen en cours d\'analyse';
+        statusIcon = Icons.science_outlined;
+        statusColor = const Color(0xFFFF9800);
+        break;
+      case 'resultat-disponible':
+        statusLabel = 'Résultats disponibles, consultation en cours';
+        statusIcon = Icons.pending_actions_outlined;
+        statusColor = const Color(0xFF2196F3);
+        break;
+      case 'En cours':
+        statusLabel = 'Consultation en cours';
+        statusIcon = Icons.medical_services_outlined;
+        statusColor = const Color(0xFF2196F3);
+        break;
+      default:
+        statusLabel = 'Détails pas encore disponibles';
+        statusIcon = Icons.info_outline_rounded;
+        statusColor = Colors.grey;
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(statusIcon, size: 56, color: statusColor),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Résultats pas encore disponibles',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Les détails complets seront disponibles une fois la consultation terminée.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ---- BUILD ----
 
   @override
@@ -782,6 +902,10 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
           ? const Center(
               child: CircularProgressIndicator(color: medPrimaryColor),
             )
+          : _consultationData == null
+          ? _buildNotAvailable()
+          : _isConsultationEnCours()
+          ? _buildNotAvailable()
           : Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(
