@@ -9,22 +9,28 @@ class MedecinService {
   Future<Medecin?> fetchMedecinConnecte() async {
     try {
       final user = client.auth.currentUser;
-      if (user == null) {
-        throw Exception('Aucun utilisateur connecté');
-      }
+      if (user == null) throw Exception('Aucun utilisateur connecté');
 
-      final response = await client
+      // Chercher par auth_id (nouveaux comptes) ou id_personnel (anciens comptes)
+      Map<String, dynamic>? response = await client
+          .from('Personnel_hopital')
+          .select()
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
+      response ??= await client
           .from('Personnel_hopital')
           .select()
           .eq('id_personnel', user.id)
-          .single();
-print(response);
+          .maybeSingle();
+
+      if (response == null) return null;
       return Medecin.fromMap(response);
     } catch (e) {
-      print('❌ Erreur lors de la récupération du médecin : $e');
       return null;
     }
   }
+
   Future<int> countPatientsEnregistres() async {
     try {
       final user = client.auth.currentUser;
@@ -43,6 +49,4 @@ print(response);
       return 0;
     }
   }
-
-
 }

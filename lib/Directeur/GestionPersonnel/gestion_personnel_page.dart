@@ -57,6 +57,7 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
 
   List<Map<String, dynamic>> _personnelList = [];
   List<Map<String, dynamic>> _filteredList = [];
+  List<Map<String, dynamic>> _demandesReset = [];
   bool _isLoading = true;
   String _selectedRole = 'Tous';
   String _searchQuery = '';
@@ -66,12 +67,48 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
   void initState() {
     super.initState();
     _loadPersonnel();
+    _loadDemandesReset();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadDemandesReset() async {
+    try {
+      final result = await Supabase.instance.client
+          .from('Personnel_hopital')
+          .select('id_personnel, Nom, Prenom, username, reset_password_statut')
+          .eq('reset_password_statut', 'en_attente');
+      if (mounted) {
+        setState(
+          () => _demandesReset = List<Map<String, dynamic>>.from(result),
+        );
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _traiterDemande(String idPersonnel, bool valider) async {
+    final statut = valider ? 'valide' : 'rejete';
+    await Supabase.instance.client
+        .from('Personnel_hopital')
+        .update({'reset_password_statut': statut})
+        .eq('id_personnel', idPersonnel);
+    _loadDemandesReset();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            valider
+                ? 'Demande validée — l\'utilisateur peut réinitialiser son mot de passe.'
+                : 'Demande rejetée.',
+          ),
+          backgroundColor: valider ? Colors.green : Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _loadPersonnel() async {
@@ -107,7 +144,6 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
     final formKey = GlobalKey<FormState>();
     final nomCtrl = TextEditingController(text: existing?['Nom'] ?? '');
     final prenomCtrl = TextEditingController(text: existing?['Prenom'] ?? '');
-    final emailCtrl = TextEditingController(text: existing?['email'] ?? '');
     final telCtrl = TextEditingController(
       text: existing?['telephone']?.toString() ?? '',
     );
@@ -115,17 +151,14 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
     final ageCtrl = TextEditingController(
       text: existing?['age']?.toString() ?? '',
     );
-    final pwCtrl = TextEditingController();
     String selectedRole = (_kRoles.contains(existing?['Specialite']))
         ? existing!['Specialite']
         : 'M\u00e9decin G\u00e9n\u00e9raliste';
-    // Normalise: DB peut stocker 'Homme'/'Femme' ou 'M'/'F'
     final rawSexe = existing?['sexe']?.toString() ?? 'Homme';
     String selectedSexe =
         (rawSexe == 'F' || rawSexe == 'Femme' || rawSexe == 'F\u00e9minin')
         ? 'Femme'
         : 'Homme';
-    bool obscure = true;
 
     showDialog(
       context: context,
@@ -202,42 +235,36 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              _buildField(
-                                emailCtrl,
-                                'staff_field_email'.tr(),
-                                Icons.email,
-                                keyboardType: TextInputType.emailAddress,
-                                required: !isEdit,
-                              ),
-                              if (!isEdit) ...[
-                                const SizedBox(height: 12),
-                                TextFormField(
-                                  controller: pwCtrl,
-                                  obscureText: obscure,
-                                  validator: (v) => (v == null || v.length < 4)
-                                      ? 'staff_min_chars'.tr()
-                                      : null,
-                                  decoration: InputDecoration(
-                                    labelText: 'staff_field_password'.tr(),
-                                    prefixIcon: const Icon(Icons.lock),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        obscure
-                                            ? Icons.visibility
-                                            : Icons.visibility_off,
-                                      ),
-                                      onPressed: () =>
-                                          setDlgState(() => obscure = !obscure),
-                                    ),
-                                    filled: true,
-                                    fillColor: const Color(0xFFF8FAFC),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide.none,
+                              if (!isEdit)
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF8E1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0xFFFFB300),
                                     ),
                                   ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.info_outline,
+                                        color: Color(0xFFE65100),
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Expanded(
+                                        child: Text(
+                                          'L\'utilisateur choisira son nom d\'utilisateur et mot de passe à sa première connexion.',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFFE65100),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
                               const SizedBox(height: 12),
                               Row(
                                 children: [
@@ -360,7 +387,6 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                               final data = {
                                 'Nom': nomCtrl.text.trim(),
                                 'Prenom': prenomCtrl.text.trim(),
-                                if (!isEdit) 'email': emailCtrl.text.trim(),
                                 'telephone': int.tryParse(telCtrl.text) ?? 0,
                                 'adresse': adresseCtrl.text.trim(),
                                 'Specialite': selectedRole,
@@ -375,10 +401,7 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                                   data,
                                 );
                               } else {
-                                error = await _service.addPersonnel(
-                                  data,
-                                  pwCtrl.text,
-                                );
+                                error = await _service.addPersonnel(data);
                               }
                               if (!mounted) return;
                               if (error == null) {
@@ -524,7 +547,52 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                     ],
                   ),
           ),
-          // Liste
+          // Section demandes de réinitialisation de mot de passe
+          if (_demandesReset.isNotEmpty)
+            Container(
+              color: const Color(0xFFFFF8E1),
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 24 : 12,
+                vertical: 10,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.lock_reset,
+                        color: Color(0xFFE65100),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_demandesReset.length} demande${_demandesReset.length > 1 ? 's' : ''} de réinitialisation de mot de passe',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFE65100),
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: _loadDemandesReset,
+                        child: const Text(
+                          'Actualiser',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ..._demandesReset.map((p) => _buildDemandeResetCard(p)),
+                ],
+              ),
+            ),
+          // Liste personnel
           Expanded(
             child: _isLoading
                 ? const Center(
@@ -812,6 +880,79 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.more_vert, color: Colors.grey, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDemandeResetCard(Map<String, dynamic> p) {
+    final nom = '${p['Prenom'] ?? ''} ${p['Nom'] ?? ''}'.trim();
+    final username = p['username']?.toString() ?? 'N/A';
+    final idPersonnel = p['id_personnel'].toString();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFFB300)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.lock_outline, color: Color(0xFFE65100), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nom,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                Text(
+                  '@$username',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => _traiterDemande(idPersonnel, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Valider',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            onPressed: () => _traiterDemande(idPersonnel, false),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Rejeter',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
         ],

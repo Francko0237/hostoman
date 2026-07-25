@@ -199,6 +199,32 @@ class NotificationsService {
           );
         }
       } catch (_) {}
+      // ============ 7. Demandes de réinitialisation de mot de passe (CRITICAL) ============
+      try {
+        final demandesReset = await supabase
+            .from('Personnel_hopital')
+            .select('Nom, Prenom, username')
+            .eq('reset_password_statut', 'en_attente');
+
+        if ((demandesReset as List).isNotEmpty) {
+          for (final p in demandesReset) {
+            final nom = '${p['Prenom'] ?? ''} ${p['Nom'] ?? ''}'.trim();
+            final username = p['username']?.toString() ?? '';
+            notifs.add(
+              DirectorNotification(
+                id: 'reset_pwd_$username',
+                severity: NotificationSeverity.critical,
+                titleKey: 'notif_reset_pwd_title',
+                titleArgs: {'nom': nom},
+                messageKey: 'notif_reset_pwd_msg',
+                messageArgs: {'username': username},
+                timestamp: now,
+                actionTab: 'staff',
+              ),
+            );
+          }
+        }
+      } catch (_) {}
     } catch (e) {
       print('Erreur Notifications: $e');
     }

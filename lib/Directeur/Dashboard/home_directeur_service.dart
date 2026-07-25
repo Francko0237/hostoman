@@ -19,11 +19,19 @@ class HomeDirecteurService {
     try {
       final user = supabase.auth.currentUser;
       if (user == null) return {};
-      final data = await supabase
+
+      Map<String, dynamic>? data = await supabase
+          .from('Personnel_hopital')
+          .select('Nom, Prenom, email, Specialite, sexe')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
+      data ??= await supabase
           .from('Personnel_hopital')
           .select('Nom, Prenom, email, Specialite, sexe')
           .eq('id_personnel', user.id)
           .maybeSingle();
+
       return data ?? {};
     } catch (_) {
       return {};

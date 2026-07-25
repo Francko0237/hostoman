@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:hostoman/app_config.dart';
 
 //Import de toutes les pages classer par ordre
 
 import 'authentification/authen_personnel.dart';
 import 'authentification/authen_patient.dart';
+import 'authentification/premiere_connexion.dart';
+import 'authentification/mot_de_passe_oublie.dart';
 
 //Directeur
 import 'Directeur/Dashboard/dashboard_directeur.dart';
@@ -80,6 +83,14 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/Authen_Personnel',
       builder: (context, state) => Authen_Personnel(),
+    ),
+    GoRoute(
+      path: '/PremiereConnexion',
+      builder: (context, state) => const PremiereConnexionPage(),
+    ),
+    GoRoute(
+      path: '/MotDePasseOublie',
+      builder: (context, state) => const MotDePasseOubliePage(),
     ),
     GoRoute(
       path: '/Authen_Patient',
@@ -418,9 +429,8 @@ Future<void> main() async {
   await initializeDateFormatting('fr_FR', null);
   await initializeDateFormatting('en_US', null);
   await Supabase.initialize(
-    url: 'http://localhost:8000',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE',
+    url: AppConfig.supabaseUrl,
+    anonKey: AppConfig.supabaseAnonKey,
   );
   runApp(
     EasyLocalization(

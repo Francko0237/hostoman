@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
+import 'package:hostoman/app_config.dart';
 import 'nouveau_patient.dart';
 
 // Couleurs
@@ -569,17 +570,17 @@ class PatientService {
     print('=== ENREGISTREMENT TERMINÉ AVEC SUCCÈS ===');
 
     // 💰 Création automatique du paiement pour la consultation
-    final prixConsultation = 600; // Prix de la consultation
-
     await supabase.from('paiement').insert({
       'id_consultation': idConsultation,
       'motif': 'Consultation',
       'statut_paiement': 'en_attente',
       'date_paiement': DateTime.now().toIso8601String(),
-      'prix_a_paye': prixConsultation, // montant = prix de la consultation
+      'prix_a_paye': AppConfig.prixConsultation,
     });
 
-    print('✅ Paiement créé automatiquement - Montant: $prixConsultation FCFA');
+    print(
+      '✅ Paiement créé automatiquement - Montant: ${AppConfig.prixConsultation} FCFA',
+    );
 
     // 🧹 Nettoyage du formulaire
     _clearFormFields();

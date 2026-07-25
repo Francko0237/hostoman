@@ -19,22 +19,34 @@ class UserProfileHelper {
         return null;
       }
 
-      if (_cachedUserData != null && _cachedUserData!['id_personnel'] == user.id) {
-        return _cachedUserData;
+      // Vérifier le cache — fonctionne pour les deux types de comptes
+      if (_cachedUserData != null) {
+        final cachedAuthId = _cachedUserData!['auth_id']?.toString();
+        final cachedPersonnelId = _cachedUserData!['id_personnel']?.toString();
+        if (cachedAuthId == user.id || cachedPersonnelId == user.id) {
+          return _cachedUserData;
+        }
       }
 
       clearCache();
 
-      final data = await client
+      // Chercher par auth_id (nouveaux comptes) en premier
+      Map<String, dynamic>? data = await client
           .from('Personnel_hopital')
-          .select('Nom, Prenom, Specialite, sexe, id_personnel')
+          .select('Nom, Prenom, Specialite, sexe, id_personnel, auth_id')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
+      // Fallback sur id_personnel (anciens comptes)
+      data ??= await client
+          .from('Personnel_hopital')
+          .select('Nom, Prenom, Specialite, sexe, id_personnel, auth_id')
           .eq('id_personnel', user.id)
-          .single();
+          .maybeSingle();
 
       _cachedUserData = data;
       return _cachedUserData;
     } catch (e) {
-      print('Erreur lors de la récupération des données utilisateur : $e');
       return null;
     }
   }
@@ -48,13 +60,17 @@ class UserProfileHelper {
         return '';
       }
 
-      if (_cachedFormattedName != null && _cachedUserData != null && _cachedUserData!['id_personnel'] == user.id) {
-        return _cachedFormattedName!;
+      if (_cachedFormattedName != null && _cachedUserData != null) {
+        final cachedAuthId = _cachedUserData!['auth_id']?.toString();
+        final cachedPersonnelId = _cachedUserData!['id_personnel']?.toString();
+        if (cachedAuthId == user.id || cachedPersonnelId == user.id) {
+          return _cachedFormattedName!;
+        }
       }
 
       final data = await getUserData();
       if (data == null) return '';
-      
+
       final nom = data['Nom']?.toString().trim() ?? '';
       final prenom = data['Prenom']?.toString().trim() ?? '';
       final specialite = data['Specialite']?.toString().trim() ?? '';
@@ -68,11 +84,12 @@ class UserProfileHelper {
           specLower.contains('dr')) {
         title = 'Dr';
       } else {
-        final isFemale = rawSexe == 'F' || 
-                         rawSexe == 'Femme' || 
-                         rawSexe == 'Féminin' || 
-                         rawSexe.toLowerCase() == 'femme' ||
-                         rawSexe.toLowerCase() == 'féminin';
+        final isFemale =
+            rawSexe == 'F' ||
+            rawSexe == 'Femme' ||
+            rawSexe == 'Féminin' ||
+            rawSexe.toLowerCase() == 'femme' ||
+            rawSexe.toLowerCase() == 'féminin';
         title = isFemale ? 'Mme' : 'M.';
       }
 
@@ -116,12 +133,7 @@ class ConnectedUserText extends StatelessWidget {
         final text = (snapshot.hasData && snapshot.data!.isNotEmpty)
             ? snapshot.data!
             : fallback;
-        return Text(
-          text,
-          style: style,
-          overflow: overflow,
-          maxLines: maxLines,
-        );
+        return Text(text, style: style, overflow: overflow, maxLines: maxLines);
       },
     );
   }

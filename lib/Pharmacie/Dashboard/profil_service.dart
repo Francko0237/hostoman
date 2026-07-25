@@ -8,14 +8,21 @@ class PharmacienService {
   Future<Medecin?> fetchPharmacienConnecte() async {
     try {
       final user = client.auth.currentUser;
-      if (user == null) {
-        throw Exception('Aucun utilisateur connecté');
-      }
-      final response = await client
+      if (user == null) throw Exception('Aucun utilisateur connecté');
+
+      Map<String, dynamic>? response = await client
+          .from('Personnel_hopital')
+          .select()
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
+      response ??= await client
           .from('Personnel_hopital')
           .select()
           .eq('id_personnel', user.id)
-          .single();
+          .maybeSingle();
+
+      if (response == null) return null;
       return Medecin.fromMap(response);
     } catch (e) {
       return null;
@@ -26,8 +33,11 @@ class PharmacienService {
   Future<Map<String, dynamic>> fetchStatsPharmacien() async {
     try {
       final today = DateTime.now();
-      final startOfDay =
-          DateTime(today.year, today.month, today.day).toIso8601String();
+      final startOfDay = DateTime(
+        today.year,
+        today.month,
+        today.day,
+      ).toIso8601String();
 
       final delivrees = await client
           .from('prescription')
@@ -47,10 +57,7 @@ class PharmacienService {
         totalJour += (p['prix_a_paye'] as num?)?.toDouble() ?? 0;
       }
 
-      return {
-        'delivrees_total': delivrees.count,
-        'ventes_jour': totalJour,
-      };
+      return {'delivrees_total': delivrees.count, 'ventes_jour': totalJour};
     } catch (_) {
       return {'delivrees_total': 0, 'ventes_jour': 0.0};
     }
