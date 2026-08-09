@@ -88,26 +88,22 @@ class _VenteLibrePageState extends State<VenteLibrePage> {
   }
 
   Widget _buildPc() {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie/VenteLibre',
-      breadcrumbKey: 'phar_breadcrumb_vente_libre',
-      body: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'phar_vl_title'.tr(),
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: PharmacieTheme.textDark,
-              ),
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'phar_vl_title'.tr(),
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: PharmacieTheme.textDark,
             ),
-            const SizedBox(height: 16),
-            Expanded(child: _buildBody()),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _buildBody()),
+        ],
       ),
     );
   }

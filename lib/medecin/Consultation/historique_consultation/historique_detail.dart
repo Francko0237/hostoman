@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'historique_service.dart';
+import '../finalisation_consultation/consultation_pdf_generator.dart';
 
 const Color medPrimaryColor = Color(0xFF6A5ACD);
 const Color medAccentColor = Color(0xFF6A5ACD);
@@ -24,6 +25,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
   Map<String, dynamic>? _patientData;
   Map<String, dynamic>? _parametresVitaux;
   List<Map<String, dynamic>> _examens = [];
+  List<Map<String, dynamic>> _medicaments = [];
 
   bool _isLoading = true;
   String _patientName = '';
@@ -54,6 +56,9 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
       final examens = await _service.getExamensConsultation(
         widget.idConsultation,
       );
+      final medicaments = await _service.getMedicamentsConsultation(
+        widget.idConsultation,
+      );
 
       if (mounted && consultation != null) {
         setState(() {
@@ -62,6 +67,7 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
           _parametresVitaux =
               consultation['Parametres_vitaux'] as Map<String, dynamic>?;
           _examens = examens;
+          _medicaments = medicaments;
           _patientName = _patientData?['nom_complet']?.toString() ?? '';
           _patientNameLoaded = true;
           _isLoading = false;
@@ -80,52 +86,120 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
     }
   }
 
+  Future<void> _printConsultationPdf() async {
+    final p = _patientData ?? {};
+    final v = _parametresVitaux ?? {};
+    final c = _consultationData ?? {};
+
+    DateTime? rdvDate;
+    final rdvRaw = c['date_rdv_prevu'];
+    if (rdvRaw != null) {
+      try {
+        rdvDate = DateTime.parse(rdvRaw.toString());
+      } catch (_) {}
+    }
+
+    final data = ConsultationPdfData(
+      idConsultation: '${widget.idConsultation}',
+      patientNom: p['nom_complet']?.toString() ?? '—',
+      patientSexe: p['sexe']?.toString() ?? '—',
+      patientAge: p['age']?.toString() ?? '—',
+      patientTelephone: p['telephone']?.toString() ?? '—',
+      patientAdresse: p['adresse']?.toString() ?? '—',
+      patientProfession: p['profession']?.toString() ?? '—',
+      patientStatutMatrimonial: p['statut_matrimonial']?.toString() ?? '—',
+      temperature: v['temperature']?.toString(),
+      tension: (v['systolique'] != null && v['diastolique'] != null)
+          ? '${v['systolique']}/${v['diastolique']}'
+          : null,
+      poids: v['poid']?.toString(),
+      statutVih: v['statut_VIH']?.toString(),
+      vaccination: v['vaccination']?.toString(),
+      motif: v['motif_de_consultation']?.toString(),
+      antecedents: c['antecedents']?.toString() ?? '—',
+      signesSymptomes: c['signes_symptomes']?.toString() ?? '—',
+      diagnosticInitial: c['diagnostic_initial']?.toString() ?? '—',
+      diagnosticFinal: c['diagnostic_final']?.toString() ?? '—',
+      traitementPrescrit: c['traitement_prescrit']?.toString() ?? '—',
+      rdvDate: rdvDate,
+      examensResultats: _examens,
+      medicaments: _medicaments,
+    );
+
+    try {
+      await ConsultationPdfGenerator.previewAndPrint(
+        context: context,
+        data: data,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('consult_pdf_error'.tr(namedArgs: {'msg': '$e'})),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   // ---- ONGLET CONSULTATION ----
 
   Widget _buildConsultationTab() {
     if (_consultationData == null) {
       return Center(child: Text('hcdet_no_data'.tr()));
     }
+
+    final fieldsWidgets = <MapEntry<String, String>>[];
+
+    // 1. Map des champs par défaut
+    final defaultLabels = {
+      'antecedents': 'Antécédents',
+      'signes_symptomes': 'Signes & Symptômes',
+      'diagnostic_initial': 'Diagnostic Initial',
+      'diagnostic_final': 'Diagnostic Final',
+      'traitement_prescrit': 'Traitement Prescrit',
+    };
+
+    defaultLabels.forEach((cle, label) {
+      final value = _consultationData![cle]?.toString();
+      if (value != null && value.trim().isNotEmpty) {
+        fieldsWidgets.add(MapEntry(label, value));
+      }
+    });
+
+    // 2. Champs supplémentaires (JSONB)
+    final extra = _consultationData!['champs_supplementaires'];
+    if (extra is Map) {
+      extra.forEach((key, value) {
+        if (value is Map) {
+          final label = value['label']?.toString() ?? key;
+          final valeur = value['valeur']?.toString() ?? '';
+          if (valeur.trim().isNotEmpty) {
+            fieldsWidgets.add(MapEntry(label, valeur));
+          }
+        }
+      });
+    }
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildSectionCard(
-            title: 'hcdet_section_diag_initial'.tr(),
-            icon: Icons.manage_search_rounded,
-            children: [
-              _buildReadOnlyField(
-                'hcdet_field_antecedent'.tr(),
-                _consultationData!['antecedents']?.toString(),
-              ),
-              _buildReadOnlyField(
-                'hcdet_field_signs'.tr(),
-                _consultationData!['signes_symptomes']?.toString(),
-              ),
-              _buildReadOnlyField(
-                'hcdet_field_diag_initial'.tr(),
-                _consultationData!['diagnostic_initial']?.toString(),
-                isLast: true,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildSectionCard(
-            title: 'hcdet_section_diag_final'.tr(),
-            icon: Icons.medical_services_rounded,
-            children: [
-              _buildReadOnlyField(
-                'hcdet_field_diag_final'.tr(),
-                _consultationData!['diagnostic_final']?.toString(),
-              ),
-              _buildReadOnlyField(
-                'hcdet_field_treatment'.tr(),
-                _consultationData!['traitement_prescrit']?.toString(),
-                isLast: true,
-              ),
-            ],
-          ),
+          if (fieldsWidgets.isNotEmpty)
+            _buildSectionCard(
+              title: 'Informations Cliniques',
+              icon: Icons.medical_services_rounded,
+              children: List.generate(fieldsWidgets.length, (idx) {
+                final entry = fieldsWidgets[idx];
+                return _buildReadOnlyField(
+                  entry.key,
+                  entry.value,
+                  isLast: idx == fieldsWidgets.length - 1,
+                );
+              }),
+            ),
           const SizedBox(height: 12),
           _buildSectionCard(
             title: 'hcdet_section_rdv'.tr(),
@@ -876,6 +950,14 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
             fontWeight: FontWeight.w700,
           ),
         ),
+        actions: [
+          if (!_isLoading && _consultationData != null)
+            IconButton(
+              icon: const Icon(Icons.print_rounded, color: Colors.white),
+              tooltip: 'consult_pdf_prompt_yes'.tr(),
+              onPressed: _printConsultationPdf,
+            ),
+        ],
         centerTitle: !isDesktop,
         bottom: TabBar(
           controller: _tabController,

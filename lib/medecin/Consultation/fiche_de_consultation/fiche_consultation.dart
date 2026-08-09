@@ -5,6 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../shared/consultation_pickers.dart';
 import '../historique_consultation/historique_patient_page.dart';
+import '../champs_config/champ_config_model.dart';
+import '../champs_config/champs_config_service.dart';
+import '../finalisation_consultation/consultation_pdf_generator.dart';
 
 // --- Page de Consultation (StatefulWidget) ---
 class ConsultationPage extends StatefulWidget {
@@ -23,29 +26,25 @@ class _ConsultationPageState extends State<ConsultationPage> {
   String _patientName = '';
   bool _patientNameLoaded = false;
 
-  // --- Contrôleurs ---
-  final TextEditingController _antecedentsController = TextEditingController();
-  final TextEditingController _signesSymptomesController =
-      TextEditingController();
-  final TextEditingController _diagnosticInitialController =
-      TextEditingController();
-  final TextEditingController _diagnosticFinalController =
-      TextEditingController();
-  final TextEditingController _traitementPrescritController =
-      TextEditingController();
+  // --- Services de configuration ---
+  late final ChampsConfigService _configService;
+  List<ChampConfig> _fieldsConfig = [];
+  bool _configLoading = true;
+
+  // Contrôleurs et FocusNodes Dynamiques
+  final Map<String, TextEditingController> _dynamicControllers = {};
+  final Map<String, FocusNode> _dynamicFocusNodes = {};
+
+  // Contrôleurs RDV fixes
   final TextEditingController _rdvDateController = TextEditingController();
   final TextEditingController _rdvHeureController = TextEditingController();
 
-  // FocusNodes pour le focus et défilement automatique lors de la validation
-  final FocusNode _antecedentsFocusNode = FocusNode();
-  final FocusNode _signesSymptomesFocusNode = FocusNode();
-  final FocusNode _diagnosticInitialFocusNode = FocusNode();
+  // FocusNodes fixes
   final FocusNode _statutConsultationFocusNode = FocusNode();
-  final FocusNode _diagnosticFinalFocusNode = FocusNode();
-  final FocusNode _traitementPrescritFocusNode = FocusNode();
   final FocusNode _programmationRdvFocusNode = FocusNode();
   final FocusNode _rdvDateFocusNode = FocusNode();
   final FocusNode _rdvHeureFocusNode = FocusNode();
+
 
   // --- Variables d'État du Formulaire ---
   String? _statutConsultation;
@@ -64,6 +63,10 @@ class _ConsultationPageState extends State<ConsultationPage> {
   bool _medicamentsLoading = true;
   String? _idPatient;
 
+  // Cache patient & vitaux pour le PDF
+  Map<String, dynamic> _cachedPatient = {};
+  Map<String, dynamic> _cachedVitaux = {};
+
   // --- Couleurs et Styles (Consolidés) ---
   final Color fieldBackgroundColor = const Color(0xFFF8F9FA);
   final Color fieldBorderColor = const Color(0xFFE0E0E0);
@@ -75,30 +78,48 @@ class _ConsultationPageState extends State<ConsultationPage> {
   void initState() {
     super.initState();
     medecinService = MedecinServices(Supabase.instance.client);
+    _configService = ChampsConfigService(Supabase.instance.client);
     _loadPatientName();
     _loadExamens();
     _loadMedicaments();
+    _loadFieldsConfig();
+  }
+
+  Future<void> _loadFieldsConfig() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    try {
+      final config = await _configService.getChampsConfig(user.id);
+      if (mounted) {
+        setState(() {
+          _fieldsConfig = config;
+          for (final c in config) {
+            _dynamicControllers[c.cle] = TextEditingController();
+            _dynamicFocusNodes[c.cle] = FocusNode();
+          }
+          _configLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Erreur _loadFieldsConfig: $e');
+      if (mounted) {
+        setState(() => _configLoading = false);
+      }
+    }
   }
 
   @override
   void dispose() {
-    _antecedentsController.dispose();
-    _signesSymptomesController.dispose();
-    _diagnosticInitialController.dispose();
-    _diagnosticFinalController.dispose();
-    _traitementPrescritController.dispose();
     _rdvDateController.dispose();
     _rdvHeureController.dispose();
 
-    _antecedentsFocusNode.dispose();
-    _signesSymptomesFocusNode.dispose();
-    _diagnosticInitialFocusNode.dispose();
     _statutConsultationFocusNode.dispose();
-    _diagnosticFinalFocusNode.dispose();
-    _traitementPrescritFocusNode.dispose();
     _programmationRdvFocusNode.dispose();
     _rdvDateFocusNode.dispose();
     _rdvHeureFocusNode.dispose();
+
+    _dynamicControllers.forEach((_, controller) => controller.dispose());
+    _dynamicFocusNodes.forEach((_, focusNode) => focusNode.dispose());
     super.dispose();
   }
 
@@ -108,7 +129,9 @@ class _ConsultationPageState extends State<ConsultationPage> {
     try {
       final data = await medecinService.infosPatient(widget.idConsultation);
       if (data.isNotEmpty) {
-        final patient = data[0]['Patient'] as Map<String, dynamic>;
+        final consultationRow = data[0];
+        final patient = consultationRow['Patient'] as Map<String, dynamic>;
+        final vitaux = (consultationRow['Parametres_vitaux'] as Map<String, dynamic>?) ?? {};
         final String nomComplet = (patient['nom_complet']?.toString() ?? '');
         final String? idPatient = patient['id_patient']?.toString();
         if (mounted) {
@@ -116,6 +139,8 @@ class _ConsultationPageState extends State<ConsultationPage> {
             _patientName = nomComplet;
             _patientNameLoaded = true;
             _idPatient = idPatient;
+            _cachedPatient = patient;
+            _cachedVitaux = vitaux;
           });
         }
       }
@@ -457,22 +482,23 @@ class _ConsultationPageState extends State<ConsultationPage> {
     required TextEditingController controller,
     String? Function(String?)? validator,
     FocusNode? focusNode,
+    int minLines = 3,
+    int maxLines = 5,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
-        // 🛑 Utilisation de TextFormField pour la validation
         controller: controller,
         focusNode: focusNode,
-        minLines: 3,
-        maxLines: 5,
-        validator: validator, // 🛑 Ajout du validateur
+        minLines: minLines,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        validator: validator,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(color: Colors.grey),
-          errorStyle: const TextStyle(
-            height: 0.5,
-          ), // Réduit l'espace des messages d'erreur
+          errorStyle: const TextStyle(height: 0.5),
           filled: true,
           fillColor: fieldBackgroundColor,
           border: OutlineInputBorder(
@@ -485,13 +511,11 @@ class _ConsultationPageState extends State<ConsultationPage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: primaryBlue.withOpacity(0.5)),
+            borderSide: BorderSide(color: primaryBlue.withValues(alpha: 0.5)),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(
-              color: Colors.red,
-            ), // Mettre en évidence les erreurs
+            borderSide: const BorderSide(color: Colors.red),
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
@@ -572,28 +596,18 @@ class _ConsultationPageState extends State<ConsultationPage> {
   }
 
   void _focusOnFirstInvalidField() {
-    if (_antecedentsController.text.trim().isEmpty) {
-      _focusAndScrollTo(_antecedentsFocusNode);
-      return;
-    }
-    if (_signesSymptomesController.text.trim().isEmpty) {
-      _focusAndScrollTo(_signesSymptomesFocusNode);
-      return;
-    }
-    if (_diagnosticInitialController.text.trim().isEmpty) {
-      _focusAndScrollTo(_diagnosticInitialFocusNode);
-      return;
+    for (final config in _fieldsConfig) {
+      final controller = _dynamicControllers[config.cle];
+      if (config.obligatoire && (controller == null || controller.text.trim().isEmpty)) {
+        final focusNode = _dynamicFocusNodes[config.cle];
+        if (focusNode != null) {
+          _focusAndScrollTo(focusNode);
+          return;
+        }
+      }
     }
     if (_statutConsultation == null) {
       _focusAndScrollTo(_statutConsultationFocusNode);
-      return;
-    }
-    if (_diagnosticFinalController.text.trim().isEmpty) {
-      _focusAndScrollTo(_diagnosticFinalFocusNode);
-      return;
-    }
-    if (_traitementPrescritController.text.trim().isEmpty) {
-      _focusAndScrollTo(_traitementPrescritFocusNode);
       return;
     }
     if (_programmationRdv == null) {
@@ -666,17 +680,34 @@ class _ConsultationPageState extends State<ConsultationPage> {
       );
     }
 
+    // Collecte des valeurs des champs dynamiques
+    final Map<String, dynamic> defaultFields = {
+      'antecedents': _dynamicControllers['antecedents']?.text ?? '',
+      'signes_symptomes': _dynamicControllers['signes_symptomes']?.text ?? '',
+      'diagnostic_initial': _dynamicControllers['diagnostic_initial']?.text ?? '',
+      'diagnostic_final': _dynamicControllers['diagnostic_final']?.text ?? '',
+      'traitement_prescrit': _dynamicControllers['traitement_prescrit']?.text ?? '',
+    };
+
+    final Map<String, dynamic> champsSupplementaires = {};
+    for (final config in _fieldsConfig) {
+      if (!config.isDefault) {
+        champsSupplementaires[config.cle] = {
+          'label': config.label,
+          'valeur': _dynamicControllers[config.cle]?.text ?? '',
+          'type': config.type,
+        };
+      }
+    }
+
     // 3. Appel du service d'enregistrement
     try {
       await medecinService.saveConsultationData(
         idConsultation: widget.idConsultation,
-        antecedents: _antecedentsController.text,
-        signesSymptomes: _signesSymptomesController.text,
-        diagnosticInitial: _diagnosticInitialController.text,
+        defaultFields: defaultFields,
+        champsSupplementaires: champsSupplementaires,
         statutConsultation: _statutConsultation ?? 'pas_examen',
         examensPrescrits: examensPrescrits,
-        diagnosticFinal: _diagnosticFinalController.text,
-        traitementPrescrit: _traitementPrescritController.text,
         programmationRdv: _programmationRdv == 'programmer'
             ? 'RDV_programmer'
             : null,
@@ -686,15 +717,20 @@ class _ConsultationPageState extends State<ConsultationPage> {
       );
 
       if (mounted) {
-        // Utiliser context.go au lieu de context.push pour remplacer la route
-        // Cela évite de revenir à la fiche de consultation lors du retour
-        context.go('/Dashboard_Medecin/ConsultationList');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('fiche_save_success'.tr()),
             backgroundColor: Colors.green,
           ),
         );
+        // Proposer l'impression de la fiche de consultation
+        await _proposePrintPdf(
+          examensPrescrits: examensPrescrits,
+          medicamentsPrescrits: medicamentsPrescrits,
+          finalRdvDate: finalRdvDate,
+          defaultFields: defaultFields,
+        );
+        if (mounted) context.go('/Dashboard_Medecin/ConsultationList');
       }
     } on PostgrestException catch (e) {
       if (mounted) {
@@ -721,37 +757,122 @@ class _ConsultationPageState extends State<ConsultationPage> {
     }
   }
 
+  Future<void> _proposePrintPdf({
+    required List<Map<String, dynamic>> examensPrescrits,
+    required List<Map<String, dynamic>> medicamentsPrescrits,
+    required Map<String, dynamic> defaultFields,
+    DateTime? finalRdvDate,
+  }) async {
+    if (!mounted) return;
+    final shouldPrint = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text('consult_pdf_prompt_title'.tr()),
+        content: Text('consult_pdf_prompt_message'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('consult_pdf_prompt_no'.tr()),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.print, size: 18),
+            label: Text('consult_pdf_prompt_yes'.tr()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryPurple,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+    if (shouldPrint != true || !mounted) return;
+
+    final p = _cachedPatient;
+    final v = _cachedVitaux;
+
+    final data = ConsultationPdfData(
+      idConsultation: '${widget.idConsultation}',
+      patientNom: p['nom_complet']?.toString() ?? '—',
+      patientSexe: p['sexe']?.toString() ?? '—',
+      patientAge: p['age']?.toString() ?? '—',
+      patientTelephone: p['telephone']?.toString() ?? '—',
+      patientAdresse: p['adresse']?.toString() ?? '—',
+      patientProfession: p['profession']?.toString() ?? '—',
+      patientStatutMatrimonial: p['statut_matrimonial']?.toString() ?? '—',
+      temperature: v['temperature']?.toString(),
+      tension: (v['systolique'] != null && v['diastolique'] != null)
+          ? '${v['systolique']}/${v['diastolique']}'
+          : null,
+      poids: v['poid']?.toString(),
+      statutVih: v['statut_VIH']?.toString(),
+      vaccination: v['vaccination']?.toString(),
+      motif: v['motif_de_consultation']?.toString(),
+      antecedents: defaultFields['antecedents']?.toString() ?? '—',
+      signesSymptomes: defaultFields['signes_symptomes']?.toString() ?? '—',
+      diagnosticInitial: defaultFields['diagnostic_initial']?.toString() ?? '—',
+      diagnosticFinal: defaultFields['diagnostic_final']?.toString() ?? '—',
+      traitementPrescrit: defaultFields['traitement_prescrit']?.toString() ?? '—',
+      rdvDate: finalRdvDate,
+      nouveauxExamens: examensPrescrits,
+      medicaments: medicamentsPrescrits,
+    );
+
+    try {
+      await ConsultationPdfGenerator.previewAndPrint(
+        context: context,
+        data: data,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('consult_pdf_error'.tr(namedArgs: {'msg': '$e'})),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   // --- WIDGETS DE CONSTRUCTION DE SECTION ---
 
-  Widget _buildGeneralInfoSection() {
-    // 🛑 VALIDATION : Les 3 champs principaux sont rendus obligatoires
+  Widget _buildDynamicFields() {
+    if (_configLoading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator(color: primaryPurple)),
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildFormField(
-          hint: 'fiche_hint_antecedents'.tr(),
-          controller: _antecedentsController,
-          focusNode: _antecedentsFocusNode,
-          validator: (value) => value == null || value.isEmpty
-              ? 'fiche_field_required'.tr()
-              : null,
-        ),
-        _buildFormField(
-          hint: 'fiche_hint_signs'.tr(),
-          controller: _signesSymptomesController,
-          focusNode: _signesSymptomesFocusNode,
-          validator: (value) => value == null || value.isEmpty
-              ? 'fiche_field_required'.tr()
-              : null,
-        ),
-        _buildFormField(
-          hint: 'fiche_hint_diag_initial'.tr(),
-          controller: _diagnosticInitialController,
-          focusNode: _diagnosticInitialFocusNode,
-          validator: (value) => value == null || value.isEmpty
-              ? 'fiche_field_required'.tr()
-              : null,
-        ),
+      children: <Widget>[
+        for (final config in _fieldsConfig)
+          Builder(builder: (context) {
+            final controller = _dynamicControllers[config.cle];
+            if (controller == null) return const SizedBox.shrink();
+            return _buildFormField(
+              hint: config.label + (config.obligatoire ? ' *' : ''),
+              controller: controller,
+              focusNode: _dynamicFocusNodes[config.cle],
+              minLines: config.hauteurLignes,
+              maxLines: config.hauteurLignes + 2,
+              keyboardType: config.type == 'numerique' ? TextInputType.number : TextInputType.text,
+              validator: (value) {
+                if (config.obligatoire && (value == null || value.trim().isEmpty)) {
+                  return 'fiche_field_required'.tr();
+                }
+                if (config.type == 'numerique' && value != null && value.trim().isNotEmpty) {
+                  if (double.tryParse(value.trim()) == null) {
+                    return 'Veuillez saisir un nombre valide';
+                  }
+                }
+                return null;
+              },
+            );
+          }),
       ],
     );
   }
@@ -776,7 +897,7 @@ class _ConsultationPageState extends State<ConsultationPage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: primaryBlue.withOpacity(0.5)),
+            borderSide: BorderSide(color: primaryBlue.withValues(alpha: 0.5)),
           ),
           errorStyle: const TextStyle(height: 0.5),
         ),
@@ -802,40 +923,6 @@ class _ConsultationPageState extends State<ConsultationPage> {
         },
       ),
       ),
-    );
-  }
-
-  Widget _buildFinalizationSection() {
-    // 🛑 VALIDATION : Diagnostic et Traitement sont rendus obligatoires
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'fiche_finalization_section'.tr(),
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 15),
-        _buildFormField(
-          hint: 'fiche_hint_diag_final'.tr(),
-          controller: _diagnosticFinalController,
-          focusNode: _diagnosticFinalFocusNode,
-          validator: (value) => value == null || value.isEmpty
-              ? 'fiche_field_required'.tr()
-              : null,
-        ),
-        _buildFormField(
-          hint: 'fiche_hint_treatment'.tr(),
-          controller: _traitementPrescritController,
-          focusNode: _traitementPrescritFocusNode,
-          validator: (value) => value == null || value.isEmpty
-              ? 'fiche_field_required'.tr()
-              : null,
-        ),
-      ],
     );
   }
 
@@ -1125,19 +1212,29 @@ class _ConsultationPageState extends State<ConsultationPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Section 1: Infos générales (obligatoires)
-                          _buildGeneralInfoSection(),
+                          // Les champs de consultation configurés dynamiquement
+                          _buildDynamicFields(),
+
+                          const SizedBox(height: 20),
+                          const Divider(),
+                          const SizedBox(height: 15),
+
+                          // Prescriptions & Examens
+                          const Text(
+                            'Examens & Médicaments',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
 
                           // Dropdown Statut Consultation (obligatoire)
                           _buildExamStatusDropdown(),
 
                           // Liste des examens (conditionnel) -> bouton qui ouvre un modal
                           if (_showExamens) _buildExamsPickerButton(),
-
-                          const SizedBox(height: 25),
-
-                          // Section 2: Finalisation (obligatoire)
-                          _buildFinalizationSection(),
 
                           // Sélection des médicaments (Pharmacie)
                           _buildMedicamentsPickerButton(),

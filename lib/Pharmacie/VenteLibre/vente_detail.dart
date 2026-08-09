@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:hostoman/shared/responsive_wrapper.dart';
 import '../shared/pharmacie_theme.dart';
 import '../Ordonnances/ordonnances_service.dart';
 
@@ -68,12 +69,68 @@ class _VenteDetailPageState extends State<VenteDetailPage> {
       }
       if (!mounted) return;
       await _showReceiptDialog();
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: PharmacieTheme.danger,
-            content: Text('phar_action_error'.tr()),
+            content: Text(e.toString()),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _annuler() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('phar_vl_cancel_title'.tr()),
+        content: Text('phar_vl_cancel_message'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'phar_vd_receipt_no'.tr(),
+              style: const TextStyle(color: PharmacieTheme.textMuted),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PharmacieTheme.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('phar_vl_cancel_yes'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _saving = true);
+    try {
+      await _service.annulerPrescription(widget.idPrescription);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: PharmacieTheme.success,
+            content: Text('phar_vl_cancelled_success'.tr()),
+          ),
+        );
+        context.go('/Dashboard_Pharmacie/VenteLibre');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: PharmacieTheme.danger,
+            content: Text(e.toString()),
           ),
         );
       }
@@ -241,6 +298,10 @@ class _VenteDetailPageState extends State<VenteDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    return ResponsiveLayout(mobile: _buildMobile(), pc: _buildPc());
+  }
+
+  Widget _buildMobile() {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
@@ -264,14 +325,55 @@ class _VenteDetailPageState extends State<VenteDetailPage> {
               child: CircularProgressIndicator(color: PharmacieTheme.primary),
             )
           : _error != null
-          ? Center(
-              child: Text(
-                _error!,
-                style: const TextStyle(color: PharmacieTheme.danger),
-              ),
-            )
-          : _buildBody(),
+              ? Center(
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: PharmacieTheme.danger),
+                  ),
+                )
+              : _buildBody(),
     );
+  }
+
+  Widget _buildPc() {
+    return _loading
+        ? const Center(
+            child: CircularProgressIndicator(color: PharmacieTheme.primary),
+          )
+        : _error != null
+            ? Center(
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: PharmacieTheme.danger),
+                ),
+              )
+            : Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => context.go('/Dashboard_Pharmacie/VenteLibre'),
+                          icon: const Icon(Icons.arrow_back),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'phar_vd_title'.tr(),
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: PharmacieTheme.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(child: _buildBody()),
+                  ],
+                ),
+              );
   }
 
   Widget _buildBody() {
@@ -378,39 +480,64 @@ class _VenteDetailPageState extends State<VenteDetailPage> {
           ),
         ),
 
-        // Bouton Encaisser
+        // Boutons Annuler et Encaisser
         Container(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _saving ? null : _encaisser,
-              icon: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.point_of_sale_rounded),
-              label: Text(
-                'phar_vd_encaisser'.tr(),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _saving ? null : _annuler,
+                  icon: const Icon(Icons.cancel_outlined, color: PharmacieTheme.danger),
+                  label: Text(
+                    'phar_vd_annuler'.tr(),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: PharmacieTheme.danger,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: PharmacieTheme.danger, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: PharmacieTheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _saving ? null : _encaisser,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.point_of_sale_rounded),
+                  label: Text(
+                    'phar_vd_encaisser'.tr(),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PharmacieTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ],

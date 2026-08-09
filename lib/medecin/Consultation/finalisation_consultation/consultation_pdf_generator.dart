@@ -157,22 +157,19 @@ class ConsultationPdfGenerator {
               // ===== INFOS PATIENT =====
               _sectionTitle(ttfBold, 'consult_pdf_section_patient'.tr()),
               pw.SizedBox(height: 4),
-              _infoBox(
+              _infoGrid(
                 ttf,
                 ttfBold,
-                rows: [
+                fullWidthRows: [
                   ['consult_pdf_label_name'.tr(), data.patientNom],
-                  [
-                    'consult_pdf_label_sex_age'.tr(),
-                    '${data.patientSexe} — ${data.patientAge}',
-                  ],
+                ],
+                pairedRows: [
+                  ['consult_pdf_label_sex'.tr(), data.patientSexe],
+                  ['consult_pdf_label_age'.tr(), data.patientAge],
                   ['consult_pdf_label_phone'.tr(), data.patientTelephone],
                   ['consult_pdf_label_address'.tr(), data.patientAdresse],
                   ['consult_pdf_label_profession'.tr(), data.patientProfession],
-                  [
-                    'consult_pdf_label_marital'.tr(),
-                    data.patientStatutMatrimonial,
-                  ],
+                  ['consult_pdf_label_marital'.tr(), data.patientStatutMatrimonial],
                 ],
               ),
               pw.SizedBox(height: 10),
@@ -181,10 +178,10 @@ class ConsultationPdfGenerator {
               if (_hasVitals(data)) ...[
                 _sectionTitle(ttfBold, 'consult_pdf_section_vitals'.tr()),
                 pw.SizedBox(height: 4),
-                _infoBox(
+                _infoGrid(
                   ttf,
                   ttfBold,
-                  rows: [
+                  pairedRows: [
                     if ((data.temperature ?? '').isNotEmpty)
                       ['consult_pdf_label_temp'.tr(), data.temperature!],
                     if ((data.tension ?? '').isNotEmpty)
@@ -390,6 +387,143 @@ class ConsultationPdfGenerator {
               ),
             )
             .toList(),
+      ),
+    );
+  }
+
+  /// Renders a compact 2-column grid.
+  /// [fullWidthRows]: rows that span both columns (e.g. patient name).
+  /// [pairedRows]: placed 2 per row side-by-side.
+  static pw.Widget _infoGrid(
+    pw.Font ttf,
+    pw.Font ttfBold, {
+    List<List<String>> fullWidthRows = const [],
+    List<List<String>> pairedRows = const [],
+  }) {
+    // Build paired rows (chunks of 2)
+    final List<pw.Widget> gridRows = [];
+
+    // Full-width rows first
+    for (final r in fullWidthRows) {
+      gridRows.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(vertical: 2),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.SizedBox(
+                width: 90,
+                child: pw.Text(
+                  '${r[0]} :',
+                  style: pw.TextStyle(
+                    font: ttf,
+                    fontSize: 9,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+              ),
+              pw.Expanded(
+                child: pw.Text(
+                  r[1].isEmpty ? '\u2014' : r[1],
+                  style: pw.TextStyle(font: ttfBold, fontSize: 9),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Divider after full-width rows if needed
+    if (fullWidthRows.isNotEmpty && pairedRows.isNotEmpty) {
+      gridRows.add(
+        pw.Divider(height: 4, thickness: 0.3, color: PdfColors.grey400),
+      );
+    }
+
+    // Pair the remaining rows in groups of 2
+    for (int i = 0; i < pairedRows.length; i += 2) {
+      final left = pairedRows[i];
+      final right = i + 1 < pairedRows.length ? pairedRows[i + 1] : null;
+
+      gridRows.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(vertical: 2),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Left cell
+              pw.Expanded(
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.SizedBox(
+                      width: 75,
+                      child: pw.Text(
+                        '${left[0]} :',
+                        style: pw.TextStyle(
+                          font: ttf,
+                          fontSize: 9,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                    ),
+                    pw.Expanded(
+                      child: pw.Text(
+                        left[1].isEmpty ? '\u2014' : left[1],
+                        style: pw.TextStyle(font: ttfBold, fontSize: 9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Vertical separator
+              pw.SizedBox(
+                width: 1,
+                child: pw.Container(color: PdfColors.grey300),
+              ),
+              pw.SizedBox(width: 8),
+              // Right cell (may be empty)
+              pw.Expanded(
+                child: right != null
+                    ? pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.SizedBox(
+                            width: 75,
+                            child: pw.Text(
+                              '${right[0]} :',
+                              style: pw.TextStyle(
+                                font: ttf,
+                                fontSize: 9,
+                                color: PdfColors.grey700,
+                              ),
+                            ),
+                          ),
+                          pw.Expanded(
+                            child: pw.Text(
+                              right[1].isEmpty ? '\u2014' : right[1],
+                              style: pw.TextStyle(font: ttfBold, fontSize: 9),
+                            ),
+                          ),
+                        ],
+                      )
+                    : pw.SizedBox(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: gridRows,
       ),
     );
   }

@@ -102,7 +102,8 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: PharmacieTheme.danger,
-            content: Text('phar_action_error'.tr()),
+            content: Text(e.toString()),
+            duration: const Duration(seconds: 8),
           ),
         );
       }
@@ -290,35 +291,31 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
   }
 
   Widget _buildPc() {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie/Ordonnances',
-      breadcrumbKey: 'phar_breadcrumb_ordo_detail',
-      body: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => context.pop(),
-                  icon: const Icon(Icons.arrow_back),
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => context.pop(),
+                icon: const Icon(Icons.arrow_back),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'phar_ordo_detail_title'.tr(),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: PharmacieTheme.textDark,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'phar_ordo_detail_title'.tr(),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: PharmacieTheme.textDark,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(child: _buildContent(isPc: true)),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _buildContent(isPc: true)),
+        ],
       ),
     );
   }

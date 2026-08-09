@@ -413,20 +413,16 @@ class _DashboardPharmacieState extends State<DashboardPharmacie> {
 
   // ========== PC — sidebar + grille complète ==========
   Widget _buildPc() {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie',
-      breadcrumbKey: 'phar_breadcrumb_dashboard',
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: PharmacieTheme.primary),
-            )
-          : _error != null
-          ? _errorView()
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(28),
-              child: _buildPcBody(),
-            ),
-    );
+    return _loading
+        ? const Center(
+            child: CircularProgressIndicator(color: PharmacieTheme.primary),
+          )
+        : _error != null
+        ? _errorView()
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: _buildPcBody(),
+          );
   }
 
   Widget _buildPcBody() {

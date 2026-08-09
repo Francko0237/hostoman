@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../Consultation/champs_config/champs_config_page.dart';
 
 // Couleurs propres au module Médecin (violet)
 const Color mmPrimaryColor = Color(0xFF5A47C9);
@@ -250,6 +251,21 @@ class ParametreMedecinPage extends StatelessWidget {
                     ),
                   ),
                   onTap: () => _showLanguagePicker(context),
+                ),
+                const SizedBox(height: 12),
+                _settingCard(
+                  icon: Icons.tune_rounded,
+                  iconColor: mmAccentColor,
+                  title: 'champ_config_param_btn'.tr(),
+                  subtitle: 'champ_config_param_btn_subtitle'.tr(),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChampsConfigPage(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 28),
                 _sectionTitle('acc_settings_system'.tr()),

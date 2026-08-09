@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../champs_config/accueil_champs_config_page.dart';
 
 const Color npPrimaryColor = Color(0xFF1565C0);
 const Color npAccentColor = Color(0xFF2196F3);
@@ -254,6 +255,21 @@ class ParametrePage extends StatelessWidget {
                     ),
                   ),
                   onTap: () => _showLanguagePicker(context),
+                ),
+                const SizedBox(height: 12),
+                _settingCard(
+                  icon: Icons.tune_rounded,
+                  iconColor: npPrimaryColor,
+                  title: 'acc_champ_config_param_btn'.tr(),
+                  subtitle: 'acc_champ_config_param_btn_subtitle'.tr(),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AccueilChampsConfigPage(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 28),
                 _sectionTitle('acc_settings_system'.tr()),

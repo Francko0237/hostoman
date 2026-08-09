@@ -902,15 +902,19 @@ class _FinalisationConsultationPageState
     try {
       // Délègue au service : met à jour la consultation, insère les
       // examens additionnels (avec facture) et la prescription pharmacie.
+      final Map<String, dynamic> defaultFields = {
+        'antecedents': _antecedentsController.text,
+        'signes_symptomes': _signesSymptomesController.text,
+        'diagnostic_initial': _diagnosticInitialController.text,
+        'diagnostic_final': _diagnosticFinalController.text,
+        'traitement_prescrit': _traitementPrescritController.text,
+      };
       await medecinService.saveConsultationData(
         idConsultation: widget.idConsultation,
-        antecedents: _antecedentsController.text,
-        signesSymptomes: _signesSymptomesController.text,
-        diagnosticInitial: _diagnosticInitialController.text,
+        defaultFields: defaultFields,
+        champsSupplementaires: const {},
         statutConsultation: 'terminer',
         examensPrescrits: examensPrescrits,
-        diagnosticFinal: _diagnosticFinalController.text,
-        traitementPrescrit: _traitementPrescritController.text,
         programmationRdv: _programmationRdv == 'programmer'
             ? 'RDV_programmer'
             : null,

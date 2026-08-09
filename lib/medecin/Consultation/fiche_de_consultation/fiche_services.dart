@@ -54,13 +54,10 @@ class MedecinServices {
   ///   - disponible_initialement (bool)
   Future<void> saveConsultationData({
     required int idConsultation,
-    required String antecedents,
-    required String signesSymptomes,
-    required String diagnosticInitial,
-    required String statutConsultation, // Reçu de l'UI
+    required Map<String, dynamic> defaultFields,
+    required Map<String, dynamic> champsSupplementaires,
+    required String statutConsultation,
     required List<Map<String, dynamic>> examensPrescrits,
-    required String diagnosticFinal,
-    required String traitementPrescrit,
     String? programmationRdv,
     DateTime? rdvDate,
     List<Map<String, dynamic>> medicamentsPrescrits = const [],
@@ -77,11 +74,12 @@ class MedecinServices {
     await supabase
         .from('Consultation')
         .update({
-          'antecedents': antecedents,
-          'signes_symptomes': signesSymptomes,
-          'diagnostic_initial': diagnosticInitial,
-          'diagnostic_final': diagnosticFinal,
-          'traitement_prescrit': traitementPrescrit,
+          'antecedents': defaultFields['antecedents'],
+          'signes_symptomes': defaultFields['signes_symptomes'],
+          'diagnostic_initial': defaultFields['diagnostic_initial'],
+          'diagnostic_final': defaultFields['diagnostic_final'],
+          'traitement_prescrit': defaultFields['traitement_prescrit'],
+          'champs_supplementaires': champsSupplementaires,
           'programmation_rdv': programmationRdv,
           'Statut_Consultation': statutFinal,
           'date_rdv_prevu': rdvDate?.toIso8601String(),
@@ -89,51 +87,37 @@ class MedecinServices {
         })
         .eq('id_consultation', idConsultation);
 
-    // 2. Traitement des examens et de la facturation
+    // 2. Traitement des examens
+    double totalExamens = 0;
     if (examensPrescrits.isNotEmpty) {
-      // Insertion des examens à effectuer
-      final List<Map<String, dynamic>> dataToInsert = examensPrescrits.map((
-        examen,
-      ) {
+      final List<Map<String, dynamic>> dataToInsert = examensPrescrits.map((e) {
         return {
           'id_consultation': idConsultation,
-          'nom_examen': examen['nom'],
-          'prix_examen': examen['prix'],
+          'nom_examen': e['nom'],
+          'prix_examen': e['prix'],
           'statut_examen': 'en attente',
           'date_enregistrement': now,
         };
       }).toList();
-
       await supabase.from('examen_a_effectuer').insert(dataToInsert);
 
-      // 3. GÉNÉRATION AUTOMATIQUE DE LA FACTURE
-      double totalPrix = 0;
-      for (var ex in examensPrescrits) {
-        // Conversion sécurisée : gère String ou num
+      for (final ex in examensPrescrits) {
         final prix = ex['prix'];
-        totalPrix += prix;
+        if (prix is num) totalExamens += prix.toDouble();
       }
-
-      await supabase.from('paiement').insert({
-        'id_consultation': idConsultation,
-        'prix_a_paye': totalPrix,
-        'statut_paiement': 'en_attente',
-        'motif': 'Examens',
-        'date_paiement': now,
-      });
     }
 
-    // 4. Traitement des médicaments prescrits (Pharmacie)
+    // 3. Traitement des médicaments prescrits
+    int? idPrescription;
+    double totalMed = 0;
     if (medicamentsPrescrits.isNotEmpty) {
-      // Total estimé (les saisies libres sans prix sont ignorées du total)
-      double totalMed = 0;
       for (final m in medicamentsPrescrits) {
         final prix = (m['prix_unitaire'] as num?)?.toDouble() ?? 0;
         final qte = (m['quantite'] as num?)?.toInt() ?? 1;
         totalMed += prix * qte;
       }
 
-      // 4.a Création de la prescription
+      // 3.a Création de la prescription
       final prescriptionRes = await supabase
           .from('prescription')
           .insert({
@@ -148,31 +132,46 @@ class MedecinServices {
           .select('id_prescription')
           .single();
 
-      final int idPrescription = prescriptionRes['id_prescription'] as int;
+      idPrescription = prescriptionRes['id_prescription'] as int;
 
-      // 4.b Lignes de prescription
+      // 3.b Lignes de prescription
       final List<Map<String, dynamic>> lignes = medicamentsPrescrits.map((m) {
         return {
           'id_prescription': idPrescription,
-          'id_medicament': m['id_medicament'], // peut être null
+          'id_medicament': m['id_medicament'],
           'nom_medicament': m['nom_medicament'],
           'posologie': m['posologie'],
           'quantite': m['quantite'],
-          'prix_unitaire': m['prix_unitaire'], // peut être null si saisie libre
+          'prix_unitaire': m['prix_unitaire'],
           'disponible_initialement': m['disponible_initialement'] ?? false,
           'statut_ligne': 'en_attente',
         };
       }).toList();
-
       await supabase.from('prescription_ligne').insert(lignes);
+    }
 
-      // 4.c Facture pharmacie
+    // 4. Création d'UN SEUL paiement consolidé (examens + médicaments)
+    //    Cela évite le bug "seulement un paiement à la fois" à la caisse.
+    final double totalConsolide = totalExamens + totalMed;
+    final bool hasExams = examensPrescrits.isNotEmpty;
+    final bool hasMeds = medicamentsPrescrits.isNotEmpty;
+
+    if (hasExams || hasMeds) {
+      String motif;
+      if (hasExams && hasMeds) {
+        motif = 'Examens & Médicaments';
+      } else if (hasExams) {
+        motif = 'Examens';
+      } else {
+        motif = 'Medicaments';
+      }
+
       await supabase.from('paiement').insert({
         'id_consultation': idConsultation,
-        'id_prescription': idPrescription,
-        'prix_a_paye': totalMed,
+        if (idPrescription != null) 'id_prescription': idPrescription,
+        'prix_a_paye': totalConsolide,
         'statut_paiement': 'en_attente',
-        'motif': 'Medicaments',
+        'motif': motif,
         'date_paiement': now,
       });
     }

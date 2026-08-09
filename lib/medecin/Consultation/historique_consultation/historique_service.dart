@@ -74,6 +74,7 @@ class HistoriqueConsultationService {
           diagnostic_initial,
           diagnostic_final,
           traitement_prescrit,
+          champs_supplementaires,
           Parametres_vitaux(motif_de_consultation)
         ''')
         .eq('id_patient', idPatient)
@@ -89,5 +90,29 @@ class HistoriqueConsultationService {
           .toList();
     }
     return results;
+  }
+
+  /// 💊 Récupère les lignes de prescription (médicaments) d'une consultation
+  Future<List<Map<String, dynamic>>> getMedicamentsConsultation(
+    int idConsultation,
+  ) async {
+    final List<dynamic> prescription = await supabase
+        .from('prescription')
+        .select('id_prescription')
+        .eq('id_consultation', idConsultation);
+
+    if (prescription.isEmpty) return [];
+
+    final idPrescription = prescription.first['id_prescription'] as int;
+
+    final response = await supabase
+        .from('prescription_ligne')
+        .select('*')
+        .eq('id_prescription', idPrescription)
+        .order('id_ligne', ascending: true);
+
+    return (response as List<dynamic>)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
   }
 }

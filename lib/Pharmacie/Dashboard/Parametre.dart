@@ -137,13 +137,21 @@ class ParametrePharmacie extends StatelessWidget {
       applicationName: 'auth_hospital_name'.tr(),
       applicationVersion: 'v1.0.0',
       applicationIcon: Container(
-        width: 48,
-        height: 48,
+        width: 64,
+        height: 64,
         decoration: BoxDecoration(
-          color: _primary.withValues(alpha: 0.1),
+          color: _primary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(Icons.medication_rounded, color: _primary),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.asset(
+            'assets/images/logo.png',
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) =>
+                const Icon(Icons.local_hospital_rounded, color: _primary),
+          ),
+        ),
       ),
       applicationLegalese: '© 2025 Yamgai Mokube Franck Daniel',
     );
@@ -237,18 +245,14 @@ class ParametrePharmacie extends StatelessWidget {
   }
 
   Widget _buildPc(BuildContext context) {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie/Parametres',
-      breadcrumbKey: 'phar_breadcrumb_parametres',
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: _bodyItems(context),
-            ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(28),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _bodyItems(context),
           ),
         ),
       ),
@@ -312,10 +316,16 @@ class ParametrePharmacie extends StatelessWidget {
       Center(
         child: Column(
           children: [
-            Icon(
-              Icons.medication_rounded,
-              color: Colors.grey.shade400,
-              size: 32,
+            Image.asset(
+              'assets/images/logo.png',
+              width: 40,
+              height: 40,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.local_hospital_rounded,
+                color: Colors.grey.shade400,
+                size: 32,
+              ),
             ),
             const SizedBox(height: 8),
             Text(

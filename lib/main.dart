@@ -74,6 +74,7 @@ import 'package:hostoman/Pharmacie/VenteLibre/nouvelle_vente.dart';
 import 'package:hostoman/Pharmacie/Historique/historique.dart';
 import 'package:hostoman/Pharmacie/Statistique/statistique.dart';
 import 'package:hostoman/Pharmacie/Stock/stock_entree_list.dart';
+import 'package:hostoman/Pharmacie/shared/pharmacie_theme.dart';
 
 //Configuration de toutes les route du projets
 final GoRouter _router = GoRouter(
@@ -360,63 +361,131 @@ final GoRouter _router = GoRouter(
     ),
 
     // Pharmacie
-    GoRoute(
-      path: '/Dashboard_Pharmacie',
-      builder: (context, state) => const DashboardPharmacie(),
+    // Pharmacie ShellRoute to keep the sidebar static on PC
+    ShellRoute(
+      builder: (context, state, child) {
+        final isDesktop = MediaQuery.of(context).size.width >= 700;
+        if (isDesktop) {
+          final location = state.matchedLocation;
+          String activeRoute = '/Dashboard_Pharmacie';
+          String breadcrumbKey = 'phar_breadcrumb_dashboard';
+
+          if (location.startsWith('/Dashboard_Pharmacie/Ordonnances')) {
+            activeRoute = '/Dashboard_Pharmacie/Ordonnances';
+            breadcrumbKey = location.split('/').length > 3
+                ? 'phar_breadcrumb_ordo_detail'
+                : 'phar_breadcrumb_ordonnances';
+          } else if (location.startsWith('/Dashboard_Pharmacie/VenteLibre')) {
+            activeRoute = '/Dashboard_Pharmacie/VenteLibre';
+            if (location.endsWith('/NouvelleVente')) {
+              breadcrumbKey = 'phar_nv_title';
+            } else if (location.split('/').length > 3) {
+              breadcrumbKey = 'phar_breadcrumb_ordo_detail';
+            } else {
+              breadcrumbKey = 'phar_breadcrumb_vente_libre';
+            }
+          } else if (location.startsWith('/Dashboard_Pharmacie/Catalogue')) {
+            activeRoute = '/Dashboard_Pharmacie/Catalogue';
+            breadcrumbKey = 'phar_breadcrumb_catalogue';
+          } else if (location.startsWith('/Dashboard_Pharmacie/Historique')) {
+            activeRoute = '/Dashboard_Pharmacie/Historique';
+            breadcrumbKey = 'phar_breadcrumb_historique';
+          } else if (location.startsWith('/Dashboard_Pharmacie/Statistiques')) {
+            activeRoute = '/Dashboard_Pharmacie/Statistiques';
+            breadcrumbKey = 'phar_breadcrumb_stats';
+          } else if (location.startsWith('/Dashboard_Pharmacie/Stock')) {
+            activeRoute = '/Dashboard_Pharmacie/Stock';
+            breadcrumbKey = 'phar_breadcrumb_stock';
+          } else if (location.startsWith('/Dashboard_Pharmacie/Profil')) {
+            activeRoute = '/Dashboard_Pharmacie/Profil';
+            breadcrumbKey = 'phar_breadcrumb_profil';
+          } else if (location.startsWith('/Dashboard_Pharmacie/Parametres')) {
+            activeRoute = '/Dashboard_Pharmacie/Parametres';
+            breadcrumbKey = 'phar_breadcrumb_parametres';
+          }
+
+          return PharmaciePcLayout(
+            activeRoute: activeRoute,
+            breadcrumbKey: breadcrumbKey,
+            body: child,
+          );
+        }
+        return child;
+      },
       routes: [
         GoRoute(
-          path: 'Ordonnances',
-          builder: (context, state) => const OrdonnancesList(),
-          routes: [
-            GoRoute(
-              path: ':idPrescription',
-              builder: (context, state) {
-                final id = int.parse(state.pathParameters['idPrescription']!);
-                return OrdonnanceDetail(idPrescription: id);
-              },
-            ),
-          ],
+          path: '/Dashboard_Pharmacie',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: DashboardPharmacie(),
+          ),
         ),
         GoRoute(
-          path: 'VenteLibre',
-          builder: (context, state) => const VenteLibrePage(),
-          routes: [
-            GoRoute(
-              path: 'NouvelleVente',
-              builder: (context, state) => const NouvelleVentePage(),
-            ),
-            GoRoute(
-              path: ':idPrescription',
-              builder: (context, state) {
-                final id = int.parse(state.pathParameters['idPrescription']!);
-                return VenteDetailPage(idPrescription: id);
-              },
-            ),
-          ],
+          path: '/Dashboard_Pharmacie/Ordonnances',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: OrdonnancesList(),
+          ),
         ),
         GoRoute(
-          path: 'Catalogue',
-          builder: (context, state) => const GestionMedicaments(),
+          path: '/Dashboard_Pharmacie/Ordonnances/:idPrescription',
+          pageBuilder: (context, state) {
+            final id = int.parse(state.pathParameters['idPrescription']!);
+            return NoTransitionPage(child: OrdonnanceDetail(idPrescription: id));
+          },
         ),
         GoRoute(
-          path: 'Historique',
-          builder: (context, state) => const HistoriquePharmacie(),
+          path: '/Dashboard_Pharmacie/VenteLibre',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: VenteLibrePage(),
+          ),
         ),
         GoRoute(
-          path: 'Statistiques',
-          builder: (context, state) => const StatistiquePharmacie(),
+          path: '/Dashboard_Pharmacie/VenteLibre/NouvelleVente',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: NouvelleVentePage(),
+          ),
         ),
         GoRoute(
-          path: 'Stock',
-          builder: (context, state) => const StockEntreePage(),
+          path: '/Dashboard_Pharmacie/VenteLibre/:idPrescription',
+          pageBuilder: (context, state) {
+            final id = int.parse(state.pathParameters['idPrescription']!);
+            return NoTransitionPage(child: VenteDetailPage(idPrescription: id));
+          },
         ),
         GoRoute(
-          path: 'Profil',
-          builder: (context, state) => const ProfilPharmacien(),
+          path: '/Dashboard_Pharmacie/Catalogue',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: GestionMedicaments(),
+          ),
         ),
         GoRoute(
-          path: 'Parametres',
-          builder: (context, state) => const ParametrePharmacie(),
+          path: '/Dashboard_Pharmacie/Historique',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: HistoriquePharmacie(),
+          ),
+        ),
+        GoRoute(
+          path: '/Dashboard_Pharmacie/Statistiques',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: StatistiquePharmacie(),
+          ),
+        ),
+        GoRoute(
+          path: '/Dashboard_Pharmacie/Stock',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: StockEntreePage(),
+          ),
+        ),
+        GoRoute(
+          path: '/Dashboard_Pharmacie/Profil',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: ProfilPharmacien(),
+          ),
+        ),
+        GoRoute(
+          path: '/Dashboard_Pharmacie/Parametres',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: ParametrePharmacie(),
+          ),
         ),
       ],
     ),
@@ -454,7 +523,10 @@ class MyApp extends StatelessWidget {
       themeMode: ThemeMode.light,
       theme: ThemeData(
         brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF64748B), // gris-bleu neutre, pas de violet
+          surface: Colors.white,
+        ),
         scaffoldBackgroundColor: const Color(0xFFF5F6FA),
         // Force le texte saisi dans les TextField à du noir solide
         // (sinon Material 3 dérive une teinte rosée/violette de la seed).
@@ -465,6 +537,18 @@ class MyApp extends StatelessWidget {
         ),
         inputDecorationTheme: const InputDecorationTheme(
           hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+        ),
+        dialogTheme: const DialogThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+          ),
+        ),
+        popupMenuTheme: const PopupMenuThemeData(
+          color: Colors.white,
+          surfaceTintColor: Colors.transparent,
         ),
         textTheme: ThemeData.light().textTheme.apply(
           bodyColor: const Color(0xFF0F172A),

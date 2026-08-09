@@ -190,61 +190,57 @@ class _GestionMedicamentsState extends State<GestionMedicaments> {
   }
 
   Widget _buildPc() {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie/Catalogue',
-      breadcrumbKey: 'phar_breadcrumb_catalogue',
-      body: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'phar_cat_title'.tr(),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: PharmacieTheme.textDark,
-                        ),
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'phar_cat_title'.tr(),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: PharmacieTheme.textDark,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'phar_cat_subtitle'.tr(),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: PharmacieTheme.textMuted,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'phar_cat_subtitle'.tr(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: PharmacieTheme.textMuted,
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showForm(),
+                icon: const Icon(Icons.add),
+                label: Text('phar_cat_add'.tr()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: PharmacieTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _showForm(),
-                  icon: const Icon(Icons.add),
-                  label: Text('phar_cat_add'.tr()),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: PharmacieTheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(child: _buildBody()),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _buildBody()),
+        ],
       ),
     );
   }

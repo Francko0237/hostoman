@@ -102,42 +102,38 @@ class _StockEntreePageState extends State<StockEntreePage> {
   }
 
   Widget _pc() {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie/Stock',
-      breadcrumbKey: 'phar_breadcrumb_stock',
-      body: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'phar_stock_title'.tr(),
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: PharmacieTheme.textDark,
-                  ),
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'phar_stock_title'.tr(),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: PharmacieTheme.textDark,
                 ),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: _openForm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: PharmacieTheme.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text('phar_stock_nouvelle_entree'.tr()),
+              ),
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: _openForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: PharmacieTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(child: _body()),
-          ],
-        ),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text('phar_stock_nouvelle_entree'.tr()),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _body()),
+        ],
       ),
     );
   }

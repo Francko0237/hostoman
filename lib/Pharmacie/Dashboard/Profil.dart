@@ -53,16 +53,12 @@ class _ProfilPharmacienState extends State<ProfilPharmacien> {
   }
 
   Widget _buildPc() {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie/Profil',
-      breadcrumbKey: 'phar_breadcrumb_profil',
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: _buildBody(),
-          ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(28),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: _buildBody(),
         ),
       ),
     );

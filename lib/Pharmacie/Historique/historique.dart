@@ -109,34 +109,30 @@ class _HistoriquePharmacieState extends State<HistoriquePharmacie> {
   }
 
   Widget _pc() {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie/Historique',
-      breadcrumbKey: 'phar_breadcrumb_historique',
-      body: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'phar_hist_title'.tr(),
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: PharmacieTheme.textDark,
-              ),
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'phar_hist_title'.tr(),
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: PharmacieTheme.textDark,
             ),
-            const SizedBox(height: 4),
-            Text(
-              'phar_hist_subtitle'.tr(),
-              style: const TextStyle(
-                fontSize: 14,
-                color: PharmacieTheme.textMuted,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'phar_hist_subtitle'.tr(),
+            style: const TextStyle(
+              fontSize: 14,
+              color: PharmacieTheme.textMuted,
             ),
-            const SizedBox(height: 16),
-            Expanded(child: _body()),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _body()),
+        ],
       ),
     );
   }

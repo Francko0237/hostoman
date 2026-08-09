@@ -99,11 +99,7 @@ class _OrdonnancesListState extends State<OrdonnancesList>
   }
 
   Widget _buildPc() {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie/Ordonnances',
-      breadcrumbKey: 'phar_breadcrumb_ordonnances',
-      body: _buildContent(isPc: true),
-    );
+    return _buildContent(isPc: true);
   }
 
   Widget _buildContent({bool isPc = false}) {

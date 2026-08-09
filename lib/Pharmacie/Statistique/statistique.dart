@@ -105,11 +105,7 @@ class _StatistiquePharmacieState extends State<StatistiquePharmacie> {
   }
 
   Widget _pc() {
-    return PharmaciePcLayout(
-      activeRoute: '/Dashboard_Pharmacie/Statistiques',
-      breadcrumbKey: 'phar_breadcrumb_stats',
-      body: _scrollBody(isPc: true),
-    );
+    return _scrollBody(isPc: true);
   }
 
   Widget _scrollBody({bool isPc = false}) {

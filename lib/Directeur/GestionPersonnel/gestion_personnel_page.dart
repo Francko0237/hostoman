@@ -162,10 +162,13 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlgState) {
           return Dialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -312,14 +315,26 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                               const SizedBox(height: 12),
                               DropdownButtonFormField<String>(
                                 initialValue: selectedRole,
+                                dropdownColor: Colors.white,
+                                focusColor: Colors.transparent,
+                                iconEnabledColor: dirPrimaryColor,
                                 decoration: InputDecoration(
                                   labelText: 'staff_field_role'.tr(),
-                                  prefixIcon: const Icon(Icons.badge),
+                                  labelStyle: const TextStyle(color: Color(0xFF5C6BC0)),
+                                  prefixIcon: const Icon(Icons.badge, color: Color(0xFF5C6BC0)),
                                   filled: true,
                                   fillColor: const Color(0xFFF8FAFC),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(color: dirPrimaryColor, width: 2),
                                   ),
                                 ),
                                 items: _kRoles
@@ -336,14 +351,26 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                               const SizedBox(height: 12),
                               DropdownButtonFormField<String>(
                                 initialValue: selectedSexe,
+                                dropdownColor: Colors.white,
+                                focusColor: Colors.transparent,
+                                iconEnabledColor: dirPrimaryColor,
                                 decoration: InputDecoration(
                                   labelText: 'staff_field_gender'.tr(),
-                                  prefixIcon: const Icon(Icons.wc),
+                                  labelStyle: const TextStyle(color: Color(0xFF5C6BC0)),
+                                  prefixIcon: const Icon(Icons.wc, color: Color(0xFF5C6BC0)),
                                   filled: true,
                                   fillColor: const Color(0xFFF8FAFC),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(color: dirPrimaryColor, width: 2),
                                   ),
                                 ),
                                 items: [
@@ -371,6 +398,8 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                           child: OutlinedButton(
                             onPressed: () => Navigator.pop(ctx),
                             style: OutlinedButton.styleFrom(
+                              foregroundColor: dirPrimaryColor,
+                              side: const BorderSide(color: dirPrimaryColor),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -460,6 +489,7 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
       controller: ctrl,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      cursorColor: dirPrimaryColor,
       validator:
           validator ??
           (required
@@ -469,12 +499,29 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
               : null),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon),
+        labelStyle: const TextStyle(color: Color(0xFF5C6BC0)),
+        prefixIcon: Icon(icon, color: const Color(0xFF5C6BC0)),
         filled: true,
         fillColor: const Color(0xFFF8FAFC),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: dirPrimaryColor, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
       ),
     );
@@ -840,12 +887,17 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
               if (v == 'edit') _showFormDialog(existing: p);
               if (v == 'delete') _confirmDelete(p);
             },
+            color: Colors.white,
+            surfaceTintColor: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.grey.shade200),
             ),
+            elevation: 4,
             itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'edit',
+                mouseCursor: SystemMouseCursors.click,
                 child: Row(
                   children: [
                     const Icon(
@@ -860,6 +912,7 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
               ),
               PopupMenuItem(
                 value: 'delete',
+                mouseCursor: SystemMouseCursors.click,
                 child: Row(
                   children: [
                     const Icon(
@@ -868,7 +921,10 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                       size: 18,
                     ),
                     const SizedBox(width: 8),
-                    Text('staff_delete'.tr()),
+                    Text(
+                      'staff_delete'.tr(),
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ],
                 ),
               ),

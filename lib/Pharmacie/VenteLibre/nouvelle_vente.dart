@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:hostoman/shared/responsive_wrapper.dart';
 import '../shared/pharmacie_theme.dart';
 import '../Dashboard/listemedicament_service.dart';
 import 'vente_libre_service.dart';
@@ -276,6 +277,10 @@ class _NouvelleVentePageState extends State<NouvelleVentePage> {
 
   @override
   Widget build(BuildContext context) {
+    return ResponsiveLayout(mobile: _buildMobile(), pc: _buildPc());
+  }
+
+  Widget _buildMobile() {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
@@ -284,72 +289,104 @@ class _NouvelleVentePageState extends State<NouvelleVentePage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () =>
-              context.go('/Dashboard_Pharmacie/VenteLibre'),
+          onPressed: () => context.go('/Dashboard_Pharmacie/VenteLibre'),
         ),
         title: Text(
           'phar_nv_title'.tr(),
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w700),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
       ),
-      body: Column(
+      body: _buildContent(),
+    );
+  }
+
+  Widget _buildPc() {
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: TextField(
-              onChanged: (v) =>
-                  setState(() => _search = v.toLowerCase().trim()),
-              decoration: InputDecoration(
-                hintText: 'phar_vl_search_patient'.tr(),
-                prefixIcon: const Icon(Icons.search,
-                    color: PharmacieTheme.textMuted),
-                filled: true,
-                fillColor: Colors.white,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: PharmacieTheme.border),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => context.go('/Dashboard_Pharmacie/VenteLibre'),
+                icon: const Icon(Icons.arrow_back),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'phar_nv_title'.tr(),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: PharmacieTheme.textDark,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: PharmacieTheme.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: PharmacieTheme.primary),
-                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _buildContent()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: TextField(
+            onChanged: (v) =>
+                setState(() => _search = v.toLowerCase().trim()),
+            decoration: InputDecoration(
+              hintText: 'phar_vl_search_patient'.tr(),
+              prefixIcon: const Icon(Icons.search,
+                  color: PharmacieTheme.textMuted),
+              filled: true,
+              fillColor: Colors.white,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: PharmacieTheme.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: PharmacieTheme.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: PharmacieTheme.primary),
               ),
             ),
           ),
-          Expanded(
-            child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                        color: PharmacieTheme.primary))
-                : _filtered.isEmpty
-                    ? Center(
-                        child: Text('fiche_med_empty'.tr(),
-                            style: const TextStyle(
-                                color: PharmacieTheme.textMuted)))
-                    : ListView.separated(
-                        padding:
-                            const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                        itemCount: _filtered.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 8),
-                        itemBuilder: (_, i) =>
-                            _medicineCard(_filtered[i]),
-                      ),
-          ),
-          _bottomBar(),
-        ],
-      ),
+        ),
+        Expanded(
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                      color: PharmacieTheme.primary))
+              : _filtered.isEmpty
+                  ? Center(
+                      child: Text('fiche_med_empty'.tr(),
+                          style: const TextStyle(
+                              color: PharmacieTheme.textMuted)))
+                  : ListView.separated(
+                      padding:
+                          const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      itemCount: _filtered.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (_, i) =>
+                          _medicineCard(_filtered[i]),
+                    ),
+        ),
+        _bottomBar(),
+      ],
     );
   }
 

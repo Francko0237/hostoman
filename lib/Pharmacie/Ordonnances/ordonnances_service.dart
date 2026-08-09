@@ -92,13 +92,20 @@ class OrdonnancesService {
         .eq('id_prescription', idPrescription)
         .order('id_ligne', ascending: true);
 
-    final paiement = await supabase
+    // Prend le paiement le plus récent (évite le crash si plusieurs lignes)
+    final paiements = await supabase
         .from('paiement')
         .select(
           'id_paiement, prix_a_paye, statut_paiement, date_paiement, motif',
         )
         .eq('id_prescription', idPrescription)
-        .maybeSingle();
+        .order('id_paiement', ascending: false)
+        .limit(1);
+
+    final paiement =
+        (paiements as List).isNotEmpty
+            ? paiements.first
+            : null;
 
     return {
       'prescription': prescription,
@@ -111,11 +118,38 @@ class OrdonnancesService {
   Future<void> confirmerPaiement(int idPrescription) async {
     final now = DateTime.now().toIso8601String();
 
-    // Met à jour le paiement lié
-    await supabase
+    // Vérifie si une ligne paiement existe déjà pour cette prescription
+    final existing = await supabase
         .from('paiement')
-        .update({'statut_paiement': 'paye', 'date_paiement': now})
-        .eq('id_prescription', idPrescription);
+        .select('id_paiement, prix_a_paye')
+        .eq('id_prescription', idPrescription)
+        .order('id_paiement', ascending: false)
+        .limit(1);
+
+    if ((existing as List).isNotEmpty) {
+      // Met à jour la ligne existante — cast sécurisé (Supabase renvoie num)
+      final idPaiement = (existing.first['id_paiement'] as num).toInt();
+      await supabase
+          .from('paiement')
+          .update({'statut_paiement': 'paye', 'date_paiement': now})
+          .eq('id_paiement', idPaiement);
+    } else {
+      // Crée la ligne paiement si elle n'existe pas (cas rare)
+      final prescription = await supabase
+          .from('prescription')
+          .select('total_prix, id_consultation')
+          .eq('id_prescription', idPrescription)
+          .single();
+
+      await supabase.from('paiement').insert({
+        'id_prescription': idPrescription,
+        'id_consultation': prescription['id_consultation'],
+        'prix_a_paye': (prescription['total_prix'] as num?)?.toDouble() ?? 0.0,
+        'statut_paiement': 'paye',
+        'motif': 'Medicaments',
+        'date_paiement': now,
+      });
+    }
 
     // Met à jour la prescription
     await supabase
@@ -188,6 +222,26 @@ class OrdonnancesService {
     await supabase
         .from('paiement')
         .update({'prix_a_paye': total})
+        .eq('id_prescription', idPrescription);
+  }
+
+  /// Annule une prescription (statut `annule`).
+  Future<void> annulerPrescription(int idPrescription) async {
+    final now = DateTime.now().toIso8601String();
+
+    // Annuler le paiement associé s'il existe
+    await supabase
+        .from('paiement')
+        .update({'statut_paiement': 'annule'})
+        .eq('id_prescription', idPrescription);
+
+    // Annuler la prescription
+    await supabase
+        .from('prescription')
+        .update({
+          'statut_prescription': 'annule',
+          'date_derniere_mise_ajour': now,
+        })
         .eq('id_prescription', idPrescription);
   }
 }

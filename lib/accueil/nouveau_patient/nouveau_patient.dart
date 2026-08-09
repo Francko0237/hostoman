@@ -5,6 +5,8 @@ import 'package:hostoman/model_unifier.dart';
 import 'service.dart';
 import 'validators.dart';
 import 'dart:ui';
+import '../champs_config/accueil_champs_config_service.dart';
+import '../../medecin/Consultation/champs_config/champ_config_model.dart';
 
 // Map: valeur stockée en DB (en français) -> clé de traduction
 // On garde la valeur en FR pour ne pas casser les données Supabase
@@ -80,6 +82,12 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
     Supabase.instance.client,
   );
 
+  late final AccueilChampsConfigService _champsService;
+  List<ChampConfig> _configs = [];
+  bool _configsLoading = true;
+  final Map<String, TextEditingController> _dynamicControllers = {};
+  final Map<String, FocusNode> _dynamicFocusNodes = {};
+
   // FocusNodes pour le focus et défilement automatique lors de la validation
   final FocusNode _nomCompletFocusNode = FocusNode();
   final FocusNode _sexeFocusNode = FocusNode();
@@ -98,6 +106,41 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
   final FocusNode _serviceFocusNode = FocusNode();
   final FocusNode _medecinFocusNode = FocusNode();
 
+  @override
+  void initState() {
+    super.initState();
+    _champsService = AccueilChampsConfigService(Supabase.instance.client);
+    _loadChampsConfig();
+  }
+
+  Future<void> _loadChampsConfig() async {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+    try {
+      final data = await _champsService.getChampsConfig(uid);
+      if (mounted) {
+        setState(() {
+          _configs = data;
+          _configsLoading = false;
+        });
+        _initDynamicFields();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _configsLoading = false);
+      }
+    }
+  }
+
+  void _initDynamicFields() {
+    for (final config in _configs) {
+      if (!config.isDefault) {
+        _dynamicControllers.putIfAbsent(config.cle, () => TextEditingController());
+        _dynamicFocusNodes.putIfAbsent(config.cle, () => FocusNode());
+      }
+    }
+  }
+
   void _focusAndScrollTo(FocusNode node) {
     node.requestFocus();
     if (node.context != null) {
@@ -110,66 +153,91 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
   }
 
   void _focusOnFirstInvalidField() {
-    if (PatientFormConfig.nomComplet.validator(nom_completController.text) !=
-        null) {
-      _focusAndScrollTo(_nomCompletFocusNode);
-      return;
+    for (final config in _configs) {
+      String? Function(String?)? validator;
+      TextEditingController? controller;
+      FocusNode? focusNode;
+
+      if (config.isDefault) {
+        if (config.cle == 'nom_complet') {
+          validator = PatientFormConfig.nomComplet.validator;
+          controller = nom_completController;
+          focusNode = _nomCompletFocusNode;
+        } else if (config.cle == 'age') {
+          validator = PatientFormConfig.age.validator;
+          controller = age;
+          focusNode = _ageFocusNode;
+        } else if (config.cle == 'telephone') {
+          validator = PatientFormConfig.telephone.validator;
+          controller = telephone;
+          focusNode = _telephoneFocusNode;
+        } else if (config.cle == 'adresse') {
+          validator = PatientFormConfig.adresse.validator;
+          controller = adresse;
+          focusNode = _adresseFocusNode;
+        } else if (config.cle == 'profession') {
+          validator = PatientFormConfig.profession.validator;
+          controller = profession;
+          focusNode = _professionFocusNode;
+        } else if (config.cle == 'temperature') {
+          validator = PatientFormConfig.temperature.validator;
+          controller = temperature;
+          focusNode = _temperatureFocusNode;
+        } else if (config.cle == 'poids') {
+          validator = PatientFormConfig.poids.validator;
+          controller = poid;
+          focusNode = _poidsFocusNode;
+        } else if (config.cle == 'tension_systolique') {
+          validator = PatientFormConfig.tensionSystolique.validator;
+          controller = systolique;
+          focusNode = _systoliqueFocusNode;
+        } else if (config.cle == 'tension_diastolique') {
+          validator = PatientFormConfig.tensionDiastolique.validator;
+          controller = diastolique;
+          focusNode = _diastoliqueFocusNode;
+        } else if (config.cle == 'test_vih') {
+          validator = PatientFormConfig.testVIH.validator;
+          controller = test_VIH;
+          focusNode = _testHivFocusNode;
+        } else if (config.cle == 'vaccination') {
+          validator = PatientFormConfig.vaccination.validator;
+          controller = vaccination;
+          focusNode = _vaccinationFocusNode;
+        } else if (config.cle == 'motif_consultation') {
+          validator = PatientFormConfig.motifConsultation.validator;
+          controller = motif_consultation;
+          focusNode = _motifFocusNode;
+        }
+      } else {
+        controller = _dynamicControllers[config.cle];
+        focusNode = _dynamicFocusNodes[config.cle];
+        validator = (val) {
+          if (config.obligatoire && (val == null || val.trim().isEmpty)) {
+            return 'fiche_field_required'.tr();
+          }
+          if (config.type == 'numerique' && val != null && val.trim().isNotEmpty) {
+            if (double.tryParse(val.trim()) == null) {
+              return 'Veuillez saisir un nombre valide';
+            }
+          }
+          return null;
+        };
+      }
+
+      if (controller != null && validator != null && focusNode != null) {
+        if (validator(controller.text) != null) {
+          _focusAndScrollTo(focusNode);
+          return;
+        }
+      }
     }
+
     if (_value == null || _value!.isEmpty) {
       _focusAndScrollTo(_sexeFocusNode);
       return;
     }
-    if (PatientFormConfig.age.validator(age.text) != null) {
-      _focusAndScrollTo(_ageFocusNode);
-      return;
-    }
-    if (PatientFormConfig.telephone.validator(telephone.text) != null) {
-      _focusAndScrollTo(_telephoneFocusNode);
-      return;
-    }
-    if (PatientFormConfig.adresse.validator(adresse.text) != null) {
-      _focusAndScrollTo(_adresseFocusNode);
-      return;
-    }
-    if (PatientFormConfig.profession.validator(profession.text) != null) {
-      _focusAndScrollTo(_professionFocusNode);
-      return;
-    }
     if (_statutMatrimonialSelectionne == null) {
       _focusAndScrollTo(_statutMatrimonialFocusNode);
-      return;
-    }
-    if (PatientFormConfig.temperature.validator(temperature.text) != null) {
-      _focusAndScrollTo(_temperatureFocusNode);
-      return;
-    }
-    if (PatientFormConfig.poids.validator(poid.text) != null) {
-      _focusAndScrollTo(_poidsFocusNode);
-      return;
-    }
-    if (PatientFormConfig.tensionSystolique.validator(systolique.text) !=
-        null) {
-      _focusAndScrollTo(_systoliqueFocusNode);
-      return;
-    }
-    if (PatientFormConfig.tensionDiastolique.validator(diastolique.text) !=
-        null) {
-      _focusAndScrollTo(_diastoliqueFocusNode);
-      return;
-    }
-    if (PatientFormConfig.testVIH.validator(test_VIH.text) != null) {
-      _focusAndScrollTo(_testHivFocusNode);
-      return;
-    }
-    if (PatientFormConfig.vaccination.validator(vaccination.text) != null) {
-      _focusAndScrollTo(_vaccinationFocusNode);
-      return;
-    }
-    if (PatientFormConfig.motifConsultation.validator(
-          motif_consultation.text,
-        ) !=
-        null) {
-      _focusAndScrollTo(_motifFocusNode);
       return;
     }
     if (_typeServiceSelectionne == null) {
@@ -202,6 +270,10 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
     _motifFocusNode.dispose();
     _serviceFocusNode.dispose();
     _medecinFocusNode.dispose();
+
+    _dynamicControllers.forEach((_, c) => c.dispose());
+    _dynamicFocusNodes.forEach((_, f) => f.dispose());
+
     super.dispose();
   }
 
@@ -286,6 +358,229 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
         activeColor: npAccentColor,
       ),
     );
+  }
+
+  String _getEffectiveCategory(ChampConfig config) {
+    if (config.categorie != null && config.categorie!.isNotEmpty) {
+      return config.categorie!;
+    }
+    // Rétrocompatibilité intelligente : on classifie selon la clé
+    final medicalKeys = {
+      'temperature',
+      'poids',
+      'tension_systolique',
+      'tension_diastolique',
+      'test_vih',
+      'vaccination',
+      'motif_consultation'
+    };
+    if (medicalKeys.contains(config.cle)) {
+      return 'medical';
+    }
+    return 'personnel';
+  }
+
+  Widget? _buildSingleConfiguredField(ChampConfig config) {
+    if (config.cle == 'nom_complet') {
+      return _buildTextFormField(
+        controller: nom_completController,
+        label: config.label,
+        hint: 'np_full_name_hint'.tr(),
+        icon: Icons.person,
+        validator: PatientFormConfig.nomComplet.validator,
+        focusNode: _nomCompletFocusNode,
+      );
+    } else if (config.cle == 'age') {
+      return _buildTextFormField(
+        controller: age,
+        label: config.label,
+        hint: 'np_age_hint'.tr(),
+        icon: Icons.cake,
+        keyboardType: TextInputType.number,
+        validator: PatientFormConfig.age.validator,
+        focusNode: _ageFocusNode,
+      );
+    } else if (config.cle == 'telephone') {
+      return _buildTextFormField(
+        controller: telephone,
+        label: config.label,
+        hint: 'np_phone_hint'.tr(),
+        icon: Icons.phone,
+        keyboardType: TextInputType.phone,
+        prefixText: '+237 ',
+        maxLength: 9,
+        validator: PatientFormConfig.telephone.validator,
+        focusNode: _telephoneFocusNode,
+      );
+    } else if (config.cle == 'adresse') {
+      return _buildTextFormField(
+        controller: adresse,
+        label: config.label,
+        hint: 'np_address_hint'.tr(),
+        icon: Icons.house,
+        validator: config.obligatoire 
+            ? (val) => val == null || val.trim().isEmpty ? 'fiche_field_required'.tr() : null
+            : PatientFormConfig.adresse.validator,
+        focusNode: _adresseFocusNode,
+      );
+    } else if (config.cle == 'profession') {
+      return _buildTextFormField(
+        controller: profession,
+        label: config.label,
+        hint: 'np_profession_hint'.tr(),
+        icon: Icons.work,
+        validator: config.obligatoire 
+            ? (val) => val == null || val.trim().isEmpty ? 'fiche_field_required'.tr() : null
+            : PatientFormConfig.profession.validator,
+        focusNode: _professionFocusNode,
+      );
+    } else if (config.cle == 'temperature') {
+      return _buildTextFormField(
+        controller: temperature,
+        label: config.label,
+        hint: '37.2',
+        icon: Icons.thermostat,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        validator: config.obligatoire 
+            ? (val) {
+                if (val == null || val.trim().isEmpty) return 'fiche_field_required'.tr();
+                return PatientFormConfig.temperature.validator(val);
+              }
+            : PatientFormConfig.temperature.validator,
+        focusNode: _temperatureFocusNode,
+      );
+    } else if (config.cle == 'poids') {
+      return _buildTextFormField(
+        controller: poid,
+        label: config.label,
+        hint: '70.5',
+        icon: Icons.scale,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        validator: config.obligatoire 
+            ? (val) {
+                if (val == null || val.trim().isEmpty) return 'fiche_field_required'.tr();
+                return PatientFormConfig.poids.validator(val);
+              }
+            : PatientFormConfig.poids.validator,
+        focusNode: _poidsFocusNode,
+      );
+    } else if (config.cle == 'tension_systolique') {
+      return _buildTextFormField(
+        controller: systolique,
+        label: config.label,
+        hint: '120',
+        icon: Icons.monitor_heart_outlined,
+        keyboardType: TextInputType.number,
+        validator: config.obligatoire 
+            ? (val) {
+                if (val == null || val.trim().isEmpty) return 'fiche_field_required'.tr();
+                return PatientFormConfig.tensionSystolique.validator(val);
+              }
+            : PatientFormConfig.tensionSystolique.validator,
+        focusNode: _systoliqueFocusNode,
+      );
+    } else if (config.cle == 'tension_diastolique') {
+      return _buildTextFormField(
+        controller: diastolique,
+        label: config.label,
+        hint: '80',
+        icon: Icons.monitor_heart_outlined,
+        keyboardType: TextInputType.number,
+        validator: config.obligatoire 
+            ? (val) {
+                if (val == null || val.trim().isEmpty) return 'fiche_field_required'.tr();
+                return PatientFormConfig.tensionDiastolique.validator(val);
+              }
+            : PatientFormConfig.tensionDiastolique.validator,
+        focusNode: _diastoliqueFocusNode,
+      );
+    } else if (config.cle == 'test_vih') {
+      return _buildTextFormField(
+        controller: test_VIH,
+        label: config.label,
+        icon: Icons.bloodtype,
+        validator: config.obligatoire 
+            ? (val) => val == null || val.trim().isEmpty ? 'fiche_field_required'.tr() : null
+            : PatientFormConfig.testVIH.validator,
+        focusNode: _testHivFocusNode,
+      );
+    } else if (config.cle == 'vaccination') {
+      return _buildTextFormField(
+        controller: vaccination,
+        label: config.label,
+        icon: Icons.vaccines,
+        validator: config.obligatoire 
+            ? (val) => val == null || val.trim().isEmpty ? 'fiche_field_required'.tr() : null
+            : PatientFormConfig.vaccination.validator,
+        focusNode: _vaccinationFocusNode,
+      );
+    } else if (config.cle == 'motif_consultation') {
+      return _buildTextFormField(
+        controller: motif_consultation,
+        label: config.label,
+        icon: Icons.medical_information,
+        keyboardType: TextInputType.multiline,
+        maxLines: config.hauteurLignes,
+        validator: PatientFormConfig.motifConsultation.validator,
+        focusNode: _motifFocusNode,
+      );
+    } else {
+      // Champ custom
+      final ctrl = _dynamicControllers[config.cle];
+      final fn = _dynamicFocusNodes[config.cle];
+      if (ctrl != null && fn != null) {
+        return _buildTextFormField(
+          controller: ctrl,
+          label: config.label + (config.obligatoire ? ' *' : ''),
+          icon: config.type == 'numerique' ? Icons.numbers : Icons.text_fields,
+          keyboardType: config.type == 'numerique' ? TextInputType.number : TextInputType.text,
+          maxLines: config.hauteurLignes,
+          validator: (value) {
+            if (config.obligatoire && (value == null || value.trim().isEmpty)) {
+              return 'fiche_field_required'.tr();
+            }
+            if (config.type == 'numerique' && value != null && value.trim().isNotEmpty) {
+              if (double.tryParse(value.trim()) == null) {
+                return 'Veuillez saisir un nombre valide';
+              }
+            }
+            return null;
+          },
+          focusNode: fn,
+        );
+      }
+    }
+    return null;
+  }
+
+  List<Widget> _buildDynamicPatientFields(String category) {
+    if (_configsLoading) {
+      return [
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(child: CircularProgressIndicator(color: npAccentColor)),
+        )
+      ];
+    }
+
+    final List<Widget> fields = [];
+    final categoryConfigs = _configs.where((c) => _getEffectiveCategory(c) == category).toList();
+
+    for (final config in categoryConfigs) {
+      // Le Nom Complet est géré séparément tout en haut de la fiche
+      if (config.cle == 'nom_complet') continue;
+
+      final widget = _buildSingleConfiguredField(config);
+      if (widget != null) {
+        fields.add(widget);
+        fields.add(const SizedBox(height: 16));
+      }
+    }
+    
+    if (fields.isNotEmpty) {
+      fields.removeLast();
+    }
+    return fields;
   }
 
   Future<void> _onSubmit() async {
@@ -380,10 +675,22 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
       ),
     );
 
+    final Map<String, dynamic> champsSupplementaires = {};
+    for (final config in _configs) {
+      if (!config.isDefault) {
+        champsSupplementaires[config.cle] = {
+          'label': config.label,
+          'valeur': _dynamicControllers[config.cle]?.text ?? '',
+          'type': config.type,
+        };
+      }
+    }
+
     try {
       final success = await patientService.patientSave(
         context: context,
         idMedecin: _idMedecinSelectionne,
+        champsSupplementaires: champsSupplementaires,
       );
 
       Navigator.pop(context);
@@ -415,6 +722,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
       sexe = '';
       StatutMatrimonial = null;
       type_service = null;
+      _dynamicControllers.forEach((_, c) => c.clear());
     } catch (e) {
       Navigator.pop(context);
       _showMessage(
@@ -657,27 +965,28 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    Form(
+        Form(
                       key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Section Informations personnelles
+                          // Section Informations personnelles (Nom complet + Sexe + Champs personnels + Statut matrimonial)
                           _buildSectionCard(
                             title: 'np_section_personal'.tr(),
                             children: [
-                              _buildTextFormField(
-                                controller: nom_completController,
-                                label: 'np_full_name'.tr(),
-                                hint: 'np_full_name_hint'.tr(),
-                                icon: Icons.person,
-                                validator:
-                                    PatientFormConfig.nomComplet.validator,
-                                focusNode: _nomCompletFocusNode,
-                              ),
-                              const SizedBox(height: 16),
+                              // 1. Nom complet en premier si configuré
+                              ...() {
+                                final nomConfig = _configs.where((c) => c.cle == 'nom_complet' && c.visible).toList();
+                                if (nomConfig.isNotEmpty) {
+                                  final w = _buildSingleConfiguredField(nomConfig.first);
+                                  if (w != null) {
+                                    return [w, const SizedBox(height: 16)];
+                                  }
+                                }
+                                return <Widget>[];
+                              }(),
 
+                              // 2. Sexe
                               Text(
                                 'np_sex'.tr(),
                                 style: const TextStyle(
@@ -696,9 +1005,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           color: _value == 'Homme'
                                               ? npAccentColor.withOpacity(0.1)
                                               : Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
+                                          borderRadius: BorderRadius.circular(12),
                                           border: Border.all(
                                             color: _value == 'Homme'
                                                 ? npAccentColor
@@ -710,9 +1017,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           value: 'Homme',
                                           title: Text(
                                             'np_sex_male'.tr(),
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                            ),
+                                            style: const TextStyle(fontSize: 15),
                                           ),
                                           groupValue: _value,
                                           onChanged: (v) =>
@@ -729,9 +1034,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           color: _value == 'Femme'
                                               ? npAccentColor.withOpacity(0.1)
                                               : Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
+                                          borderRadius: BorderRadius.circular(12),
                                           border: Border.all(
                                             color: _value == 'Femme'
                                                 ? npAccentColor
@@ -743,9 +1046,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           value: 'Femme',
                                           title: Text(
                                             'np_sex_female'.tr(),
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                            ),
+                                            style: const TextStyle(fontSize: 15),
                                           ),
                                           groupValue: _value,
                                           onChanged: (v) =>
@@ -760,59 +1061,11 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                               ),
                               const SizedBox(height: 16),
 
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildTextFormField(
-                                      controller: age,
-                                      label: 'np_age_field'.tr(),
-                                      hint: 'np_age_hint'.tr(),
-                                      icon: Icons.cake,
-                                      keyboardType: TextInputType.number,
-                                      validator:
-                                          PatientFormConfig.age.validator,
-                                      focusNode: _ageFocusNode,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildTextFormField(
-                                      controller: telephone,
-                                      label: 'np_phone'.tr(),
-                                      hint: 'np_phone_hint'.tr(),
-                                      icon: Icons.phone,
-                                      keyboardType: TextInputType.phone,
-                                      prefixText: '+237 ',
-                                      maxLength: 9,
-                                      validator:
-                                          PatientFormConfig.telephone.validator,
-                                      focusNode: _telephoneFocusNode,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-
-                              _buildTextFormField(
-                                controller: adresse,
-                                label: 'np_address'.tr(),
-                                hint: 'np_address_hint'.tr(),
-                                icon: Icons.house,
-                                validator: PatientFormConfig.adresse.validator,
-                                focusNode: _adresseFocusNode,
-                              ),
-                              const SizedBox(height: 16),
-
-                              _buildTextFormField(
-                                controller: profession,
-                                label: 'np_profession'.tr(),
-                                hint: 'np_profession_hint'.tr(),
-                                icon: Icons.work,
-                                validator:
-                                    PatientFormConfig.profession.validator,
-                                focusNode: _professionFocusNode,
-                              ),
-                              const SizedBox(height: 16),
+                              // 3. Autres champs personnels dynamiques
+                              ..._buildDynamicPatientFields('personnel'),
+                              
+                              if (_configs.where((c) => _getEffectiveCategory(c) == 'personnel' && c.cle != 'nom_complet' && c.visible).isNotEmpty)
+                                const SizedBox(height: 16),
 
                               Text(
                                 'np_marital'.tr(),
@@ -828,9 +1081,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                   decoration: BoxDecoration(
                                     color: Colors.grey.shade50,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.grey.shade300,
-                                    ),
+                                    border: Border.all(color: Colors.grey.shade300),
                                   ),
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
@@ -838,9 +1089,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                       value: _statutMatrimonialSelectionne,
                                       isExpanded: true,
                                       hint: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 16),
                                         child: Text('np_marital_select'.tr()),
                                       ),
                                       padding: const EdgeInsets.symmetric(
@@ -851,9 +1100,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                                           .map(
                                             (s) => DropdownMenuItem(
                                               value: s,
-                                              child: Text(
-                                                (_kMaritalLabels[s] ?? s).tr(),
-                                              ),
+                                              child: Text((_kMaritalLabels[s] ?? s).tr()),
                                             ),
                                           )
                                           .toList(),
@@ -868,120 +1115,10 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
                             ],
                           ),
 
-                          // Section Données médicales
+                          // Section Données médicales (Champs médicaux dynamiques)
                           _buildSectionCard(
                             title: 'np_section_medical'.tr(),
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildTextFormField(
-                                      controller: temperature,
-                                      label: 'np_temperature'.tr(),
-                                      hint: '37.2',
-                                      icon: Icons.thermostat,
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                      validator: PatientFormConfig
-                                          .temperature
-                                          .validator,
-                                      focusNode: _temperatureFocusNode,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildTextFormField(
-                                      controller: poid,
-                                      label: 'np_weight'.tr(),
-                                      hint: '70.5',
-                                      icon: Icons.scale,
-                                      keyboardType:
-                                          TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                      validator:
-                                          PatientFormConfig.poids.validator,
-                                      focusNode: _poidsFocusNode,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-
-                              Text(
-                                'np_blood_pressure'.tr(),
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildTextFormField(
-                                      controller: systolique,
-                                      label: 'np_systolic'.tr(),
-                                      hint: '120',
-                                      icon: Icons.monitor_heart_outlined,
-                                      keyboardType: TextInputType.number,
-                                      validator: PatientFormConfig
-                                          .tensionSystolique
-                                          .validator,
-                                      focusNode: _systoliqueFocusNode,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildTextFormField(
-                                      controller: diastolique,
-                                      label: 'np_diastolic'.tr(),
-                                      hint: '80',
-                                      icon: Icons.monitor_heart_outlined,
-                                      keyboardType: TextInputType.number,
-                                      validator: PatientFormConfig
-                                          .tensionDiastolique
-                                          .validator,
-                                      focusNode: _diastoliqueFocusNode,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-
-                              _buildTextFormField(
-                                controller: test_VIH,
-                                label: 'np_test_hiv'.tr(),
-                                icon: Icons.bloodtype,
-                                validator: PatientFormConfig.testVIH.validator,
-                                focusNode: _testHivFocusNode,
-                              ),
-                              const SizedBox(height: 16),
-
-                              _buildTextFormField(
-                                controller: vaccination,
-                                label: 'np_vaccination'.tr(),
-                                icon: Icons.vaccines,
-                                validator:
-                                    PatientFormConfig.vaccination.validator,
-                                focusNode: _vaccinationFocusNode,
-                              ),
-                              const SizedBox(height: 16),
-
-                              _buildTextFormField(
-                                controller: motif_consultation,
-                                label: 'np_consultation_motive'.tr(),
-                                icon: Icons.medical_information,
-                                keyboardType: TextInputType.multiline,
-                                maxLines: 4,
-                                validator: PatientFormConfig
-                                    .motifConsultation
-                                    .validator,
-                                focusNode: _motifFocusNode,
-                              ),
-                            ],
+                            children: _buildDynamicPatientFields('medical'),
                           ),
 
                           // Section Service

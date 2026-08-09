@@ -30,6 +30,7 @@ class PatientService {
   Future<bool> patientSave({
     required BuildContext context,
     String? idMedecin,
+    Map<String, dynamic> champsSupplementaires = const {},
   }) async {
     // 🔒 Validation des champs obligatoires
     if (sexe == null || sexe!.isEmpty) {
@@ -476,20 +477,20 @@ class PatientService {
       // 🔄 Mise à jour d'un patient existant
       if (choix != null && choix.startsWith('update_')) {
         final id = choix.replaceFirst('update_', '');
+        final Map<String, dynamic> updateData = Patient(
+          nom_complet: nom,
+          age: int.tryParse(age.text) ?? 0,
+          telephone: tel,
+          adresse: adresse.text.trim(),
+          profession: profession.text.trim(),
+          sexe: sexe!,
+          statut_matrimonial: StatutMatrimonial!,
+          date_enregistrement: DateTime.now(),
+        ).toMap();
+        updateData['champs_supplementaires'] = champsSupplementaires;
         await supabase
             .from('Patient')
-            .update(
-              Patient(
-                nom_complet: nom,
-                age: int.tryParse(age.text) ?? 0,
-                telephone: tel,
-                adresse: adresse.text.trim(),
-                profession: profession.text.trim(),
-                sexe: sexe!,
-                statut_matrimonial: StatutMatrimonial!,
-                date_enregistrement: DateTime.now(),
-              ).toMap(),
-            )
+            .update(updateData)
             .eq('id_patient', id);
         patientId = id;
         showMessage(context, 'np_msg_updated'.tr(), isSuccess: true);
@@ -499,7 +500,7 @@ class PatientService {
 
     // 🆕 Si aucun patient existant → insertion normale
     if (patientId == null) {
-      final patient = Patient(
+      final Map<String, dynamic> insertData = Patient(
         nom_complet: nom,
         age: int.tryParse(age.text) ?? 0,
         telephone: tel,
@@ -508,11 +509,12 @@ class PatientService {
         sexe: sexe!,
         statut_matrimonial: StatutMatrimonial!,
         date_enregistrement: DateTime.now(),
-      );
+      ).toMap();
+      insertData['champs_supplementaires'] = champsSupplementaires;
 
       final response = await supabase
           .from('Patient')
-          .insert(patient.toMap())
+          .insert(insertData)
           .select()
           .single();
       patientId = response['id_patient'];
