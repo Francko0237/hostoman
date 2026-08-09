@@ -150,28 +150,27 @@ class MedecinServices {
       await supabase.from('prescription_ligne').insert(lignes);
     }
 
-    // 4. Création d'UN SEUL paiement consolidé (examens + médicaments)
-    //    Cela évite le bug "seulement un paiement à la fois" à la caisse.
-    final double totalConsolide = totalExamens + totalMed;
+    // 4. Création des paiements distincts (examens et médicaments séparément)
     final bool hasExams = examensPrescrits.isNotEmpty;
     final bool hasMeds = medicamentsPrescrits.isNotEmpty;
 
-    if (hasExams || hasMeds) {
-      String motif;
-      if (hasExams && hasMeds) {
-        motif = 'Examens & Médicaments';
-      } else if (hasExams) {
-        motif = 'Examens';
-      } else {
-        motif = 'Medicaments';
-      }
+    if (hasExams) {
+      await supabase.from('paiement').insert({
+        'id_consultation': idConsultation,
+        'prix_a_paye': totalExamens,
+        'statut_paiement': 'en_attente',
+        'motif': 'Examens',
+        'date_paiement': now,
+      });
+    }
 
+    if (hasMeds) {
       await supabase.from('paiement').insert({
         'id_consultation': idConsultation,
         if (idPrescription != null) 'id_prescription': idPrescription,
-        'prix_a_paye': totalConsolide,
+        'prix_a_paye': totalMed,
         'statut_paiement': 'en_attente',
-        'motif': motif,
+        'motif': 'Medicaments',
         'date_paiement': now,
       });
     }

@@ -4,53 +4,90 @@ class PaiementService {
   final SupabaseClient supabase;
   PaiementService(this.supabase);
 
-  /// 🔍 Récupère les patients dont le paiement de la consultation et des examens qui n'ont pas encore effectué
-  Future<List<Map<String, dynamic>>> getPatientsNonPayes() async {
+  /// 🔍 Récupère CHAQUE paiement en attente comme une ligne indépendante,
+  /// avec les informations de la consultation et du patient.
+  Future<List<Map<String, dynamic>>> getPaiementsEnAttente() async {
     try {
       final response = await supabase
-          .from('Consultation')
+          .from('paiement')
           .select('''
-            id_consultation, 
-            type_service, 
-            id_patient, 
-            date_derniere_mise_ajour,
-            date_enregistrement,
-            Patient(*),
-            paiement!inner(*),
-            examen_a_effectuer(nom_examen, prix_examen, statut_examen)
+            id_paiement,
+            id_consultation,
+            id_prescription,
+            prix_a_paye,
+            statut_paiement,
+            motif,
+            date_paiement,
+            Consultation!inner(
+              id_consultation,
+              type_service,
+              id_patient,
+              date_derniere_mise_ajour,
+              date_enregistrement,
+              Patient(*),
+              examen_a_effectuer(nom_examen, prix_examen, statut_examen)
+            )
           ''')
-          .eq('paiement.statut_paiement', 'en_attente');
+          .eq('statut_paiement', 'en_attente')
+          .order('date_paiement', ascending: false);
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      print("Erreur getPatientsNonPayes: $e");
+      print("Erreur getPaiementsEnAttente: $e");
       return [];
     }
   }
 
-  /// ✅ Valide le paiement en mettant  'payer':'oui'
+  /// ⚠️ Kept for backwards compatibility — now targets a single paiement by ID
+  Future<List<Map<String, dynamic>>> getPatientsNonPayes() async {
+    return getPaiementsEnAttente();
+  }
+
+  /// ✅ Valide un paiement précis par son id_paiement
+  Future<void> validerPaiementById(int idPaiement) async {
+    try {
+      await supabase
+          .from('paiement')
+          .update({'statut_paiement': 'payer'})
+          .eq('id_paiement', idPaiement);
+    } catch (e) {
+      print("Erreur lors de la validation : $e");
+      rethrow;
+    }
+  }
+
+  /// ❌ Annule un paiement précis par son id_paiement
+  Future<void> annulerPaiementById(int idPaiement) async {
+    try {
+      await supabase
+          .from('paiement')
+          .update({'statut_paiement': 'annuler'})
+          .eq('id_paiement', idPaiement);
+    } catch (e) {
+      print("Erreur lors de l'annulation : $e");
+      rethrow;
+    }
+  }
+
+  /// ✅ Valide le paiement en mettant 'payer' (tous les paiements de la consultation)
   Future<void> validerPaiement(String idConsultation) async {
     try {
       await supabase
           .from('paiement')
           .update({'statut_paiement': 'payer'})
           .eq('id_consultation', idConsultation);
-
-      print("Paiement validé avec succès");
     } catch (e) {
       print("Erreur lors de la validation : $e");
     }
   }
 
-  ///  Anuller le paiement en mettant  'payer':'annuler'
+  /// ❌ Annuler le paiement (tous les paiements de la consultation)
   Future<void> AnnulerPaiement(String idConsultation) async {
     try {
       await supabase
           .from('paiement')
           .update({'statut_paiement': 'annuler'})
           .eq('id_consultation', idConsultation);
-
-      print("Paiement annulé");
     } catch (e) {
       print("Erreur lors de l'annulation : $e");
     }

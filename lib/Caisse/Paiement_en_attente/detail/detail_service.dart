@@ -4,24 +4,32 @@ class DetailService {
   final SupabaseClient supabase;
   DetailService(this.supabase);
 
-  /// 🔍 Récupère les détails complets d'un patient et de son paiement
+  /// 🔍 Récupère les détails complets d'un paiement par son id_paiement
   Future<Map<String, dynamic>?> getPatientPaymentDetails(
-    String idConsultation,
+    int idPaiement,
   ) async {
     try {
       final response = await supabase
-          .from('Consultation')
+          .from('paiement')
           .select('''
+            id_paiement,
             id_consultation,
-            type_service,
-            date_enregistrement,
-            Statut_Consultation,
-            id_patient,
-            Patient(*),
-            paiement!inner(*),
-            examen_a_effectuer(nom_examen, prix_examen, statut_examen)
+            id_prescription,
+            prix_a_paye,
+            statut_paiement,
+            motif,
+            date_paiement,
+            Consultation(
+              id_consultation,
+              type_service,
+              date_enregistrement,
+              Statut_Consultation,
+              id_patient,
+              Patient(*),
+              examen_a_effectuer(nom_examen, prix_examen, statut_examen)
+            )
           ''')
-          .eq('id_consultation', idConsultation)
+          .eq('id_paiement', idPaiement)
           .single();
 
       return response;
@@ -31,13 +39,13 @@ class DetailService {
     }
   }
 
-  /// ✅ Valide le paiement
-  Future<void> validerPaiement(String idConsultation) async {
+  /// ✅ Valide le paiement par son id_paiement
+  Future<void> validerPaiement(int idPaiement) async {
     try {
       await supabase
           .from('paiement')
           .update({'statut_paiement': 'payer'})
-          .eq('id_consultation', idConsultation);
+          .eq('id_paiement', idPaiement);
 
       print("Paiement validé avec succès");
     } catch (e) {
@@ -45,13 +53,13 @@ class DetailService {
     }
   }
 
-  /// ❌ Annule le paiement
-  Future<void> annulerPaiement(String idConsultation) async {
+  /// ❌ Annule le paiement par son id_paiement
+  Future<void> annulerPaiement(int idPaiement) async {
     try {
       await supabase
           .from('paiement')
           .update({'statut_paiement': 'annuler'})
-          .eq('id_consultation', idConsultation);
+          .eq('id_paiement', idPaiement);
 
       print("Paiement annulé");
     } catch (e) {

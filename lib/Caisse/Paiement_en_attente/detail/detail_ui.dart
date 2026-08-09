@@ -15,9 +15,9 @@ const Color npOrangeColor = Color(0xFFFF9800);
 const Color npBlueColor = Color(0xFF2196F3);
 
 class DetailUI extends StatefulWidget {
-  final String idConsultation;
+  final int idPaiement;
 
-  const DetailUI({super.key, required this.idConsultation});
+  const DetailUI({super.key, required this.idPaiement});
 
   @override
   State<DetailUI> createState() => _DetailUIState();
@@ -38,13 +38,14 @@ class _DetailUIState extends State<DetailUI> {
   Future<void> chargerDetails() async {
     setState(() => isLoading = true);
     detailsData = await detailService.getPatientPaymentDetails(
-      widget.idConsultation,
+      widget.idPaiement,
     );
     setState(() => isLoading = false);
   }
 
   Future<void> validerPaiement() async {
-    await detailService.validerPaiement(widget.idConsultation);
+    await detailService.validerPaiement(widget.idPaiement);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -76,30 +77,26 @@ class _DetailUIState extends State<DetailUI> {
   Future<void> _imprimerRecu() async {
     if (detailsData == null) return;
 
-    final patientMap = detailsData!['Patient'] as Map<String, dynamic>;
+    final consultationMap = detailsData!['Consultation'] as Map<String, dynamic>? ?? {};
+    final patientMap = (consultationMap['Patient'] as Map<String, dynamic>?) ?? {};
+    patientMap['id_patient'] = consultationMap['id_patient'];
     final patient = Patient.fromMap(patientMap);
 
-    final List<dynamic> paiementsList = detailsData!['paiement'] ?? [];
-    Map<String, dynamic> paiementDataMap = {};
-    if (paiementsList.isNotEmpty) {
-      paiementDataMap = paiementsList.last as Map<String, dynamic>;
-    }
-    final paiement = Paiement.fromMap(paiementDataMap);
-
-    final typeService = detailsData!['type_service'] ?? 'Consultation';
-    final motif = paiementDataMap['motif'] ?? 'pay_default_motif'.tr();
-    final examensList =
-        (detailsData!['examen_a_effectuer'] as List<dynamic>?) ?? [];
+    final motif = detailsData!['motif'] ?? 'pay_default_motif'.tr();
+    final examensList = (consultationMap['examen_a_effectuer'] as List<dynamic>?) ?? [];
+    final typeService = consultationMap['type_service'] ?? 'Consultation';
+    final montant = (detailsData!['prix_a_paye'] as num?)?.toDouble() ?? 0.0;
+    final currentIdConsultation = (detailsData!['id_consultation'] ?? consultationMap['id_consultation']).toString();
 
     final data = ReceiptPdfData(
       patientNom: patient.nom_complet,
       patientSexe: patient.sexe,
       patientAge: patient.age.toString(),
       patientTelephone: patient.telephone.toString(),
-      idConsultation: widget.idConsultation,
+      idConsultation: currentIdConsultation,
       serviceName: typeService,
       motif: motif,
-      montant: (paiement.prix_a_paye ?? 0).toDouble(),
+      montant: montant,
       datePaiement: DateFormat('dd/MM/yyyy à HH:mm').format(DateTime.now()),
       statutPaiement: 'Payé',
       examens: examensList,
@@ -227,7 +224,8 @@ class _DetailUIState extends State<DetailUI> {
     final confirm = await _confirmerAnnulation();
     if (confirm != true) return;
 
-    await detailService.annulerPaiement(widget.idConsultation);
+    await detailService.annulerPaiement(widget.idPaiement);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -247,7 +245,7 @@ class _DetailUIState extends State<DetailUI> {
         elevation: 6,
       ),
     );
-    Navigator.pop(context, true); // Retour à la liste avec refresh
+    if (mounted) Navigator.pop(context, true); // Retour à la liste avec refresh
   }
 
   Future<bool?> _confirmerAnnulation() async {
@@ -478,8 +476,9 @@ class _DetailUIState extends State<DetailUI> {
   }
 
   Widget _buildPatientSection() {
-    final patientMap = detailsData!['Patient'] as Map<String, dynamic>;
-    patientMap['id_patient'] = detailsData!['id_patient'];
+    final consultationMap = detailsData!['Consultation'] as Map<String, dynamic>? ?? {};
+    final patientMap = (consultationMap['Patient'] as Map<String, dynamic>?) ?? {};
+    patientMap['id_patient'] = consultationMap['id_patient'];
     final patient = Patient.fromMap(patientMap);
 
     return Container(
@@ -605,16 +604,10 @@ class _DetailUIState extends State<DetailUI> {
   }
 
   Widget _buildPaymentSection() {
-    final List<dynamic> paiementsList = detailsData!['paiement'] ?? [];
-    if (paiementsList.isEmpty) return const SizedBox.shrink();
-
-    // Prendre le dernier paiement (le plus récent) au lieu du premier
-    // Cela permet d'afficher le paiement d'examens plutôt que le paiement de consultation
-    final paiementDataMap = paiementsList.last as Map<String, dynamic>;
-    final paiement = Paiement.fromMap(paiementDataMap);
-    final motif = paiementDataMap['motif'] ?? 'pay_default_motif'.tr();
-    final statutPaiement = paiementDataMap['statut_paiement'] ?? 'en_attente';
-    final datePaiement = paiementDataMap['date_paiement'];
+    final motif = detailsData!['motif'] ?? 'pay_default_motif'.tr();
+    final statutPaiement = detailsData!['statut_paiement'] ?? 'en_attente';
+    final datePaiement = detailsData!['date_paiement'];
+    final prixAPaye = detailsData!['prix_a_paye'] ?? 0;
 
     String dateFormatted = 'pay_value_na'.tr();
     if (datePaiement != null) {
@@ -692,7 +685,7 @@ class _DetailUIState extends State<DetailUI> {
               Icons.attach_money,
               'pay_field_amount'.tr(),
               'pay_field_amount_value'.tr(
-                namedArgs: {'value': '${paiement.prix_a_paye ?? 0}'},
+                namedArgs: {'value': '$prixAPaye'},
               ),
               npSuccessColor,
             ),
@@ -758,8 +751,9 @@ class _DetailUIState extends State<DetailUI> {
   }
 
   Widget _buildConsultationSection() {
-    final typeService = detailsData!['type_service'] ?? 'Consultation';
-    final dateEnregistrement = detailsData!['date_enregistrement'];
+    final consultationMap = detailsData!['Consultation'] as Map<String, dynamic>? ?? {};
+    final typeService = consultationMap['type_service'] ?? 'Consultation';
+    final dateEnregistrement = consultationMap['date_enregistrement'];
 
     String dateFormatted = 'pay_value_na'.tr();
     if (dateEnregistrement != null) {

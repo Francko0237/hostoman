@@ -27,8 +27,8 @@ class _PaiementlistState extends State<Paiementlist> {
   final PaiementService paiementService = PaiementService(
     Supabase.instance.client,
   );
+  // Now each item = 1 paiement row (not 1 consultation)
   List<Map<String, dynamic>> consultations = [];
-  List<Map<String, dynamic>> examen = [];
   List<Map<String, dynamic>> filteredConsultations = [];
   bool isLoading = true;
   String searchQuery = '';
@@ -42,14 +42,7 @@ class _PaiementlistState extends State<Paiementlist> {
 
   Future<void> chargerConsultations() async {
     setState(() => isLoading = true);
-    consultations = await paiementService.getPatientsNonPayes();
-    _applyFilters();
-    setState(() => isLoading = false);
-  }
-
-  Future<void> chargerExamen() async {
-    setState(() => isLoading = true);
-    examen = await paiementService.getPatientsNonPayes();
+    consultations = await paiementService.getPaiementsEnAttente();
     _applyFilters();
     setState(() => isLoading = false);
   }
@@ -57,74 +50,43 @@ class _PaiementlistState extends State<Paiementlist> {
   void _applyFilters() {
     List<Map<String, dynamic>> temp = [...consultations];
 
-    // Filtre par recherche
+    // Filtre par recherche — Patient se trouve sous item['Consultation']['Patient']
     if (searchQuery.isNotEmpty) {
       temp = temp.where((item) {
-        final patientMap = item['Patient'] as Map<String, dynamic>;
+        final consultationMap = item['Consultation'] as Map<String, dynamic>?;
+        final patientMap = consultationMap?['Patient'] as Map<String, dynamic>? ?? {};
         final nom = (patientMap['nom_complet'] ?? '').toString().toLowerCase();
         return nom.contains(searchQuery.toLowerCase());
       }).toList();
     }
 
-    // Tri
+    // Tri par date_paiement
     switch (sortOption) {
       case 'name_asc':
         temp.sort((a, b) {
-          final nomA = (a['Patient']['nom_complet'] ?? '')
-              .toString()
-              .toLowerCase();
-          final nomB = (b['Patient']['nom_complet'] ?? '')
-              .toString()
-              .toLowerCase();
+          final nomA = ((a['Consultation']?['Patient']?['nom_complet']) ?? '').toString().toLowerCase();
+          final nomB = ((b['Consultation']?['Patient']?['nom_complet']) ?? '').toString().toLowerCase();
           return nomA.compareTo(nomB);
         });
         break;
       case 'name_desc':
         temp.sort((a, b) {
-          final nomA = (a['Patient']['nom_complet'] ?? '')
-              .toString()
-              .toLowerCase();
-          final nomB = (b['Patient']['nom_complet'] ?? '')
-              .toString()
-              .toLowerCase();
+          final nomA = ((a['Consultation']?['Patient']?['nom_complet']) ?? '').toString().toLowerCase();
+          final nomB = ((b['Consultation']?['Patient']?['nom_complet']) ?? '').toString().toLowerCase();
           return nomB.compareTo(nomA);
         });
         break;
       case 'date_desc':
         temp.sort((a, b) {
-          final dateA =
-              DateTime.tryParse(
-                a['date_derniere_mise_ajour']?.toString() ??
-                    a['date_enregistrement']?.toString() ??
-                    '',
-              ) ??
-              DateTime(2000);
-          final dateB =
-              DateTime.tryParse(
-                b['date_derniere_mise_ajour']?.toString() ??
-                    b['date_enregistrement']?.toString() ??
-                    '',
-              ) ??
-              DateTime(2000);
+          final dateA = DateTime.tryParse(a['date_paiement']?.toString() ?? '') ?? DateTime(2000);
+          final dateB = DateTime.tryParse(b['date_paiement']?.toString() ?? '') ?? DateTime(2000);
           return dateB.compareTo(dateA);
         });
         break;
       case 'date_asc':
         temp.sort((a, b) {
-          final dateA =
-              DateTime.tryParse(
-                a['date_derniere_mise_ajour']?.toString() ??
-                    a['date_enregistrement']?.toString() ??
-                    '',
-              ) ??
-              DateTime(2000);
-          final dateB =
-              DateTime.tryParse(
-                b['date_derniere_mise_ajour']?.toString() ??
-                    b['date_enregistrement']?.toString() ??
-                    '',
-              ) ??
-              DateTime(2000);
+          final dateA = DateTime.tryParse(a['date_paiement']?.toString() ?? '') ?? DateTime(2000);
+          final dateB = DateTime.tryParse(b['date_paiement']?.toString() ?? '') ?? DateTime(2000);
           return dateA.compareTo(dateB);
         });
         break;
@@ -135,14 +97,9 @@ class _PaiementlistState extends State<Paiementlist> {
     });
   }
 
-  Future<void> validerPaiement(String idConsultation) async {
-    // Extraire l'item avant de recharger la liste
-    final item = consultations.firstWhere(
-      (element) => element['id_consultation'].toString() == idConsultation,
-      orElse: () => <String, dynamic>{}, // explicit type
-    );
 
-    await paiementService.validerPaiement(idConsultation);
+  Future<void> validerPaiement(int idPaiement, Map<String, dynamic> item) async {
+    await paiementService.validerPaiementById(idPaiement);
     await chargerConsultations();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -174,21 +131,17 @@ class _PaiementlistState extends State<Paiementlist> {
   }
 
   Future<void> _imprimerRecu(Map<String, dynamic> item) async {
-    final patientMap = item['Patient'] as Map<String, dynamic>;
-    patientMap['id_patient'] = item['id_patient'];
+    // item = 1 paiement row; patient is under item['Consultation']['Patient']
+    final consultationMap = item['Consultation'] as Map<String, dynamic>? ?? {};
+    final patientMap = (consultationMap['Patient'] as Map<String, dynamic>?) ?? {};
+    patientMap['id_patient'] = consultationMap['id_patient'];
     final patient = Patient.fromMap(patientMap);
 
-    final List<dynamic> paiementsList = item['paiement'] ?? [];
-    Map<String, dynamic> paiementDataMap = {};
-    if (paiementsList.isNotEmpty) {
-      paiementDataMap = paiementsList.last as Map<String, dynamic>;
-    }
-    final paiement = Paiement.fromMap(paiementDataMap);
-
-    final typeService = item['type_service'] ?? 'Consultation';
-    final motif = paiementDataMap['motif'] ?? 'pay_default_motif'.tr();
-    final currentIdConsultation = item['id_consultation'].toString();
-    final examensList = (item['examen_a_effectuer'] as List<dynamic>?) ?? [];
+    final motif = item['motif'] ?? 'pay_default_motif'.tr();
+    final currentIdConsultation = (item['id_consultation'] ?? consultationMap['id_consultation']).toString();
+    final examensList = (consultationMap['examen_a_effectuer'] as List<dynamic>?) ?? [];
+    final montant = (item['prix_a_paye'] as num?)?.toDouble() ?? 0.0;
+    final typeService = consultationMap['type_service'] ?? 'Consultation';
 
     final data = ReceiptPdfData(
       patientNom: patient.nom_complet,
@@ -198,7 +151,7 @@ class _PaiementlistState extends State<Paiementlist> {
       idConsultation: currentIdConsultation,
       serviceName: typeService,
       motif: motif,
-      montant: (paiement.prix_a_paye ?? 0).toDouble(),
+      montant: montant,
       datePaiement: DateFormat('dd/MM/yyyy à HH:mm').format(DateTime.now()),
       statutPaiement: 'Payé',
       examens: examensList,
@@ -322,12 +275,13 @@ class _PaiementlistState extends State<Paiementlist> {
     );
   }
 
-  Future<void> AnnulerPaiement(String idConsultation) async {
+  Future<void> AnnulerPaiement(int idPaiement) async {
     final confirm = await _confirmerAnnulation();
     if (confirm != true) return;
 
-    await paiementService.AnnulerPaiement(idConsultation);
+    await paiementService.annulerPaiementById(idPaiement);
     await chargerConsultations();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -797,41 +751,27 @@ class _PaiementlistState extends State<Paiementlist> {
                           itemCount: filteredConsultations.length,
                           itemBuilder: (context, index) {
                             final item = filteredConsultations[index];
-                            final patientMap =
-                                item['Patient'] as Map<String, dynamic>;
-                            final List<dynamic> paiementsList =
-                                item['paiement'] ?? [];
-                            patientMap['id_patient'] = item['id_patient'];
+                            final consultationMap = item['Consultation'] as Map<String, dynamic>? ?? {};
+                            final patientMap = (consultationMap['Patient'] as Map<String, dynamic>?) ?? {};
+                            patientMap['id_patient'] = consultationMap['id_patient'];
                             final patient = Patient.fromMap(patientMap);
 
-                            // Prendre le dernier paiement (le plus récent)
-                            final paiementDataMap =
-                                paiementsList.last as Map<String, dynamic>;
-                            final finalPaiement = Paiement.fromMap(
-                              paiementDataMap,
-                            );
-                            final idConsultation = item['id_consultation']
-                                .toString();
+                            final idPaiement = item['id_paiement'] as int;
+                            final idConsultation = (item['id_consultation'] ?? consultationMap['id_consultation']).toString();
+                            final motif = item['motif'] ?? 'pay_default_motif'.tr();
+                            final prixAPayer = (item['prix_a_paye'] as num?)?.toStringAsFixed(0) ?? '0';
+                            final sexe = patient.sexe.toString();
 
-                            // Utiliser le motif du paiement au lieu du type_service
-                            final motif =
-                                paiementDataMap['motif'] ??
-                                'pay_default_motif'.tr();
-                            String Sexe = patient.sexe.toString();
-                            String prixAPayer =
-                                finalPaiement.prix_a_paye?.toString() ??
-                                '0.0'; // Prix à payer
                             return InkWell(
                               onTap: () async {
                                 final result = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => DetailUI(
-                                      idConsultation: idConsultation,
+                                      idPaiement: idPaiement,
                                     ),
                                   ),
                                 );
-                                // Recharger la liste si le paiement a été modifié
                                 if (result == true) {
                                   chargerConsultations();
                                 }
@@ -853,8 +793,7 @@ class _PaiementlistState extends State<Paiementlist> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -903,7 +842,7 @@ class _PaiementlistState extends State<Paiementlist> {
                                                 const SizedBox(height: 4),
                                                 Row(
                                                   children: [
-                                                    Sexe == 'Homme'
+                                                    sexe == 'Homme'
                                                         ? Icon(
                                                             Icons.man,
                                                             size: 15,
@@ -1009,7 +948,7 @@ class _PaiementlistState extends State<Paiementlist> {
                                           Expanded(
                                             child: OutlinedButton.icon(
                                               onPressed: () => AnnulerPaiement(
-                                                idConsultation,
+                                                idPaiement,
                                               ),
                                               icon: const Icon(
                                                 Icons.cancel,
@@ -1040,7 +979,8 @@ class _PaiementlistState extends State<Paiementlist> {
                                           Expanded(
                                             child: ElevatedButton.icon(
                                               onPressed: () => validerPaiement(
-                                                idConsultation,
+                                                idPaiement,
+                                                item,
                                               ),
                                               icon: const Icon(
                                                 Icons.check,
