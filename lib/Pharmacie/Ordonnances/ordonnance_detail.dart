@@ -173,9 +173,11 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
   }
 
   Future<void> _substituer(Map<String, dynamic> ligne) async {
+    final int qteRequise = (ligne['quantite'] as num?)?.toInt() ?? 1;
     final selected = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => _SubstitutPicker(catalogue: _catalogue),
+      builder: (ctx) =>
+          _SubstitutPicker(catalogue: _catalogue, quantiteRequise: qteRequise),
     );
     if (selected == null) return;
 
@@ -619,16 +621,37 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
         statutIcon = Icons.schedule;
     }
 
+    // Infos stock depuis le join listemedicament
+    final medData =
+        l['listemedicament'] as Map<String, dynamic>?;
+    final int? stockActuel =
+        medData != null ? (medData['stock'] as num?)?.toInt() : null;
+    final int seuilAlerte =
+        medData != null ? (medData['seuil_alerte'] as num?)?.toInt() ?? 5 : 5;
+    // Insuffisant = stock réel < quantité prescrite
+    final bool stockInsuffisant =
+        stockActuel != null && stockActuel < qte;
+    final bool stockBas =
+        stockActuel != null && !stockInsuffisant && stockActuel <= seuilAlerte;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isAnnule
+            ? Colors.grey.shade50
+            : stockInsuffisant && !isDelivered
+                ? Colors.red.shade50
+                : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDelivered
-              ? PharmacieTheme.success.withValues(alpha: 0.3)
-              : PharmacieTheme.border,
+          color: isAnnule
+              ? Colors.grey.shade300
+              : stockInsuffisant && !isDelivered
+                  ? Colors.red.shade200
+                  : isDelivered
+                      ? PharmacieTheme.success.withValues(alpha: 0.3)
+                      : PharmacieTheme.border,
         ),
       ),
       child: Column(
@@ -643,10 +666,13 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                   children: [
                     Text(
                       (l['nom_medicament'] ?? '').toString(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
-                        color: PharmacieTheme.textDark,
+                        color: isAnnule ? Colors.grey : PharmacieTheme.textDark,
+                        decoration: isAnnule
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -676,6 +702,25 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
                           PharmacieStatusBadge(
                             text: 'fiche_med_badge_unavailable'.tr(),
                             color: PharmacieTheme.danger,
+                          ),
+                        // 🛒 Indicateur de stock en temps réel
+                        if (stockActuel != null && !isDelivered && !isAnnule)
+                          PharmacieStatusBadge(
+                            text: stockInsuffisant
+                                ? 'Stock insuffisant ($stockActuel dispo)'
+                                : stockBas
+                                    ? 'Stock bas ($stockActuel restant)'
+                                    : 'Stock : $stockActuel',
+                            color: stockInsuffisant
+                                ? PharmacieTheme.danger
+                                : stockBas
+                                    ? PharmacieTheme.warn
+                                    : PharmacieTheme.success,
+                            icon: stockInsuffisant
+                                ? Icons.warning_amber_rounded
+                                : stockBas
+                                    ? Icons.warning_outlined
+                                    : Icons.inventory_2_outlined,
                           ),
                       ],
                     ),
@@ -719,7 +764,10 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _busy ? null : () => _delivrerLigne(l),
+                    onPressed: _busy ||
+                            (stockInsuffisant && !isCustom)
+                        ? null
+                        : () => _delivrerLigne(l),
                     icon: const Icon(Icons.check, size: 16),
                     label: Text('phar_action_delivrer'.tr()),
                     style: ElevatedButton.styleFrom(
@@ -767,7 +815,11 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
 /// Mini-dialog pour choisir un médicament de substitution.
 class _SubstitutPicker extends StatefulWidget {
   final List<Map<String, dynamic>> catalogue;
-  const _SubstitutPicker({required this.catalogue});
+  final int quantiteRequise;
+  const _SubstitutPicker({
+    required this.catalogue,
+    required this.quantiteRequise,
+  });
 
   @override
   State<_SubstitutPicker> createState() => _SubstitutPickerState();
@@ -846,7 +898,8 @@ class _SubstitutPickerState extends State<_SubstitutPicker> {
                       itemBuilder: (_, i) {
                         final m = filtered[i];
                         final stock = (m['stock'] as num?)?.toInt() ?? 0;
-                        final dispo = stock > 0;
+                        // Disponible uniquement si le stock couvre la quantité prescrite
+                        final dispo = stock >= widget.quantiteRequise;
                         return ListTile(
                           title: Text(
                             (m['nom_medicament'] ?? '').toString(),
@@ -867,7 +920,9 @@ class _SubstitutPickerState extends State<_SubstitutPicker> {
                           trailing: PharmacieStatusBadge(
                             text: dispo
                                 ? 'fiche_med_badge_available'.tr()
-                                : 'fiche_med_badge_unavailable'.tr(),
+                                : stock > 0
+                                    ? 'Stock insuffisant ($stock)'
+                                    : 'fiche_med_badge_unavailable'.tr(),
                             color: dispo
                                 ? PharmacieTheme.success
                                 : PharmacieTheme.danger,

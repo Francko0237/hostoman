@@ -49,8 +49,6 @@ class DashboardLaboService {
           .neq('examen_a_effectuer.statut_examen', 'En cours')
           .neq('examen_a_effectuer.statut_examen', 'Terminé')
           .neq('examen_a_effectuer.statut_examen', 'Annulé')
-          .gte('date_enregistrement', debutJour.toIso8601String())
-          .lte('date_enregistrement', finJour.toIso8601String())
           .order('date_enregistrement', ascending: true);
 
       final patientsExamensAFaire = (examensAFaire as List)
@@ -69,8 +67,6 @@ class DashboardLaboService {
           .eq('Statut_Consultation', 'en-attente-resultat')
           // On s'assure qu'il reste au moins un examen "En cours" (donc sans résultat)
           .eq('examen_a_effectuer.statut_examen', 'En cours')
-          .gte('date_enregistrement', debutJour.toIso8601String())
-          .lte('date_enregistrement', finJour.toIso8601String())
           .order('date_enregistrement', ascending: true);
 
       final patientsResultats = (resultatsExamen as List)

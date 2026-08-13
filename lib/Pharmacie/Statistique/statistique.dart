@@ -223,7 +223,7 @@ class _StatistiquePharmacieState extends State<StatistiquePharmacie> {
               label: 'phar_stats_ordonnances'.tr(
                 namedArgs: {'n': '${_stats['total_ordonnances'] ?? 0}'},
               ),
-              onTap: () => context.go('/Dashboard_Pharmacie/Ordonnances'),
+              onTap: () => context.go('/Dashboard_Pharmacie/Historique'),
             ),
             const SizedBox(height: 30),
           ],

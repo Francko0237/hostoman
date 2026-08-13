@@ -87,7 +87,9 @@ class OrdonnancesService {
         .select(
           'id_ligne, id_medicament, id_medicament_substitut, nom_medicament, '
           'posologie, quantite, prix_unitaire, disponible_initialement, '
-          'statut_ligne',
+          'statut_ligne, '
+          // Jointure vers le catalogue pour avoir le stock en temps réel
+          'listemedicament!prescription_ligne_id_medicament_fkey(stock, seuil_alerte)',
         )
         .eq('id_prescription', idPrescription)
         .order('id_ligne', ascending: true);
@@ -164,17 +166,109 @@ class OrdonnancesService {
   /// Délivrance d'une ligne (décrément du stock et changement de statut).
   /// [idMedicamentSubstitut] permet de remplacer le médicament prescrit
   /// par un équivalent du catalogue.
+  ///
+  /// ⚠️  Implémentation 100 % côté Dart (no RPC) pour garantir que le stock
+  ///    est toujours décrémenté et qu'un stock insuffisant est refusé,
+  ///    indépendamment de l'état des fonctions stockées Supabase.
   Future<void> delivrerLigne({
     required int idLigne,
     int? idMedicamentSubstitut,
   }) async {
-    await supabase.rpc(
-      'delivrer_ligne_prescription',
-      params: {
-        'p_id_ligne': idLigne,
-        'p_id_medicament_substitut': idMedicamentSubstitut,
-      },
-    );
+    // 1. Charger les détails de la ligne de prescription
+    final ligne = await supabase
+        .from('prescription_ligne')
+        .select('id_prescription, id_medicament, quantite, nom_medicament')
+        .eq('id_ligne', idLigne)
+        .single();
+
+    final int idPrescription = (ligne['id_prescription'] as num).toInt();
+    final int? idMedBase = ligne['id_medicament'] != null
+        ? (ligne['id_medicament'] as num).toInt()
+        : null;
+    final int? idMed = idMedicamentSubstitut ?? idMedBase;
+    final int qte = (ligne['quantite'] as num?)?.toInt() ?? 1;
+    final String nomMed = (ligne['nom_medicament'] ?? '').toString();
+
+    // 2. Vérifier et décrémenter le stock si un id_medicament est défini
+    if (idMed != null) {
+      final medRes = await supabase
+          .from('listemedicament')
+          .select('stock')
+          .eq('id_medicament', idMed)
+          .maybeSingle();
+
+      if (medRes != null) {
+        final int currentStock = (medRes['stock'] as num?)?.toInt() ?? 0;
+        if (currentStock < qte) {
+          throw Exception(
+            'Stock insuffisant pour "$nomMed". '
+            'Disponible : $currentStock, demandé : $qte.',
+          );
+        }
+        await supabase
+            .from('listemedicament')
+            .update({'stock': currentStock - qte})
+            .eq('id_medicament', idMed);
+      }
+    }
+
+    // 3. Mettre à jour le statut de la ligne
+    final Map<String, dynamic> update = {
+      'statut_ligne': idMedicamentSubstitut != null ? 'substitue' : 'delivre',
+    };
+    if (idMedicamentSubstitut != null) {
+      update['id_medicament_substitut'] = idMedicamentSubstitut;
+    }
+    await supabase
+        .from('prescription_ligne')
+        .update(update)
+        .eq('id_ligne', idLigne);
+
+    // 4. Recalculer le statut global de la prescription
+    await _recalculerStatutPrescription(idPrescription);
+  }
+
+  /// Recalcule et persiste le statut global d'une prescription
+  /// (paye → partiellement_delivre → delivre) en fonction de ses lignes.
+  Future<void> _recalculerStatutPrescription(int idPrescription) async {
+    final lignes = await supabase
+        .from('prescription_ligne')
+        .select('statut_ligne')
+        .eq('id_prescription', idPrescription);
+
+    int total = 0, delivrees = 0;
+    for (final l in lignes as List<dynamic>) {
+      total++;
+      final s = l['statut_ligne']?.toString();
+      if (s == 'delivre' || s == 'substitue') delivrees++;
+    }
+    if (total == 0) return;
+
+    final String nouveauStatut;
+    if (delivrees == total) {
+      nouveauStatut = 'delivre';
+    } else if (delivrees > 0) {
+      nouveauStatut = 'partiellement_delivre';
+    } else {
+      return; // Aucune délivrance : pas de changement
+    }
+
+    final p = await supabase
+        .from('prescription')
+        .select('statut_prescription')
+        .eq('id_prescription', idPrescription)
+        .single();
+
+    final actuel = p['statut_prescription']?.toString();
+    if (actuel == 'annule' || actuel == nouveauStatut) return;
+
+    await supabase
+        .from('prescription')
+        .update({
+          'statut_prescription': nouveauStatut,
+          'date_derniere_mise_ajour': DateTime.now().toIso8601String(),
+        })
+        .eq('id_prescription', idPrescription);
   }
 
   /// Marque une ligne en rupture (non délivrée).

@@ -26,11 +26,6 @@ class PharmacieTheme {
       route: '/Dashboard_Pharmacie',
     ),
     PharmacieNavItem(
-      icon: Icons.assignment_outlined,
-      labelKey: 'phar_nav_ordonnances',
-      route: '/Dashboard_Pharmacie/Ordonnances',
-    ),
-    PharmacieNavItem(
       icon: Icons.point_of_sale_outlined,
       labelKey: 'phar_nav_vente_libre',
       route: '/Dashboard_Pharmacie/VenteLibre',

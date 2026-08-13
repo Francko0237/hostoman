@@ -214,105 +214,126 @@ class _DashboardPharmacieState extends State<DashboardPharmacie> {
     final ventesTotal = (_kpis['ventes_jour_total'] ?? 0).toDouble();
     final stockBasCount = _kpis['stock_bas'] ?? 0;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Bannière ──
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-            decoration: BoxDecoration(
-              color: PharmacieTheme.primary,
-              borderRadius: BorderRadius.circular(14),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
             ),
-            child: Center(
-              child: Text(
-                'phar_dashboard_title'.tr(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.3,
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Bannière ──
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: PharmacieTheme.primary,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'phar_dashboard_title'.tr(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── KPIs ──
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _kpiCard(
+                            icon: Icons.attach_money_rounded,
+                            iconColor: PharmacieTheme.primary,
+                            value: '${ventesTotal.toStringAsFixed(0)} XAF',
+                            label: 'phar_kpi_vente_jour_simple'.tr(),
+                            valueColor: PharmacieTheme.textDark,
+                            onTap: () => context.go('/Dashboard_Pharmacie/Historique'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _kpiCard(
+                            icon: Icons.warning_rounded,
+                            iconColor: PharmacieTheme.danger,
+                            value: '$stockBasCount',
+                            label: 'phar_kpi_stock_bas'.tr(),
+                            valueColor: PharmacieTheme.danger,
+                            onTap: () => context.go('/Dashboard_Pharmacie/Catalogue'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Actions rapides : Nouvelle Vente Libre ──
+                    _actionCard(
+                      icon: Icons.point_of_sale_rounded,
+                      label: 'phar_action_nouvelle_vente'.tr(),
+                      onTap: () => context.go('/Dashboard_Pharmacie/VenteLibre'),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Sections rapides : Historique & Statistiques ──
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _navCard(
+                            icon: Icons.history_rounded,
+                            iconColor: const Color(0xFF1565C0),
+                            bgColor: const Color(0xFFE3F0FF),
+                            label: 'phar_nav_historique'.tr(),
+                            onTap: () => context.go('/Dashboard_Pharmacie/Historique'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _navCard(
+                            icon: Icons.bar_chart_rounded,
+                            iconColor: const Color(0xFF6A1B9A),
+                            bgColor: const Color(0xFFF3E5F5),
+                            label: 'phar_nav_stats'.tr(),
+                            onTap: () => context.go('/Dashboard_Pharmacie/Statistiques'),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Espaceur dynamique pour pousser le footer tout en bas
+                    const Spacer(),
+                    const SizedBox(height: 30),
+
+                    // ── Footer ──
+                    Center(
+                      child: Text(
+                        'fiche_footer'.tr(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: PharmacieTheme.textMuted,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 20),
-
-          // ── KPIs ──
-          Row(
-            children: [
-              Expanded(
-                child: _kpiCard(
-                  icon: Icons.attach_money_rounded,
-                  iconColor: PharmacieTheme.primary,
-                  value: '${ventesTotal.toStringAsFixed(0)} XAF',
-                  label: 'phar_kpi_vente_jour_simple'.tr(),
-                  valueColor: PharmacieTheme.textDark,
-                  onTap: () => context.go('/Dashboard_Pharmacie/Historique'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _kpiCard(
-                  icon: Icons.warning_rounded,
-                  iconColor: PharmacieTheme.danger,
-                  value: '$stockBasCount',
-                  label: 'phar_kpi_stock_bas'.tr(),
-                  valueColor: PharmacieTheme.danger,
-                  onTap: () => context.go('/Dashboard_Pharmacie/Catalogue'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // ── Actions (2 colonnes) ──
-          Row(
-            children: [
-              Expanded(
-                child: _actionCard(
-                  icon: Icons.point_of_sale_rounded,
-                  label: 'phar_action_nouvelle_vente'.tr(),
-                  onTap: () => context.go('/Dashboard_Pharmacie/VenteLibre'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _actionCard(
-                  icon: Icons.history_rounded,
-                  label: 'phar_action_historique_ventes'.tr(),
-                  onTap: () => context.go('/Dashboard_Pharmacie/Historique'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // ── Action pleine largeur ──
-          _actionCard(
-            icon: Icons.calendar_month_rounded,
-            label: 'phar_nav_stats'.tr(),
-            onTap: () => context.go('/Dashboard_Pharmacie/Statistiques'),
-            fullWidth: true,
-          ),
-
-          const SizedBox(height: 32),
-
-          // ── Footer ──
-          Center(
-            child: Text(
-              'fiche_footer'.tr(),
-              style: const TextStyle(
-                fontSize: 12,
-                color: PharmacieTheme.textMuted,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -369,42 +390,121 @@ class _DashboardPharmacieState extends State<DashboardPharmacie> {
     );
   }
 
+
   Widget _actionCard({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-    bool fullWidth = false,
   }) {
-    return Material(
-      color: const Color(0xFFEEEEEE),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: SizedBox(
-          height: fullWidth ? 110 : 130,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: PharmacieTheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAEFF4),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 5,
+            offset: const Offset(2, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          splashColor: PharmacieTheme.primary.withValues(alpha: 0.2),
+          highlightColor: PharmacieTheme.primary.withValues(alpha: 0.1),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: PharmacieTheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: PharmacieTheme.primary.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(Icons.point_of_sale_rounded, size: 36, color: PharmacieTheme.primary),
                 ),
-                child: Icon(icon, color: PharmacieTheme.primary, size: 34),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: PharmacieTheme.textMuted,
+                const SizedBox(height: 24),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[800],
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navCard({
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAEFF4),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 5,
+            offset: const Offset(2, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          splashColor: iconColor.withValues(alpha: 0.2),
+          highlightColor: iconColor.withValues(alpha: 0.1),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: iconColor.withValues(alpha: 0.3), width: 2),
+                  ),
+                  child: Icon(icon, size: 36, color: iconColor),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[800],
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -459,7 +559,7 @@ class _DashboardPharmacieState extends State<DashboardPharmacie> {
                   label: 'phar_kpi_attente_paiement'.tr(),
                   value: '$attente',
                   color: PharmacieTheme.warn,
-                  onTap: () => context.go('/Dashboard_Pharmacie/Ordonnances'),
+                  onTap: () => context.go('/Dashboard_Pharmacie/Historique'),
                 ),
               ),
             ),
@@ -471,7 +571,7 @@ class _DashboardPharmacieState extends State<DashboardPharmacie> {
                   label: 'phar_kpi_a_delivrer'.tr(),
                   value: '$aDelivrer',
                   color: Colors.blue,
-                  onTap: () => context.go('/Dashboard_Pharmacie/Ordonnances'),
+                  onTap: () => context.go('/Dashboard_Pharmacie/Historique'),
                 ),
               ),
             ),

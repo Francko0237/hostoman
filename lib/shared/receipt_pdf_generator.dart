@@ -45,17 +45,27 @@ class ReceiptPdfGenerator {
       final user = client.auth.currentUser;
       if (user == null) return 'rcpt_agent_unknown'.tr();
 
-      final data = await client
+      // Essai 1 : colonne auth_id (pharmaciens, caissiers, etc.)
+      Map<String, dynamic>? data = await client
           .from('Personnel_hopital')
-          .select('Nom, Prenom, Specialite')
+          .select('Nom, Prenom')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
+      // Essai 2 : colonne id_personnel (médecins et autres)
+      data ??= await client
+          .from('Personnel_hopital')
+          .select('Nom, Prenom')
           .eq('id_personnel', user.id)
-          .single();
+          .maybeSingle();
+
+      if (data == null) throw Exception('Aucun personnel trouvé');
 
       final nom = data['Nom']?.toString() ?? '';
       final prenom = data['Prenom']?.toString() ?? '';
 
       final fullName = '$prenom $nom'.trim();
-      if (fullName.isEmpty) return 'rcpt_agent_unknown'.tr();
+      if (fullName.isEmpty) throw Exception('Nom vide');
       return fullName;
     } catch (e) {
       final user = Supabase.instance.client.auth.currentUser;
@@ -446,6 +456,255 @@ class ReceiptPdfGenerator {
           ),
         ],
       ),
+    );
+  }
+
+  /// Génère et ouvre la prévisualisation PDF du reçu pour la pharmacie
+  static Future<void> printPharmacyReceipt({
+    required BuildContext context,
+    required String patientNom,
+    required String idPrescription,
+    required double total,
+    required List<dynamic> lignes,
+    bool isVenteLibre = false,
+  }) async {
+    final built = await runWithPdfLoadingOverlay<_BuiltReceipt>(
+      context: context,
+      spinnerColor: const Color(0xFF2E7D5B),
+      work: () async {
+        final doc = pw.Document();
+        final agentName = await _getAgentNameFromDb();
+
+        final ttf = pw.Font.helvetica();
+        final ttfBold = pw.Font.helveticaBold();
+        final ttfItalic = pw.Font.helveticaOblique();
+
+        pw.MemoryImage? logoImage;
+        try {
+          final bytes = await rootBundle.load('assets/images/logo.png');
+          logoImage = pw.MemoryImage(bytes.buffer.asUint8List());
+        } catch (_) {
+          logoImage = null;
+        }
+
+        final now = DateTime.now();
+        final dateImpression = DateFormat('rcpt_date_format'.tr()).format(now);
+        final numRecu = 'HST-${idPrescription.toString().padLeft(6, '0')}';
+
+        const kPharmacyColor = PdfColor.fromInt(0xFF2E7D5B); // Vert Pharmacie
+
+        doc.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.a5,
+            margin: const pw.EdgeInsets.all(30),
+            build: (pw.Context ctx) {
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  // En-tête hôpital
+                  _buildHeader(
+                    ttf: ttf,
+                    ttfBold: ttfBold,
+                    ttfItalic: ttfItalic,
+                    logo: logoImage,
+                  ),
+                  pw.SizedBox(height: 15),
+
+                  // Titre
+                  pw.Container(
+                    decoration: const pw.BoxDecoration(
+                      color: kPharmacyColor,
+                    ),
+                    padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                    child: pw.Text(
+                      isVenteLibre ? 'REÇU DE PHARMACIE (VENTE DIRECTE)' : 'REÇU DE PHARMACIE',
+                      style: pw.TextStyle(
+                        font: ttfBold,
+                        fontSize: 12,
+                        color: PdfColors.white,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.SizedBox(height: 5),
+
+                  pw.Center(
+                    child: pw.Text(
+                      'Reçu N° : $numRecu',
+                      style: pw.TextStyle(
+                        font: ttfBold,
+                        fontSize: 10,
+                        color: PdfColors.grey800,
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(height: 15),
+
+                  // Infos Patient/Vente
+                  pw.Text(
+                    'INFORMATIONS DE VENTE',
+                    style: pw.TextStyle(
+                      font: ttfBold,
+                      fontSize: 9,
+                      color: kPharmacyColor,
+                      decoration: pw.TextDecoration.underline,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+                  _buildInfoRow(ttf, ttfBold, 'Client / Patient', patientNom),
+                  _buildInfoRow(ttf, ttfBold, 'Date / Heure', dateImpression),
+                  _buildInfoRow(ttf, ttfBold, 'Type de vente', isVenteLibre ? 'Vente Libre (sans ordonnance)' : 'Ordonnance médicale'),
+
+                  pw.SizedBox(height: 15),
+
+                  // Tableau des médicaments
+                  pw.Text(
+                    'MÉDICAMENTS LIVRÉS',
+                    style: pw.TextStyle(
+                      font: ttfBold,
+                      fontSize: 9,
+                      color: kPharmacyColor,
+                      decoration: pw.TextDecoration.underline,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
+                    ),
+                    child: pw.Column(
+                      children: [
+                        // En-tête tableau
+                        pw.Container(
+                          color: PdfColors.grey200,
+                          padding: const pw.EdgeInsets.all(6),
+                          child: pw.Row(
+                            children: [
+                              pw.Expanded(
+                                flex: 3,
+                                child: pw.Text('Désignation', style: pw.TextStyle(font: ttfBold, fontSize: 8)),
+                              ),
+                              pw.Expanded(
+                                flex: 1,
+                                child: pw.Text('Qte', style: pw.TextStyle(font: ttfBold, fontSize: 8), textAlign: pw.TextAlign.center),
+                              ),
+                              pw.Expanded(
+                                flex: 2,
+                                child: pw.Text('P.U.', style: pw.TextStyle(font: ttfBold, fontSize: 8), textAlign: pw.TextAlign.right),
+                              ),
+                              pw.Expanded(
+                                flex: 2,
+                                child: pw.Text('Total', style: pw.TextStyle(font: ttfBold, fontSize: 8), textAlign: pw.TextAlign.right),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Lignes
+                        ...lignes.map((l) {
+                          final nomMed = (l['nom_medicament'] ?? '').toString();
+                          final qte = (l['quantite'] as num?)?.toInt() ?? 1;
+                          final pu = (l['prix_unitaire'] as num?)?.toDouble() ?? 0;
+                          final tot = pu * qte;
+                          return pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            decoration: const pw.BoxDecoration(
+                              border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
+                            ),
+                            child: pw.Row(
+                              children: [
+                                pw.Expanded(
+                                  flex: 3,
+                                  child: pw.Text(nomMed, style: pw.TextStyle(font: ttf, fontSize: 8)),
+                                ),
+                                pw.Expanded(
+                                  flex: 1,
+                                  child: pw.Text('$qte', style: pw.TextStyle(font: ttf, fontSize: 8), textAlign: pw.TextAlign.center),
+                                ),
+                                pw.Expanded(
+                                  flex: 2,
+                                  child: pw.Text('${pu.toStringAsFixed(0)}', style: pw.TextStyle(font: ttf, fontSize: 8), textAlign: pw.TextAlign.right),
+                                ),
+                                pw.Expanded(
+                                  flex: 2,
+                                  child: pw.Text('${tot.toStringAsFixed(0)}', style: pw.TextStyle(font: ttfBold, fontSize: 8), textAlign: pw.TextAlign.right),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+
+                  pw.SizedBox(height: 10),
+
+                  // Total
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.end,
+                    children: [
+                      pw.Text('NET À PAYER : ', style: pw.TextStyle(font: ttfBold, fontSize: 10)),
+                      pw.Text(
+                        '${total.toStringAsFixed(0)} FCFA',
+                        style: pw.TextStyle(font: ttfBold, fontSize: 12, color: kPharmacyColor),
+                      ),
+                    ],
+                  ),
+
+                  pw.Spacer(),
+
+                  // Signatures
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('Le Pharmacien :', style: pw.TextStyle(font: ttfBold, fontSize: 9)),
+                          pw.SizedBox(height: 25),
+                          pw.Text(agentName, style: pw.TextStyle(font: ttf, fontSize: 9)),
+                        ],
+                      ),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Text('Cachet / Signature :', style: pw.TextStyle(font: ttfBold, fontSize: 9)),
+                          pw.SizedBox(height: 25),
+                          pw.Text('________________________', style: pw.TextStyle(font: ttf, fontSize: 9)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 15),
+
+                  // Pied de page
+                  pw.Divider(thickness: 0.5, color: PdfColors.grey400),
+                  pw.SizedBox(height: 5),
+                  pw.Center(
+                    child: pw.Text(
+                      'Imprimé le $dateImpression',
+                      style: pw.TextStyle(font: ttfItalic, fontSize: 7, color: PdfColors.grey600),
+                    ),
+                  ),
+                  pw.Center(
+                    child: pw.Text(
+                      'Les médicaments vendus ne sont ni repris ni échangés.',
+                      style: pw.TextStyle(font: ttf, fontSize: 7, color: PdfColors.grey600),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+
+        return _BuiltReceipt(doc: doc, numRecu: numRecu, fileDate: now);
+      },
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => built.doc.save(),
+      name: 'Recu_Pharmacie_${built.numRecu}_${DateFormat('yyyyMMdd').format(built.fileDate)}.pdf',
     );
   }
 

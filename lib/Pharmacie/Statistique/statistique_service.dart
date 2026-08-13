@@ -28,7 +28,7 @@ class StatistiquePharmacieService {
         .from('paiement')
         .select('prix_a_paye, date_paiement')
         .eq('motif', 'Medicaments')
-        .eq('statut_paiement', 'paye')
+        .inFilter('statut_paiement', ['paye', 'payer', 'payé'])
         .gte('date_paiement', debutIso)
         .lte('date_paiement', finIso);
 

@@ -3,10 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:hostoman/shared/responsive_wrapper.dart';
+import 'package:hostoman/shared/receipt_pdf_generator.dart';
 import '../shared/pharmacie_theme.dart';
 import '../Ordonnances/ordonnances_service.dart';
 
@@ -176,122 +174,18 @@ class _VenteDetailPageState extends State<VenteDetailPage> {
   }
 
   Future<void> _printReceipt() async {
+    if (!mounted) return;
     try {
       final patient = _prescription?['Patient'] as Map<String, dynamic>? ?? {};
-      final nom = (patient['nom_complet'] ?? '—').toString();
-      final idStr = 'HST-${widget.idPrescription.toString().padLeft(6, '0')}';
+      final nom = (patient['nom_complet'] ?? 'Client').toString();
       final total = (_prescription?['total_prix'] as num?)?.toDouble() ?? 0;
-      final now = DateTime.now();
-      final dateStr =
-          '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}  '
-          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-
-      final logoBytes = await rootBundle.load('assets/images/logo.png');
-      final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
-
-      await Printing.layoutPdf(
-        name: 'recu_$idStr',
-        onLayout: (PdfPageFormat format) async {
-          final doc = pw.Document();
-          doc.addPage(
-            pw.Page(
-              pageFormat: PdfPageFormat.a5,
-              margin: const pw.EdgeInsets.all(24),
-              build: (pw.Context ctx) => pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Center(
-                    child: pw.Image(
-                      logoImage,
-                      width: 72,
-                      height: 72,
-                      fit: pw.BoxFit.contain,
-                    ),
-                  ),
-                  pw.SizedBox(height: 6),
-                  pw.Center(
-                    child: pw.Text(
-                      'PHARMACIE',
-                      style: pw.TextStyle(
-                        fontSize: 18,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  pw.Center(child: pw.Text('Reçu de paiement')),
-                  pw.SizedBox(height: 4),
-                  pw.Center(
-                    child: pw.Text(
-                      idStr,
-                      style: const pw.TextStyle(fontSize: 11),
-                    ),
-                  ),
-                  pw.Center(
-                    child: pw.Text(
-                      dateStr,
-                      style: const pw.TextStyle(fontSize: 10),
-                    ),
-                  ),
-                  pw.Divider(),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    'Patient : $nom',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.SizedBox(height: 10),
-                  pw.Text(
-                    'Médicaments :',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.SizedBox(height: 4),
-                  ..._lignes.map((l) {
-                    final nomMed = (l['nom_medicament'] ?? '').toString();
-                    final qte = (l['quantite'] as num?)?.toInt() ?? 1;
-                    final prix = (l['prix_unitaire'] as num?)?.toDouble() ?? 0;
-                    return pw.Padding(
-                      padding: const pw.EdgeInsets.only(bottom: 4),
-                      child: pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text('$nomMed  x$qte'),
-                          pw.Text('${(prix * qte).toStringAsFixed(0)} FCFA'),
-                        ],
-                      ),
-                    );
-                  }),
-                  pw.Divider(),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text(
-                        'TOTAL',
-                        style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      pw.Text(
-                        '${total.toStringAsFixed(0)} XAF',
-                        style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                  pw.SizedBox(height: 20),
-                  pw.Center(
-                    child: pw.Text(
-                      'Merci de votre visite',
-                      style: const pw.TextStyle(fontSize: 11),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-          return doc.save();
-        },
+      await ReceiptPdfGenerator.printPharmacyReceipt(
+        context: context,
+        patientNom: nom,
+        idPrescription: widget.idPrescription.toString(),
+        total: total,
+        lignes: _lignes,
+        isVenteLibre: true,
       );
     } catch (_) {}
   }

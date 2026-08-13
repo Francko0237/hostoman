@@ -28,6 +28,10 @@ class _DetailUIState extends State<DetailUI> {
 
   Map<String, dynamic>? detailsData;
   bool isLoading = true;
+  /// Prix reflété en temps réel lors des annulations/restaurations
+  double _currentPrixAPaye = 0;
+  /// Map id_examen/id_ligne -> bool (true = en cours de traitement)
+  final Map<int, bool> _itemLoading = {};
 
   @override
   void initState() {
@@ -40,6 +44,7 @@ class _DetailUIState extends State<DetailUI> {
     detailsData = await detailService.getPatientPaymentDetails(
       widget.idPaiement,
     );
+    _currentPrixAPaye = (detailsData?['prix_a_paye'] as num?)?.toDouble() ?? 0;
     setState(() => isLoading = false);
   }
 
@@ -72,6 +77,92 @@ class _DetailUIState extends State<DetailUI> {
     }
 
     if (mounted) Navigator.pop(context, true); // Retour à la liste avec refresh
+  }
+
+  // ─────────────────────────────────────────────────────
+  // Toggle Examen (Annulé ↔ en attente)
+  // ─────────────────────────────────────────────────────
+  Future<void> _toggleExamen(Map<String, dynamic> examen) async {
+    final idExamen = examen['id_examen'] as int;
+    final prix = (examen['prix_examen'] as num?)?.toDouble() ?? 0;
+    final isAnnule = (examen['statut_examen'] ?? '') == 'Annulé';
+
+    setState(() => _itemLoading[idExamen] = true);
+    try {
+      if (isAnnule) {
+        await detailService.restaurerExamen(
+          idExamen: idExamen,
+          idPaiement: widget.idPaiement,
+          prixExamen: prix,
+        );
+      } else {
+        await detailService.annulerExamen(
+          idExamen: idExamen,
+          idPaiement: widget.idPaiement,
+          prixExamen: prix,
+        );
+      }
+      // Met à jour l'état local sans recharger toute la page
+      setState(() {
+        examen['statut_examen'] = isAnnule ? 'en attente' : 'Annulé';
+        _currentPrixAPaye = isAnnule
+            ? _currentPrixAPaye + prix
+            : (_currentPrixAPaye - prix).clamp(0, double.infinity);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: npErrorColor),
+        );
+      }
+    } finally {
+      setState(() => _itemLoading.remove(idExamen));
+    }
+  }
+
+  // ─────────────────────────────────────────────────────
+  // Toggle Ligne Prescription (annule ↔ en_attente)
+  // ─────────────────────────────────────────────────────
+  Future<void> _toggleLignePrescription(Map<String, dynamic> ligne) async {
+    final idLigne = ligne['id_ligne'] as int;
+    final idPrescription = detailsData!['id_prescription'] as int;
+    final prix = (ligne['prix_unitaire'] as num?)?.toDouble() ?? 0;
+    final qte = (ligne['quantite'] as num?)?.toInt() ?? 1;
+    final montant = prix * qte;
+    final isAnnule = (ligne['statut_ligne'] ?? '') == 'annule';
+
+    setState(() => _itemLoading[idLigne] = true);
+    try {
+      if (isAnnule) {
+        await detailService.restaurerLignePrescription(
+          idLigne: idLigne,
+          idPaiement: widget.idPaiement,
+          idPrescription: idPrescription,
+          montantLigne: montant,
+        );
+      } else {
+        await detailService.annulerLignePrescription(
+          idLigne: idLigne,
+          idPaiement: widget.idPaiement,
+          idPrescription: idPrescription,
+          montantLigne: montant,
+        );
+      }
+      setState(() {
+        ligne['statut_ligne'] = isAnnule ? 'en_attente' : 'annule';
+        _currentPrixAPaye = isAnnule
+            ? _currentPrixAPaye + montant
+            : (_currentPrixAPaye - montant).clamp(0, double.infinity);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: npErrorColor),
+        );
+      }
+    } finally {
+      setState(() => _itemLoading.remove(idLigne));
+    }
   }
 
   Future<void> _imprimerRecu() async {
@@ -463,6 +554,8 @@ class _DetailUIState extends State<DetailUI> {
                         const SizedBox(height: 16),
                         _buildPaymentSection(),
                         const SizedBox(height: 16),
+                        _buildItemsSection(),
+                        const SizedBox(height: 16),
                         _buildConsultationSection(),
                         const SizedBox(height: 24),
                         _buildActionButtons(),
@@ -607,7 +700,8 @@ class _DetailUIState extends State<DetailUI> {
     final motif = detailsData!['motif'] ?? 'pay_default_motif'.tr();
     final statutPaiement = detailsData!['statut_paiement'] ?? 'en_attente';
     final datePaiement = detailsData!['date_paiement'];
-    final prixAPaye = detailsData!['prix_a_paye'] ?? 0;
+    // Utiliser le prix local (mis à jour à chaque toggle d'item)
+    final prixAPaye = _currentPrixAPaye;
 
     String dateFormatted = 'pay_value_na'.tr();
     if (datePaiement != null) {
@@ -685,7 +779,7 @@ class _DetailUIState extends State<DetailUI> {
               Icons.attach_money,
               'pay_field_amount'.tr(),
               'pay_field_amount_value'.tr(
-                namedArgs: {'value': '$prixAPaye'},
+                namedArgs: {'value': prixAPaye.toStringAsFixed(0)},
               ),
               npSuccessColor,
             ),
@@ -744,6 +838,256 @@ class _DetailUIState extends State<DetailUI> {
               dateFormatted,
               npBlueColor,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────
+  // Section items (examens ou médicaments) avec bouton toggle
+  // ─────────────────────────────────────────────────────
+  Widget _buildItemsSection() {
+    if (detailsData == null) return const SizedBox.shrink();
+
+    final motif = (detailsData!['motif'] ?? '').toString();
+    final consultationMap = detailsData!['Consultation'] as Map<String, dynamic>? ?? {};
+    final idPrescription = detailsData!['id_prescription'];
+
+    List<dynamic> items = [];
+    bool isExamen = false;
+
+    if (motif == 'Examens') {
+      items = (consultationMap['examen_a_effectuer'] as List<dynamic>?) ?? [];
+      isExamen = true;
+    } else if (idPrescription != null) {
+      items = (detailsData!['prescription_lignes'] as List<dynamic>?) ?? [];
+    }
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // En-tête section
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: npBlueColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isExamen ? Icons.science_rounded : Icons.medication,
+                    color: npBlueColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    isExamen ? 'Examens prescrits' : 'Médicaments prescrits',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: npBlueColor,
+                    ),
+                  ),
+                ),
+                // Nouveau total calculé
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: npSuccessColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${_currentPrixAPaye.toStringAsFixed(0)} FCFA',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: npSuccessColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Divider(color: Colors.grey.shade200),
+            const SizedBox(height: 8),
+            // Liste des items
+            ...items.map<Widget>((item) {
+              final int itemId = isExamen
+                  ? (item['id_examen'] as int)
+                  : (item['id_ligne'] as int);
+              final bool isLoading = _itemLoading[itemId] == true;
+
+              final String nom = isExamen
+                  ? (item['nom_examen'] ?? '').toString()
+                  : (item['nom_medicament'] ?? '').toString();
+
+              final double prix = isExamen
+                  ? (item['prix_examen'] as num?)?.toDouble() ?? 0
+                  : (item['prix_unitaire'] as num?)?.toDouble() ?? 0;
+
+              final int qte = isExamen
+                  ? 1
+                  : (item['quantite'] as num?)?.toInt() ?? 1;
+
+              final String statut = isExamen
+                  ? (item['statut_examen'] ?? '').toString()
+                  : (item['statut_ligne'] ?? '').toString();
+
+              final bool isAnnule = isExamen
+                  ? statut == 'Annulé'
+                  : statut == 'annule';
+
+              // Les items déjà terminés/délivrés ne peuvent plus être modifiés
+              final bool isLocked = isExamen
+                  ? (statut == 'Terminé' || statut == 'En cours')
+                  : (statut == 'delivre' || statut == 'substitue' || statut == 'rupture');
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isAnnule
+                      ? Colors.grey.shade50
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isAnnule
+                        ? Colors.grey.shade200
+                        : npBlueColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Icône statut
+                    Icon(
+                      isAnnule
+                          ? Icons.cancel_outlined
+                          : isLocked
+                              ? Icons.check_circle_outline
+                              : Icons.radio_button_unchecked,
+                      size: 18,
+                      color: isAnnule
+                          ? Colors.grey
+                          : isLocked
+                              ? npSuccessColor
+                              : npBlueColor,
+                    ),
+                    const SizedBox(width: 10),
+                    // Nom
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nom,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isAnnule ? Colors.grey : Colors.black87,
+                              decoration: isAnnule
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                            ),
+                          ),
+                          Text(
+                            isExamen
+                                ? '${prix.toStringAsFixed(0)} FCFA'
+                                : 'x$qte — ${(prix * qte).toStringAsFixed(0)} FCFA',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isAnnule ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Badge annulé (si locked)
+                    if (isLocked)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: npSuccessColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isExamen ? 'En cours' : 'Délivré',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: npSuccessColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    else if (isLoading)
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      // Bouton toggle Annuler / Restaurer
+                      InkWell(
+                        onTap: () => isExamen
+                            ? _toggleExamen(item as Map<String, dynamic>)
+                            : _toggleLignePrescription(item as Map<String, dynamic>),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isAnnule
+                                ? npSuccessColor.withOpacity(0.1)
+                                : npErrorColor.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isAnnule ? npSuccessColor : npErrorColor,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isAnnule ? Icons.restore : Icons.close,
+                                size: 13,
+                                color: isAnnule ? npSuccessColor : npErrorColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isAnnule ? 'Restaurer' : 'Annuler',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isAnnule ? npSuccessColor : npErrorColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       ),

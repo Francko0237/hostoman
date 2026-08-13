@@ -1158,6 +1158,8 @@
   "phar_nav_vente_libre": "Direct sale",
   "phar_nav_catalogue": "Catalog",
   "phar_nav_historique": "History",
+  "phar_dash_nav_historique_desc": "Past sales and prescriptions",
+  "phar_dash_nav_stats_desc": "Today's figures and trends",
   "phar_nav_stats": "Statistics",
   "phar_nav_stock": "Stock",
   "phar_nav_profil": "Profile",

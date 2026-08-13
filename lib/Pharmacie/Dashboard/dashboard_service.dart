@@ -31,7 +31,7 @@ class PharmacieDashboardService {
         .from('paiement')
         .select('prix_a_paye, statut_paiement, motif, date_paiement')
         .eq('motif', 'Medicaments')
-        .eq('statut_paiement', 'paye')
+        .inFilter('statut_paiement', ['paye', 'payer', 'payé'])
         .gte('date_paiement', startOfDay);
 
     double totalJour = 0;

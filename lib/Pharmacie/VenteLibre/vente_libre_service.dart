@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../Ordonnances/ordonnances_service.dart';
 
 /// Service pour la vente libre (prescription type='vente_libre').
 /// Crée immédiatement une prescription `paye`, décrémente le stock
@@ -77,13 +78,21 @@ class VenteLibreService {
       'date_paiement': now,
     });
 
-    // 4. Délivrance immédiate de chaque ligne via RPC (décrément stock)
+    // 4. Vérification et décrémentation du stock pour chaque ligne livrée
+    //    On réutilise la même logique robuste que delivrerLigne (100 % Dart).
+    final svc = OrdonnancesService(supabase);
     for (final row in inserted as List<dynamic>) {
       final idLigne = row['id_ligne'] as int;
-      await supabase.rpc('delivrer_ligne_prescription', params: {
-        'p_id_ligne': idLigne,
-        'p_id_medicament_substitut': null,
-      });
+      try {
+        await svc.delivrerLigne(idLigne: idLigne);
+      } catch (e) {
+        // Rollback partiel : marquer la ligne en rupture si stock insuffisant
+        await supabase
+            .from('prescription_ligne')
+            .update({'statut_ligne': 'rupture'})
+            .eq('id_ligne', idLigne);
+        rethrow;
+      }
     }
 
     return idPrescription;

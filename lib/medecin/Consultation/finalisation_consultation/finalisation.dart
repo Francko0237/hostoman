@@ -482,18 +482,17 @@ class _FinalisationConsultationPageState
   }
 
   String _localizeExamStatus(String raw) {
-    switch (raw.toLowerCase()) {
-      case 'en cours':
-        return 'final_exam_status_in_progress'.tr();
-      case 'terminé':
-        return 'final_exam_status_done'.tr();
-      case 'annuler':
-        return 'final_exam_status_cancelled'.tr();
-      case 'en attente':
-        return 'final_exam_status_pending'.tr();
-      default:
-        return raw;
+    final lower = raw.toLowerCase();
+    if (lower == 'en cours') {
+      return 'final_exam_status_in_progress'.tr();
+    } else if (lower == 'terminé' || lower == 'termine') {
+      return 'final_exam_status_done'.tr();
+    } else if (lower == 'annuler' || lower == 'annulé' || lower == 'annule') {
+      return 'final_exam_status_cancelled'.tr();
+    } else if (lower == 'en attente') {
+      return 'final_exam_status_pending'.tr();
     }
+    return raw;
   }
 
 
@@ -1108,9 +1107,9 @@ class _FinalisationConsultationPageState
 
         if (statutLowerRaw == 'en cours') {
           statutColor = Colors.orange;
-        } else if (statutLowerRaw == 'terminé') {
+        } else if (statutLowerRaw == 'terminé' || statutLowerRaw == 'termine') {
           statutColor = Colors.green;
-        } else if (statutLowerRaw == 'annuler') {
+        } else if (statutLowerRaw == 'annuler' || statutLowerRaw == 'annulé' || statutLowerRaw == 'annule') {
           statutColor = Colors.red;
         }
 

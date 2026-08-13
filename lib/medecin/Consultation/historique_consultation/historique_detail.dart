@@ -291,6 +291,8 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
         final nomExamen =
             examen['nom_examen']?.toString() ?? 'hcdet_exam_unknown'.tr();
         final resultatExamen = examen['resultat_examen']?.toString();
+        final statutExamen = examen['statut_examen']?.toString() ?? '';
+        final isAnnule = statutExamen == 'Annulé';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -316,18 +318,20 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
                   height: 46,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        medSuccessColor,
-                        medSuccessColor.withOpacity(0.7),
-                      ],
+                      colors: isAnnule
+                          ? [Colors.grey.shade400, Colors.grey.shade300]
+                          : [
+                              medSuccessColor,
+                              medSuccessColor.withOpacity(0.7),
+                            ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     shape: BoxShape.circle,
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(
-                      Icons.science_rounded,
+                      isAnnule ? Icons.cancel_outlined : Icons.science_rounded,
                       color: Colors.white,
                       size: 22,
                     ),
@@ -345,37 +349,51 @@ class _HistoriqueDetailPageState extends State<HistoriqueDetailPage>
                           Expanded(
                             child: Text(
                               nomExamen,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
+                                color: isAnnule ? Colors.grey : Colors.black87,
+                                decoration: isAnnule
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
                               ),
                             ),
                           ),
-                          // Badge terminé vert
+                          // Badge statut
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: medSuccessColor.withOpacity(0.1),
+                              color: isAnnule
+                                  ? Colors.red.shade50
+                                  : medSuccessColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.check_circle_rounded,
+                                  isAnnule
+                                      ? Icons.cancel
+                                      : Icons.check_circle_rounded,
                                   size: 12,
-                                  color: medSuccessColor,
+                                  color: isAnnule
+                                      ? Colors.red.shade700
+                                      : medSuccessColor,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'hcdet_exam_done_badge'.tr(),
+                                  isAnnule
+                                      ? 'Annulé'
+                                      : 'hcdet_exam_done_badge'.tr(),
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: medSuccessColor,
+                                    color: isAnnule
+                                        ? Colors.red.shade700
+                                        : medSuccessColor,
                                   ),
                                 ),
                               ],
