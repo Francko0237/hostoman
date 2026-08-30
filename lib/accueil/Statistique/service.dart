@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hostoman/model_unifier.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 class RapportPatientService {
   final SupabaseClient supabase;
@@ -12,8 +13,9 @@ class RapportPatientService {
   ) async {
     // On ajoute 1 jour à la fin pour inclure toute la journée sélectionnée
     final endPlusOne = end.add(const Duration(days: 1));
+    final hid = await UserProfileHelper.getHospitalId();
 
-    final data = await supabase
+    var query = supabase
         .from('Consultation')
         .select('''
         id_consultation, type_service, date_enregistrement,
@@ -23,7 +25,13 @@ class RapportPatientService {
         .lt(
           'date_enregistrement',
           endPlusOne.toIso8601String(),
-        ); // <-- lt + end+1
+        );
+
+    if (hid != null) {
+      query = query.eq('id_hopital', hid);
+    }
+
+    final data = await query;
 
     print(data); // debug
 

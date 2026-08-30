@@ -34,7 +34,7 @@ class DashboardService {
           .eq('type_service', 'Consultation')
           .eq('paiement.statut_paiement', 'payer')
           .eq('Statut_Consultation', 'en-attente-consultation')
-          .eq('id_personnel', userId)
+          .eq('id_utilisateur', userId)
           .gte('date_enregistrement', todayStart)
           .lte('date_enregistrement', todayEnd)
           .count(CountOption.exact);
@@ -48,7 +48,7 @@ class DashboardService {
           .or(
             'Statut_Consultation.eq.en-attente-examen,Statut_Consultation.eq.en-attente-resultat,Statut_Consultation.eq.resultat-disponible',
           )
-          .eq('id_personnel', userId)
+          .eq('id_utilisateur', userId)
           .gte('date_enregistrement', todayStart)
           .lte('date_enregistrement', todayEnd)
           .count(CountOption.exact);
@@ -60,7 +60,7 @@ class DashboardService {
           .from('Consultation')
           .select('id_consultation')
           .eq('Statut_Consultation', 'terminer')
-          .eq('id_personnel', userId)
+          .eq('id_utilisateur', userId)
           .gte('date_enregistrement', todayStart)
           .lte('date_enregistrement', todayEnd)
           .count(CountOption.exact);

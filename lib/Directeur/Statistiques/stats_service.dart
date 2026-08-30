@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 class StatsService {
   final SupabaseClient supabase;
@@ -23,15 +24,15 @@ class StatsService {
 
   /// 📊 Récupère les stats globales (Total)
   Future<Map<String, dynamic>> getGlobalStats() async {
+    final hid = await UserProfileHelper.getHospitalId();
     try {
       // 1. Revenu Total (Somme des paiements validés)
-      final revenuResponse = await supabase
+      var qPaiement = supabase
           .from('paiement')
           .select('prix_a_paye')
-          .eq(
-            'statut_paiement',
-            'payer',
-          ); // Assurez-vous que c'est 'payer' ou 'payé'
+          .eq('statut_paiement', 'payer');
+      if (hid != null) qPaiement = qPaiement.eq('id_hopital', hid);
+      final revenuResponse = await qPaiement;
 
       double revenuTotal = 0;
       for (var p in revenuResponse) {
@@ -39,9 +40,11 @@ class StatsService {
       }
 
       // 2. Total Patients (patients uniques par téléphone + nom normalisé)
-      final patientsResponse = await supabase
+      var qPatient = supabase
           .from('Patient')
           .select('id_patient, nom_complet, telephone');
+      if (hid != null) qPatient = qPatient.eq('id_hopital', hid);
+      final patientsResponse = await qPatient;
 
       // Map id_patient -> clé d'identité unique
       final identityById = <String, String>{};
@@ -51,9 +54,11 @@ class StatsService {
       final totalPatients = identityById.values.toSet().length;
 
       // 3. Total Consultations (une seule par identité patient + date)
-      final consultationsResponse = await supabase
+      var qConsult = supabase
           .from('Consultation')
           .select('id_patient, date_enregistrement');
+      if (hid != null) qConsult = qConsult.eq('id_hopital', hid);
+      final consultationsResponse = await qConsult;
 
       final uniqueConsults = <String>{};
       for (var c in consultationsResponse) {
@@ -88,6 +93,7 @@ class StatsService {
     required DateTime end,
     String localeTag = 'fr_FR',
   }) async {
+    final hid = await UserProfileHelper.getHospitalId();
     try {
       final startIso = DateTime(
         start.year,
@@ -104,9 +110,12 @@ class StatsService {
       ).toIso8601String();
 
       // 1. Map id_patient -> identité (téléphone+nom)
-      final allPatients = await supabase
+      var qPatient = supabase
           .from('Patient')
           .select('id_patient, nom_complet, telephone, date_enregistrement');
+      if (hid != null) qPatient = qPatient.eq('id_hopital', hid);
+      final allPatients = await qPatient;
+
       final identityById = <String, String>{};
       for (var p in allPatients) {
         identityById[p['id_patient'].toString()] = _patientIdentityKey(p);
@@ -127,11 +136,13 @@ class StatsService {
           .length;
 
       // 3. Consultations dans la plage
-      final consultationsRaw = await supabase
+      var qConsult = supabase
           .from('Consultation')
           .select('id_patient, date_enregistrement, Statut_Consultation')
           .gte('date_enregistrement', startIso)
           .lte('date_enregistrement', endIso);
+      if (hid != null) qConsult = qConsult.eq('id_hopital', hid);
+      final consultationsRaw = await qConsult;
 
       final uniqueConsults = <String>{};
       int finished = 0, ongoing = 0, cancelled = 0;
@@ -153,12 +164,14 @@ class StatsService {
       }
 
       // 4. Revenu sur la période
-      final paiementsRaw = await supabase
+      var qPaiement = supabase
           .from('paiement')
           .select('prix_a_paye, date_paiement')
           .eq('statut_paiement', 'payer')
           .gte('date_paiement', startIso)
           .lte('date_paiement', endIso);
+      if (hid != null) qPaiement = qPaiement.eq('id_hopital', hid);
+      final paiementsRaw = await qPaiement;
       double revenuPeriode = 0;
       for (var p in paiementsRaw) {
         revenuPeriode += (p['prix_a_paye'] as num).toDouble();
@@ -235,6 +248,7 @@ class StatsService {
     required DateTime end,
     String localeTag = 'fr_FR',
   }) async {
+    final hid = await UserProfileHelper.getHospitalId();
     try {
       final startIso = DateTime(
         start.year,
@@ -251,11 +265,13 @@ class StatsService {
       ).toIso8601String();
 
       // Tous les paiements de la période
-      final paiements = await supabase
+      var qPaiement = supabase
           .from('paiement')
           .select('prix_a_paye, statut_paiement, date_paiement')
           .gte('date_paiement', startIso)
           .lte('date_paiement', endIso);
+      if (hid != null) qPaiement = qPaiement.eq('id_hopital', hid);
+      final paiements = await qPaiement;
 
       double totalRevenu = 0;
       double montantEnAttente = 0;
@@ -430,13 +446,13 @@ class StatsService {
 
   /// 🚻 Récupère la démographie des patients uniques (Sexe et Âge)
   Future<Map<String, dynamic>> getDemographics() async {
+    final hid = await UserProfileHelper.getHospitalId();
     try {
-      // Limite raisonnable pour éviter les OOM sur téléphones bas de gamme.
-      // 10 000 patients couvre largement un hôpital de district.
-      final response = await supabase
+      var qPatient = supabase
           .from('Patient')
-          .select('nom_complet, telephone, sexe, age')
-          .limit(10000);
+          .select('nom_complet, telephone, sexe, age');
+      if (hid != null) qPatient = qPatient.eq('id_hopital', hid);
+      final response = await qPatient.limit(10000);
 
       // Dédupliquer par téléphone + nom normalisé
       final seen = <String>{};
@@ -497,10 +513,13 @@ class StatsService {
 
   /// 🏥 Récupère les stats opérationnelles (États des consultations)
   Future<Map<String, int>> getOperationalStats() async {
+    final hid = await UserProfileHelper.getHospitalId();
     try {
-      final response = await supabase
+      var qConsult = supabase
           .from('Consultation')
           .select('Statut_Consultation');
+      if (hid != null) qConsult = qConsult.eq('id_hopital', hid);
+      final response = await qConsult;
 
       Map<String, int> stats = {'terminer': 0, 'en attente': 0, 'annuler': 0};
 
@@ -522,6 +541,7 @@ class StatsService {
 
   /// 💰 Récupère le revenu détaillé (14 derniers jours pour meilleure lisibilité)
   Future<List<Map<String, dynamic>>> getRevenueTrend() async {
+    final hid = await UserProfileHelper.getHospitalId();
     try {
       final now = DateTime.now();
       final List<Map<String, dynamic>> trend = [];
@@ -542,12 +562,14 @@ class StatsService {
           59,
         ).toIso8601String();
 
-        final response = await supabase
+        var qPaiement = supabase
             .from('paiement')
             .select('prix_a_paye')
             .eq('statut_paiement', 'payer')
             .gte('date_paiement', startOfDay)
             .lte('date_paiement', endOfDay);
+        if (hid != null) qPaiement = qPaiement.eq('id_hopital', hid);
+        final response = await qPaiement;
 
         double dailyTotal = 0;
         for (var p in response) {

@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 /// Niveau de sévérité d'une notification
 enum NotificationSeverity { critical, warning, info, success }
@@ -37,15 +38,18 @@ class NotificationsService {
   Future<List<DirectorNotification>> getDirectorNotifications() async {
     final notifs = <DirectorNotification>[];
     final now = DateTime.now();
+    final hid = await UserProfileHelper.getHospitalId();
 
     try {
       // ============ 1. Paiements en attente depuis +24h (CRITICAL) ============
       final cutoff24h = now.subtract(const Duration(hours: 24));
-      final paiementsAttente = await supabase
+      var qPaiement24h = supabase
           .from('paiement')
           .select('prix_a_paye, date_paiement, statut_paiement')
           .neq('statut_paiement', 'payer')
           .lt('date_paiement', cutoff24h.toIso8601String());
+      if (hid != null) qPaiement24h = qPaiement24h.eq('id_hopital', hid);
+      final paiementsAttente = await qPaiement24h;
 
       if (paiementsAttente.isNotEmpty) {
         double total = 0;
@@ -71,11 +75,13 @@ class NotificationsService {
 
       // ============ 2. Consultations en cours depuis +6h (WARNING) ============
       final cutoff6h = now.subtract(const Duration(hours: 6));
-      final consultsBloquees = await supabase
+      var qConsult6h = supabase
           .from('Consultation')
           .select('id_consultation, date_enregistrement, Statut_Consultation')
           .eq('Statut_Consultation', 'en attente')
           .lt('date_enregistrement', cutoff6h.toIso8601String());
+      if (hid != null) qConsult6h = qConsult6h.eq('id_hopital', hid);
+      final consultsBloquees = await qConsult6h;
 
       if (consultsBloquees.isNotEmpty) {
         notifs.add(
@@ -96,17 +102,21 @@ class NotificationsService {
       final today = DateTime(now.year, now.month, now.day);
       final last7Start = today.subtract(const Duration(days: 7));
 
-      final patientsRecents = await supabase
+      var qPatientsRecents = supabase
           .from('Patient')
           .select('date_enregistrement')
           .gte('date_enregistrement', last7Start.toIso8601String())
           .lt('date_enregistrement', today.toIso8601String());
+      if (hid != null) qPatientsRecents = qPatientsRecents.eq('id_hopital', hid);
+      final patientsRecents = await qPatientsRecents;
 
       // Compter patients aujourd'hui
-      final patientsAujourdhui = await supabase
+      var qPatientsToday = supabase
           .from('Patient')
           .select('id_patient')
           .gte('date_enregistrement', today.toIso8601String());
+      if (hid != null) qPatientsToday = qPatientsToday.eq('id_hopital', hid);
+      final patientsAujourdhui = await qPatientsToday;
       final nbAujourdhui = (patientsAujourdhui as List).length;
 
       // Moyenne 7 derniers jours (hors aujourd'hui)
@@ -130,11 +140,13 @@ class NotificationsService {
 
       // ============ 4. Aucun paiement aujourd'hui après 12h (WARNING) ============
       if (now.hour >= 12) {
-        final paiementsToday = await supabase
+        var qPaiementToday = supabase
             .from('paiement')
             .select('id_paiement')
             .eq('statut_paiement', 'payer')
             .gte('date_paiement', today.toIso8601String());
+        if (hid != null) qPaiementToday = qPaiementToday.eq('id_hopital', hid);
+        final paiementsToday = await qPaiementToday;
         if ((paiementsToday as List).isEmpty) {
           notifs.add(
             DirectorNotification(
@@ -150,12 +162,13 @@ class NotificationsService {
       }
       // ============ 5. Stock en rupture — Pharmacie (CRITICAL) ============
       try {
-        final ruptureRes = await supabase
+        var qRupture = supabase
             .from('listemedicament')
             .select('id_medicament')
             .eq('actif', true)
-            .eq('stock', 0)
-            .count(CountOption.exact);
+            .eq('stock', 0);
+        if (hid != null) qRupture = qRupture.eq('id_hopital', hid);
+        final ruptureRes = await qRupture.count(CountOption.exact);
         if (ruptureRes.count > 0) {
           notifs.add(
             DirectorNotification(
@@ -175,11 +188,13 @@ class NotificationsService {
       // ============ 6. Lots périmés — Pharmacie (WARNING) ============
       try {
         final todayStr = now.toIso8601String().split('T').first;
-        final lotsPerimesRaw = await supabase
+        var qPerimes = supabase
             .from('stock_entree')
             .select('id_medicament')
             .not('date_peremption', 'is', null)
             .lt('date_peremption', todayStr);
+        if (hid != null) qPerimes = qPerimes.eq('id_hopital', hid);
+        final lotsPerimesRaw = await qPerimes;
         final perimesCount = (lotsPerimesRaw as List)
             .map((e) => e['id_medicament'])
             .toSet()
@@ -201,10 +216,12 @@ class NotificationsService {
       } catch (_) {}
       // ============ 7. Demandes de réinitialisation de mot de passe (CRITICAL) ============
       try {
-        final demandesReset = await supabase
-            .from('Personnel_hopital')
+        var qReset = supabase
+            .from('utilisateur')
             .select('Nom, Prenom, username')
             .eq('reset_password_statut', 'en_attente');
+        if (hid != null) qReset = qReset.eq('id_hopital', hid);
+        final demandesReset = await qReset;
 
         if ((demandesReset as List).isNotEmpty) {
           for (final p in demandesReset) {

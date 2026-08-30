@@ -13,15 +13,15 @@ class ProfilMedecinService {
       if (user == null) throw Exception('Aucun utilisateur connecté');
 
       Map<String, dynamic>? response = await client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .select()
           .eq('auth_id', user.id)
           .maybeSingle();
 
       response ??= await client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .select()
-          .eq('id_personnel', user.id)
+          .eq('id_utilisateur', user.id)
           .maybeSingle();
 
       if (response == null) return null;

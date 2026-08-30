@@ -17,7 +17,7 @@ class HistoriqueConsultationService {
           Patient(*)
         ''')
         .eq('Statut_Consultation', 'terminer')
-        .eq('id_personnel', userId)
+        .eq('id_utilisateur', userId)
         .order('date_derniere_mise_ajour', ascending: false);
 
     return (response as List<dynamic>)

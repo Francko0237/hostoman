@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:hostoman/model_unifier.dart';
 import 'package:hostoman/app_config.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 import 'nouveau_patient.dart';
 
 // Couleurs
@@ -32,6 +33,8 @@ class PatientService {
     String? idMedecin,
     Map<String, dynamic> champsSupplementaires = const {},
   }) async {
+    final currentHospitalId = UserProfileHelper.currentHospitalId;
+
     // 🔒 Validation des champs obligatoires
     if (sexe == null || sexe!.isEmpty) {
       showMessage(context, 'np_field_sex_required'.tr(), isError: true);
@@ -55,11 +58,17 @@ class PatientService {
     final nom = nom_completController.text.trim();
     final tel = int.tryParse(telephone.text.trim()) ?? 0;
 
-    // 🔍 Recherche des patients existants par nom (souple)
-    final patientsExistants = await supabase
+    // 🔍 Recherche des patients existants par nom (souple) dans le MÊME hôpital
+    var query = supabase
         .from('Patient')
         .select('id_patient, nom_complet, age, telephone, sexe')
         .ilike('nom_complet', '%$nom%');
+
+    if (currentHospitalId != null) {
+      query = query.eq('id_hopital', currentHospitalId);
+    }
+
+    final patientsExistants = await query;
 
     String? patientId;
 
@@ -511,6 +520,9 @@ class PatientService {
         date_enregistrement: DateTime.now(),
       ).toMap();
       insertData['champs_supplementaires'] = champsSupplementaires;
+      if (currentHospitalId != null) {
+        insertData['id_hopital'] = currentHospitalId;
+      }
 
       final response = await supabase
           .from('Patient')
@@ -523,7 +535,7 @@ class PatientService {
     }
 
     // 🩺 Enregistrement des paramètres vitaux
-    final parametreVitaux = Parametres_vitaux(
+    final Map<String, dynamic> parametreData = Parametres_vitaux(
       id_patient: patientId!,
       poid: double.tryParse(poid.text) ?? 0.0,
       temperature: double.tryParse(temperature.text) ?? 0.0,
@@ -536,11 +548,14 @@ class PatientService {
       date_enregistrement: DateTime.now(),
       type_service: type_service!,
       id_personnel: AuthUtils.idPersonnel ?? 'unknown',
-    );
+    ).toMap();
+    if (currentHospitalId != null) {
+      parametreData['id_hopital'] = currentHospitalId;
+    }
 
     final parametreResponse = await supabase
         .from('Parametres_vitaux')
-        .insert(parametreVitaux.toMap())
+        .insert(parametreData)
         .select()
         .single();
 
@@ -548,7 +563,7 @@ class PatientService {
     print('✅ Paramètres vitaux créés - ID: $parametreid');
 
     // 🩺 Création de la consultation
-    final consultation = Consultation(
+    final Map<String, dynamic> consultationData = Consultation(
       Statut_Consultation: 'en-attente-consultation',
       date_enregistrement: DateTime.now().toIso8601String(),
       date_derniere_mise_ajour: DateTime.now().toIso8601String(),
@@ -556,11 +571,14 @@ class PatientService {
       id_patient: patientId,
       id_parametres_vitaux: parametreid,
       id_personnel: idMedecin,
-    );
+    ).toMap();
+    if (currentHospitalId != null) {
+      consultationData['id_hopital'] = currentHospitalId;
+    }
 
     final consultationResponse = await supabase
         .from('Consultation')
-        .insert(consultation.toMap())
+        .insert(consultationData)
         .select()
         .single();
 
@@ -572,13 +590,18 @@ class PatientService {
     print('=== ENREGISTREMENT TERMINÉ AVEC SUCCÈS ===');
 
     // 💰 Création automatique du paiement pour la consultation
-    await supabase.from('paiement').insert({
+    final Map<String, dynamic> paiementData = {
       'id_consultation': idConsultation,
       'motif': 'Consultation',
       'statut_paiement': 'en_attente',
       'date_paiement': DateTime.now().toIso8601String(),
       'prix_a_paye': AppConfig.prixConsultation,
-    });
+    };
+    if (currentHospitalId != null) {
+      paiementData['id_hopital'] = currentHospitalId;
+    }
+
+    await supabase.from('paiement').insert(paiementData);
 
     print(
       '✅ Paiement créé automatiquement - Montant: ${AppConfig.prixConsultation} FCFA',

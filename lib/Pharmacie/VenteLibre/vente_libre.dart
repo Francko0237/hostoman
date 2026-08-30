@@ -158,9 +158,9 @@ class _VenteLibrePageState extends State<VenteLibrePage> {
                 borderRadius: BorderRadius.circular(10),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(10),
-                  onTap: () => context.go(
-                    '/Dashboard_Pharmacie/VenteLibre/NouvelleVente',
-                  ),
+                  onTap: () => context
+                      .push('/Dashboard_Pharmacie/VenteLibre/NouvelleVente')
+                      .then((_) => _load()),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -312,8 +312,9 @@ class _VenteLibrePageState extends State<VenteLibrePage> {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () =>
-            context.go('/Dashboard_Pharmacie/VenteLibre/$idPrescription'),
+        onTap: () => context
+            .push('/Dashboard_Pharmacie/Ordonnances/$idPrescription')
+            .then((_) => _load()),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(

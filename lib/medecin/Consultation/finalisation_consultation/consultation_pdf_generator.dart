@@ -83,9 +83,9 @@ class ConsultationPdfGenerator {
       final user = client.auth.currentUser;
       if (user == null) return 'consult_pdf_doctor_unknown'.tr();
       final data = await client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .select('Nom, Prenom')
-          .eq('id_personnel', user.id)
+          .eq('id_utilisateur', user.id)
           .single();
       final nom = data['Nom']?.toString() ?? '';
       final prenom = data['Prenom']?.toString() ?? '';

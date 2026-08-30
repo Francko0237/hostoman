@@ -18,7 +18,7 @@ class PaiementService {
             statut_paiement,
             motif,
             date_paiement,
-            Consultation!inner(
+            Consultation(
               id_consultation,
               type_service,
               id_patient,
@@ -31,7 +31,29 @@ class PaiementService {
           .eq('statut_paiement', 'en_attente')
           .order('date_paiement', ascending: false);
 
-      return List<Map<String, dynamic>>.from(response);
+      final list = List<Map<String, dynamic>>.from(response);
+
+      // Post-fetch pour les paiements de médicaments directs (sans Consultation)
+      for (var item in list) {
+        if (item['Consultation'] == null && item['id_prescription'] != null) {
+          final prescr = await supabase
+              .from('prescription')
+              .select('id_patient, Patient(*)')
+              .eq('id_prescription', item['id_prescription'])
+              .maybeSingle();
+          if (prescr != null) {
+            item['Consultation'] = {
+              'id_consultation': null,
+              'type_service': 'Pharmacie',
+              'id_patient': prescr['id_patient'],
+              'Patient': prescr['Patient'],
+              'examen_a_effectuer': [],
+            };
+          }
+        }
+      }
+
+      return list;
     } catch (e) {
       print("Erreur getPaiementsEnAttente: $e");
       return [];

@@ -49,40 +49,65 @@ class _PremiereConnexionPageState extends State<PremiereConnexionPage> {
     super.dispose();
   }
 
-  Future<void> _verifierTelephone() async {
+  Future<void> _verifierIdAgentOuTel() async {
     if (!_formKey1.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
     try {
-      final tel = int.tryParse(_telCtrl.text.trim());
-      if (tel == null) {
-        _showSnack('pc_error_invalid_phone'.tr(), isError: true);
+      final input = _telCtrl.text.trim();
+
+      // 1. Rechercher d'abord par id_utilisateur (ID agent d'activation personnalisé ex: HDM-58392)
+      List<dynamic> results = await Supabase.instance.client
+          .from('utilisateur')
+          .select('*, hopital(nom_hopital)')
+          .ilike('id_utilisateur', input);
+
+      if (results.isEmpty) {
+        results = await Supabase.instance.client
+            .from('utilisateur')
+            .select('*, hopital(nom_hopital)')
+            .ilike('username', input);
+      }
+
+      // 2. Si non trouvé, tenter par numéro de téléphone
+      if (results.isEmpty) {
+        final tel = int.tryParse(input);
+        if (tel != null) {
+          results = await Supabase.instance.client
+              .from('utilisateur')
+              .select('*, hopital(nom_hopital)')
+              .eq('telephone', tel);
+        }
+      }
+
+      if (results.isEmpty) {
+        _showSnack('Aucun compte trouvé pour l\'ID "$input". Vérifiez votre ID d\'activation.', isError: true);
         return;
       }
 
-      final result = await Supabase.instance.client
-          .from('Personnel_hopital')
-          .select()
-          .eq('telephone', tel)
-          .maybeSingle();
+      // Isoler toutes les fiches non encore activées (compte_actif false)
+      final List<Map<String, dynamic>> fichesAActiver = [];
+      for (final r in results) {
+        final Map<String, dynamic> row = Map<String, dynamic>.from(r);
+        if (row['compte_actif'] == false) {
+          fichesAActiver.add(row);
+        }
+      }
 
-      if (result == null) {
-        _showSnack('pc_error_unknown_phone'.tr(), isError: true);
+      // Si le compte est déjà actif
+      if (fichesAActiver.isEmpty) {
+        final Map<String, dynamic> first = Map<String, dynamic>.from(results.first);
+        if (first['compte_actif'] == true) {
+          _showSnack('pc_error_already_active'.tr(), isError: true);
+          return;
+        }
+        _showSnack('Aucun compte disponible pour la première connexion.', isError: true);
         return;
       }
 
-      if (result['compte_actif'] == true) {
-        _showSnack('pc_error_already_active'.tr(), isError: true);
-        return;
-      }
-
-      if (result['compte_actif'] == false && result['auth_id'] != null) {
-        _showSnack('pc_error_inactive'.tr(), isError: true);
-        return;
-      }
-
+      // Sélectionner la fiche à activer
       setState(() {
-        _ficheTrouvee = result;
+        _ficheTrouvee = fichesAActiver.first;
         _etape = 2;
       });
     } catch (e) {
@@ -108,18 +133,19 @@ class _PremiereConnexionPageState extends State<PremiereConnexionPage> {
 
     setState(() => _isLoading = true);
 
-    final username = _usernameCtrl.text.trim().toLowerCase();
-    final email = '$username@gmail.com';
+    final chosenUsername = _usernameCtrl.text.trim().toLowerCase();
+    final email = '$chosenUsername@gmail.com';
     final password = _pw1Ctrl.text;
 
     try {
-      final existing = await Supabase.instance.client
-          .from('Personnel_hopital')
+      // Vérifier si le nom d'utilisateur choisi n'est pas déjà pris par une autre personne active
+      final List<dynamic> existingList = await Supabase.instance.client
+          .from('utilisateur')
           .select('username')
-          .eq('username', username)
-          .maybeSingle();
+          .eq('username', chosenUsername)
+          .eq('compte_actif', true);
 
-      if (existing != null) {
+      if (existingList.isNotEmpty) {
         _showSnack('pc_error_username_taken'.tr(), isError: true);
         return;
       }
@@ -151,14 +177,14 @@ class _PremiereConnexionPageState extends State<PremiereConnexionPage> {
       }
 
       await Supabase.instance.client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .update({
             'auth_id': authUserId,
-            'username': username,
+            'username': chosenUsername,
             'compte_actif': true,
             'email': email,
           })
-          .eq('id_personnel', _ficheTrouvee!['id_personnel']);
+          .eq('id_utilisateur', _ficheTrouvee!['id_utilisateur']);
 
       if (!mounted) return;
       _showSnack('pc_success_activated'.tr());
@@ -463,9 +489,9 @@ class _PremiereConnexionPageState extends State<PremiereConnexionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'pc_phone_title'.tr(),
-            style: const TextStyle(
+          const Text(
+            'Activation de compte',
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Color(0xFF1A1A2E),
@@ -473,23 +499,23 @@ class _PremiereConnexionPageState extends State<PremiereConnexionPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            'pc_phone_subtitle'.tr(),
+            'Entrez l\'ID agent personnalisé qui vous a été transmis par votre administration (ex: HDM-58392).',
             style: TextStyle(fontSize: 13, color: Colors.grey[600]),
           ),
           const SizedBox(height: 20),
           TextFormField(
             controller: _telCtrl,
-            keyboardType: TextInputType.phone,
-            style: const TextStyle(fontSize: 15),
+            keyboardType: TextInputType.text,
+            textCapitalization: TextCapitalization.characters,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.1),
             decoration: _inputDecoration(
-              label: 'pc_phone_label'.tr(),
-              icon: Icons.phone,
+              label: 'ID Agent (ex: HDM-58392)',
+              icon: Icons.badge_outlined,
             ),
             validator: (v) {
-              if (v == null || v.trim().isEmpty)
-                return 'pc_phone_required'.tr();
-              if (int.tryParse(v.trim()) == null)
-                return 'pc_phone_invalid'.tr();
+              if (v == null || v.trim().isEmpty) {
+                return 'Veuillez entrer votre ID d\'activation agent';
+              }
               return null;
             },
           ),
@@ -498,7 +524,7 @@ class _PremiereConnexionPageState extends State<PremiereConnexionPage> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: _isLoading ? null : _verifierTelephone,
+              onPressed: _isLoading ? null : _verifierIdAgentOuTel,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primary,
                 shape: RoundedRectangleBorder(
@@ -574,7 +600,7 @@ class _PremiereConnexionPageState extends State<PremiereConnexionPage> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
           Text(
             'pc_username_title'.tr(),
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),

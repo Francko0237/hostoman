@@ -27,6 +27,8 @@ class DirecteurDashboardPage extends StatefulWidget {
 class _DirecteurDashboardPageState extends State<DirecteurDashboardPage> {
   int _selectedIndex = 0;
   Map<String, dynamic> _adminProfile = {};
+  // Incrémenté pour forcer le rechargement de la page active.
+  int _refreshCounter = 0;
   // Clé pour piloter le Scaffold mobile (fermer le drawer après navigation).
   final GlobalKey<ScaffoldState> _mobileScaffoldKey =
       GlobalKey<ScaffoldState>();
@@ -65,12 +67,13 @@ class _DirecteurDashboardPageState extends State<DirecteurDashboardPage> {
   // l'IndexedStack.
   List<Widget> get _pages {
     final localeKey = context.locale.toString();
+    final rk = _refreshCounter;
     return [
-      HomeDirecteurPage(key: ValueKey('home_$localeKey'), onNavigate: _onNav),
-      EtatServicesPage(key: ValueKey('services_$localeKey')),
-      stats_view(key: ValueKey('stats_$localeKey')),
-      GestionPersonnelPage(key: ValueKey('staff_$localeKey')),
-      ParametreDirecteurPage(key: ValueKey('settings_$localeKey')),
+      HomeDirecteurPage(key: ValueKey('home_${localeKey}_$rk'), onNavigate: _onNav),
+      EtatServicesPage(key: ValueKey('services_${localeKey}_$rk')),
+      stats_view(key: ValueKey('stats_${localeKey}_$rk')),
+      GestionPersonnelPage(key: ValueKey('staff_${localeKey}_$rk')),
+      ParametreDirecteurPage(key: ValueKey('settings_${localeKey}_$rk')),
     ];
   }
 
@@ -96,6 +99,12 @@ class _DirecteurDashboardPageState extends State<DirecteurDashboardPage> {
     if (scaffoldState != null && scaffoldState.isDrawerOpen) {
       scaffoldState.closeDrawer();
     }
+  }
+
+  /// Rafraîchit la page courante en incrémentant le compteur de clé,
+  /// ce qui force la reconstruction et le rechargement des données.
+  Future<void> _refreshCurrentPage() async {
+    setState(() => _refreshCounter++);
   }
 
   /// Mappe un nom d'onglet textuel (utilisé par les notifications)
@@ -232,7 +241,15 @@ class _DirecteurDashboardPageState extends State<DirecteurDashboardPage> {
           const SizedBox(width: 4),
         ],
       ),
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      // RefreshIndicator global : glisser vers le bas pour actualiser
+      // (fonctionne sur toutes les pages du Directeur sur mobile).
+      body: RefreshIndicator(
+        color: dirPrimaryColor,
+        backgroundColor: Colors.white,
+        strokeWidth: 2.5,
+        onRefresh: _refreshCurrentPage,
+        child: IndexedStack(index: _selectedIndex, children: _pages),
+      ),
     );
   }
 
@@ -600,6 +617,24 @@ class _DirecteurDashboardPageState extends State<DirecteurDashboardPage> {
             ),
           ),
           const Spacer(),
+          // Bouton Actualiser (desktop)
+          Tooltip(
+            message: 'Actualiser',
+            child: AnimatedRotation(
+              turns: _refreshCounter.toDouble(),
+              duration: const Duration(milliseconds: 500),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  size: 22,
+                  color: dirPrimaryColor,
+                ),
+                onPressed: _refreshCurrentPage,
+                splashRadius: 22,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
           NotificationsBell(
             iconColor: dirPrimaryColor,
             onNavigateToTab: _onNavByName,

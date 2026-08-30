@@ -38,9 +38,9 @@ class PatientListPdfGenerator {
       if (user == null) return 'pdf_unknown_agent'.tr();
 
       final data = await client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .select('Nom, Prenom, Specialite')
-          .eq('id_personnel', user.id)
+          .eq('id_utilisateur', user.id)
           .single();
 
       final nom = data['Nom']?.toString() ?? '';

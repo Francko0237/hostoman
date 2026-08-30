@@ -7,6 +7,7 @@ import 'package:hostoman/shared/responsive_wrapper.dart';
 import 'package:hostoman/shared/receipt_pdf_generator.dart';
 import '../shared/pharmacie_theme.dart';
 import '../Dashboard/listemedicament_service.dart';
+import '../Ordonnances/ordonnance_detail.dart' show SubstitutPicker;
 import 'vente_libre_service.dart';
 
 class NouvelleVentePage extends StatefulWidget {
@@ -92,15 +93,29 @@ class _NouvelleVentePageState extends State<NouvelleVentePage> {
     if (_panier.isEmpty) return;
     setState(() => _saving = true);
     try {
+      // Enrichir le panier avec les substitutions éventuelles
+      final lignesAvecSubs = _panier.map((p) {
+        final sub = p['substitut'] as Map<String, dynamic>?;
+        if (sub != null) {
+          return {
+            ...p,
+            'id_medicament': sub['id_medicament'],
+            'nom_medicament': sub['nom_medicament'],
+            'prix_unitaire': sub['prix_unitaire'] ?? p['prix_unitaire'],
+          };
+        }
+        return p;
+      }).toList();
       final idPrescription =
-          await _venteService.creerVente(lignes: _panier);
+          await _venteService.creerVente(lignes: lignesAvecSubs);
       if (!mounted) return;
       await _showReceiptDialog(idPrescription);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           backgroundColor: PharmacieTheme.danger,
-          content: Text('phar_action_error'.tr()),
+          content: Text(e.toString()),
+          duration: const Duration(seconds: 8),
         ));
       }
     } finally {
@@ -564,54 +579,124 @@ class _NouvelleVentePageState extends State<NouvelleVentePage> {
     final p = _panier[i];
     final qte = p['quantite'] as int;
     final prix = p['prix_unitaire'] as double;
+    final sub = p['substitut'] as Map<String, dynamic>?;
+    final nomAffiche = sub != null
+        ? (sub['nom_medicament'] ?? '').toString()
+        : (p['nom_medicament'] ?? '').toString();
+    final prixAffiche = sub != null
+        ? (sub['prix_unitaire'] as num?)?.toDouble() ?? prix
+        : prix;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  (p['nom_medicament'] ?? '').toString(),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 13),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (sub != null)
+                      Text(
+                        (p['nom_medicament'] ?? '').toString(),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: PharmacieTheme.textMuted,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                    Text(
+                      nomAffiche,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: sub != null
+                            ? PharmacieTheme.primary
+                            : PharmacieTheme.textDark,
+                      ),
+                    ),
+                    if (sub != null)
+                      Container(
+                        margin: const EdgeInsets.only(top: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: PharmacieTheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'phar_substitue'.tr(),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: PharmacieTheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      '${(prixAffiche * qte).toStringAsFixed(0)} FCFA',
+                      style: const TextStyle(
+                          fontSize: 11,
+                          color: PharmacieTheme.primary,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ],
                 ),
-                Text(
-                  '${(prix * qte).toStringAsFixed(0)} FCFA',
-                  style: const TextStyle(
-                      fontSize: 11,
-                      color: PharmacieTheme.primary,
-                      fontWeight: FontWeight.w700),
+              ),
+              // Bouton substituer
+              IconButton(
+                tooltip: 'phar_substituer'.tr(),
+                onPressed: () async {
+                  final selected =
+                      await showDialog<Map<String, dynamic>>(
+                    context: context,
+                    builder: (ctx) => SubstitutPicker(
+                      catalogue: _catalogue,
+                      quantiteRequise: qte,
+                    ),
+                  );
+                  if (selected != null) {
+                    setState(() => _panier[i]['substitut'] = selected);
+                    onChanged();
+                  }
+                },
+                icon: Icon(
+                  Icons.swap_horiz_rounded,
+                  size: 20,
+                  color: sub != null
+                      ? PharmacieTheme.primary
+                      : PharmacieTheme.textMuted,
                 ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              _changerQte(i, -1);
-              onChanged();
-            },
-            icon: const Icon(Icons.remove_circle_outline, size: 20),
-            color: PharmacieTheme.danger,
-          ),
-          Text('$qte',
-              style: const TextStyle(fontWeight: FontWeight.w800)),
-          IconButton(
-            onPressed: () {
-              _changerQte(i, 1);
-              onChanged();
-            },
-            icon: const Icon(Icons.add_circle_outline, size: 20),
-            color: PharmacieTheme.primary,
-          ),
-          IconButton(
-            onPressed: () {
-              _panier.removeAt(i);
-              onChanged();
-            },
-            icon: const Icon(Icons.delete_outline, size: 20),
-            color: Colors.grey,
+              ),
+              IconButton(
+                onPressed: () {
+                  _changerQte(i, -1);
+                  onChanged();
+                },
+                icon: const Icon(Icons.remove_circle_outline, size: 20),
+                color: PharmacieTheme.danger,
+              ),
+              Text('$qte',
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
+              IconButton(
+                onPressed: () {
+                  _changerQte(i, 1);
+                  onChanged();
+                },
+                icon: const Icon(Icons.add_circle_outline, size: 20),
+                color: PharmacieTheme.primary,
+              ),
+              IconButton(
+                onPressed: () {
+                  _panier.removeAt(i);
+                  onChanged();
+                },
+                icon: const Icon(Icons.delete_outline, size: 20),
+                color: Colors.grey,
+              ),
+            ],
           ),
         ],
       ),

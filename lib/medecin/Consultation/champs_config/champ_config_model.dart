@@ -28,7 +28,7 @@ class ChampConfig {
   factory ChampConfig.fromMap(Map<String, dynamic> map) {
     return ChampConfig(
       id: map['id']?.toString(),
-      idPersonnel: map['id_personnel']?.toString() ?? '',
+      idPersonnel: map['id_utilisateur']?.toString() ?? '',
       cle: map['cle']?.toString() ?? '',
       label: map['label']?.toString() ?? '',
       type: map['type']?.toString() ?? 'alphanumerique',
@@ -44,7 +44,7 @@ class ChampConfig {
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
-      'id_personnel': idPersonnel,
+      'id_utilisateur': idPersonnel,
       'cle': cle,
       'label': label,
       'type': type,

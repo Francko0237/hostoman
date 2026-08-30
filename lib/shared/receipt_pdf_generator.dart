@@ -47,16 +47,16 @@ class ReceiptPdfGenerator {
 
       // Essai 1 : colonne auth_id (pharmaciens, caissiers, etc.)
       Map<String, dynamic>? data = await client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .select('Nom, Prenom')
           .eq('auth_id', user.id)
           .maybeSingle();
 
       // Essai 2 : colonne id_personnel (médecins et autres)
       data ??= await client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .select('Nom, Prenom')
-          .eq('id_personnel', user.id)
+          .eq('id_utilisateur', user.id)
           .maybeSingle();
 
       if (data == null) throw Exception('Aucun personnel trouvé');

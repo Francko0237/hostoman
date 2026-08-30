@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 /// Bouton globe réutilisable pour changer la langue
 class _LanguageSwitcher extends StatefulWidget {
@@ -110,32 +111,41 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
       _isLoading = true;
     });
 
-    String nomUtilisateur = "${email.text.trim()}@gmail.com";
+    final rawInput = email.text.trim();
+    String nomUtilisateur = rawInput.contains('@') ? rawInput : "$rawInput@gmail.com";
     String motDePasse = password.text.trim();
-    print("debut de l'athentification");
+    print("début de l'authentification avec : $nomUtilisateur");
     try {
       final Reponse = await Supabase.instance.client.auth.signInWithPassword(
         email: nomUtilisateur,
         password: motDePasse,
       );
-      print("fin de l'authentification");
       if (Reponse.user != null) {
         final userId = Reponse.user!.id;
-        // Chercher d'abord par auth_id (nouveaux comptes),
-        // puis par id_personnel (anciens comptes existants)
+        print("🔍 AUTH DEBUG: Authentification Supabase Auth réussie.");
+        print("🔍 AUTH DEBUG: Supabase Auth User ID = $userId");
+        print("🔍 AUTH DEBUG: Email utilisé = $nomUtilisateur");
+
+        // Chercher par auth_id (nouveaux comptes), puis par id_utilisateur (anciens comptes)
         Map<String, dynamic>? userData = await Supabase.instance.client
-            .from('Personnel_hopital')
-            .select('Specialite, compte_actif, id_personnel')
+            .from('utilisateur')
+            .select('Specialite, compte_actif, id_utilisateur, auth_id, id_hopital, hopital(actif)')
             .eq('auth_id', userId)
             .maybeSingle();
 
-        userData ??= await Supabase.instance.client
-            .from('Personnel_hopital')
-            .select('Specialite, compte_actif, id_personnel')
-            .eq('id_personnel', userId)
-            .maybeSingle();
+        if (userData == null) {
+          print("🔍 AUTH DEBUG: Recherche par auth_id n'a rien trouvé. tentative par id_utilisateur...");
+          userData = await Supabase.instance.client
+              .from('utilisateur')
+              .select('Specialite, compte_actif, id_utilisateur, auth_id, id_hopital, hopital(actif)')
+              .eq('id_utilisateur', userId)
+              .maybeSingle();
+        }
+
+        print("🔍 AUTH DEBUG: Résultat utilisateur en DB = $userData");
 
         if (userData == null) {
+          print("❌ AUTH ERROR: Aucun enregistrement trouvé dans la table 'utilisateur' pour id=$userId");
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -149,8 +159,47 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
           return;
         }
 
-        // Vérifier si le compte est actif
-        if (userData['compte_actif'] != true) {
+        final role = userData['Specialite']?.toString().trim();
+        final compteActif = userData['compte_actif'];
+        final bool hopitalActif = (userData['hopital'] != null && userData['hopital']['actif'] != null)
+            ? userData['hopital']['actif']
+            : true;
+
+        print("🔍 AUTH DEBUG: Specialite trouvée = '$role'");
+        print("🔍 AUTH DEBUG: compte_actif = $compteActif");
+        print("🔍 AUTH DEBUG: hopitalActif = $hopitalActif");
+
+        // Redirection SuperAdmin (insensible à la casse)
+        if (role != null && role.toLowerCase() == 'superadmin') {
+          print("✅ AUTH SUCCESS: Redirection vers /Dashboard_SuperAdmin");
+          UserProfileHelper.clearCache();
+          if (mounted) {
+            context.go('/Dashboard_SuperAdmin');
+          }
+          return;
+        }
+
+        // Vérifier si l'hôpital est suspendu
+        if (!hopitalActif) {
+          print("❌ AUTH ERROR: L'hôpital est suspendu.");
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Le centre de santé associé à votre compte a été suspendu par l\'administrateur.',
+                ),
+                backgroundColor: Color(0xFFC62828),
+                duration: Duration(seconds: 4),
+              ),
+            );
+            await Supabase.instance.client.auth.signOut();
+          }
+          return;
+        }
+
+        // Vérifier si le compte est actif (pour le personnel normal)
+        if (compteActif != true) {
+          print("❌ AUTH ERROR: Compte inactif (compte_actif != true)");
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -166,23 +215,33 @@ class _Authen_PersonnelState extends State<Authen_Personnel> {
           return;
         }
 
-        final role = userData['Specialite'];
+        print("✅ AUTH SUCCESS: Redirection selon le rôle = '$role'");
+        UserProfileHelper.clearCache();
 
-        //Redirection vers les pages correspondante
-        if (role == 'Major Accueil') {
+        final String normalizedRole = (role ?? '').trim().toLowerCase();
+
+        // Redirection vers les pages correspondantes (insensible à la casse)
+        if (normalizedRole == 'major accueil' || normalizedRole == 'major_accueil') {
           context.go('/Dashboard_Accueil');
-        } else if (role == 'Directeur') {
+        } else if (normalizedRole == 'directeur') {
           context.go('/Dashboard_Directeur');
-        } else if (role == 'Caissier') {
+        } else if (normalizedRole == 'caissier') {
           context.go('/Dashboard_Caisse');
-        } else if (role == 'Médecin Généraliste') {
+        } else if (normalizedRole == 'médecin généraliste' || normalizedRole == 'medecin generaliste' || normalizedRole == 'medecin') {
           context.go('/Dashboard_Medecin');
-        } else if (role == 'Laborantin') {
+        } else if (normalizedRole == 'laborantin') {
           context.go('/Dashboard_Laboratoire');
-        } else if (role == 'Pharmacien') {
+        } else if (normalizedRole == 'pharmacien') {
           context.go('/Dashboard_Pharmacie');
         } else {
-          print('erreur de role');
+          print('❌ AUTH ERROR: Rôle inconnu : $role');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Rôle non reconnu: $role. Contactez l\'administrateur.'),
+              backgroundColor: const Color(0xFFC62828),
+            ),
+          );
+          return;
         }
 
         ScaffoldMessenger.of(context).showSnackBar(

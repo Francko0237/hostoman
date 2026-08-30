@@ -27,7 +27,7 @@ class RendezVousService {
             )
           ''')
           .eq('programmation_rdv', 'RDV_programmer')
-          .eq('id_personnel', userId)
+          .eq('id_utilisateur', userId)
           .order('date_rdv_prevu', ascending: true);
 
       return List<Map<String, dynamic>>.from(response);

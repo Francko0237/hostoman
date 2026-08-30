@@ -20,7 +20,7 @@ class DetailService {
             statut_paiement,
             motif,
             date_paiement,
-            Consultation(
+             Consultation(
               id_consultation,
               type_service,
               date_enregistrement,
@@ -35,8 +35,25 @@ class DetailService {
 
       final data = Map<String, dynamic>.from(response);
 
-      // Si le paiement est lié à une prescription, charger les lignes
+      // Si pas de consultation mais que nous avons un id_prescription, on peut récupérer le patient via prescription -> Patient
       final idPrescription = data['id_prescription'];
+      if (data['Consultation'] == null && idPrescription != null) {
+        final prescr = await supabase
+            .from('prescription')
+            .select('id_patient, Patient(*)')
+            .eq('id_prescription', idPrescription)
+            .maybeSingle();
+        if (prescr != null) {
+          data['Consultation'] = {
+            'id_patient': prescr['id_patient'],
+            'Patient': prescr['Patient'],
+            'type_service': 'Pharmacie',
+            'examen_a_effectuer': [],
+          };
+        }
+      }
+
+      // Si le paiement est lié à une prescription, charger les lignes
       if (idPrescription != null) {
         final lignes = await supabase
             .from('prescription_ligne')

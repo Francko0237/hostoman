@@ -280,7 +280,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
   Future<void> _chargerMedecins() async {
     try {
       final response = await Supabase.instance.client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .select('id_personnel, Nom, Prenom, Specialite')
           .eq('Specialite', 'Médecin Généraliste');
 
@@ -288,7 +288,7 @@ class _Nouveau_PatientState extends State<Nouveau_Patient> {
         _medecins = (response as List).map((e) {
           final map = e as Map<String, dynamic>;
           return Medecin.fromMap({
-            'id_personnel': map['id_personnel'],
+            'id_utilisateur': map['id_utilisateur'],
             'Nom': map['Nom'],
             'Prenom': map['Prenom'],
             'Specialite': map['Specialite'],

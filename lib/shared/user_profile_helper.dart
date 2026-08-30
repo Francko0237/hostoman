@@ -5,10 +5,33 @@ class UserProfileHelper {
   static String? _cachedFormattedName;
   static Map<String, dynamic>? _cachedUserData;
 
+  // ─── Getters rapides pour le cloisonnement multi-hôpitaux ──────────────────
+
+  /// Retourne l'id_hopital de l'utilisateur connecté (depuis le cache).
+  /// Retourne l'id_hopital de l'utilisateur connecté en s'assurant d'interroger la DB si le cache est vide.
+  static Future<String?> getHospitalId() async {
+    if (_cachedUserData == null) {
+      await getUserData();
+    }
+    return currentHospitalId;
+  }
+
+  /// Retourne l'id_hopital de l'utilisateur connecté (depuis le cache).
+  static String? get currentHospitalId =>
+      _cachedUserData?['id_hopital']?.toString();
+
+  /// Retourne le nom de l'hôpital de l'utilisateur connecté (depuis le cache).
+  static String get currentHospitalName =>
+      _cachedUserData?['nom_hopital']?.toString() ?? '';
+
+  // ─── Cache ─────────────────────────────────────────────────────────────────
+
   static void clearCache() {
     _cachedFormattedName = null;
     _cachedUserData = null;
   }
+
+  // ─── Chargement du profil ──────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>?> getUserData() async {
     try {
@@ -19,30 +42,39 @@ class UserProfileHelper {
         return null;
       }
 
-      // Vérifier le cache — fonctionne pour les deux types de comptes
+      // Vérifier le cache
       if (_cachedUserData != null) {
         final cachedAuthId = _cachedUserData!['auth_id']?.toString();
-        final cachedPersonnelId = _cachedUserData!['id_personnel']?.toString();
-        if (cachedAuthId == user.id || cachedPersonnelId == user.id) {
+        final cachedUserId = _cachedUserData!['id_utilisateur']?.toString();
+        if (cachedAuthId == user.id || cachedUserId == user.id) {
           return _cachedUserData;
         }
       }
 
       clearCache();
 
-      // Chercher par auth_id (nouveaux comptes) en premier
+      // Chercher par auth_id (nouveaux comptes) — inclure id_hopital et nom_hopital
       Map<String, dynamic>? data = await client
-          .from('Personnel_hopital')
-          .select('Nom, Prenom, Specialite, sexe, id_personnel, auth_id')
+          .from('utilisateur')
+          .select(
+            'Nom, Prenom, Specialite, sexe, id_utilisateur, auth_id, id_hopital, hopital(nom_hopital)',
+          )
           .eq('auth_id', user.id)
           .maybeSingle();
 
-      // Fallback sur id_personnel (anciens comptes)
+      // Fallback sur id_utilisateur (anciens comptes)
       data ??= await client
-          .from('Personnel_hopital')
-          .select('Nom, Prenom, Specialite, sexe, id_personnel, auth_id')
-          .eq('id_personnel', user.id)
+          .from('utilisateur')
+          .select(
+            'Nom, Prenom, Specialite, sexe, id_utilisateur, auth_id, id_hopital, hopital(nom_hopital)',
+          )
+          .eq('id_utilisateur', user.id)
           .maybeSingle();
+
+      // Aplatir le nom_hopital depuis la jointure
+      if (data != null && data['hopital'] != null) {
+        data['nom_hopital'] = data['hopital']['nom_hopital'];
+      }
 
       _cachedUserData = data;
       return _cachedUserData;
@@ -50,6 +82,8 @@ class UserProfileHelper {
       return null;
     }
   }
+
+  // ─── Formatage du nom affiché ──────────────────────────────────────────────
 
   static Future<String> getFormattedName() async {
     try {
@@ -62,8 +96,8 @@ class UserProfileHelper {
 
       if (_cachedFormattedName != null && _cachedUserData != null) {
         final cachedAuthId = _cachedUserData!['auth_id']?.toString();
-        final cachedPersonnelId = _cachedUserData!['id_personnel']?.toString();
-        if (cachedAuthId == user.id || cachedPersonnelId == user.id) {
+        final cachedUserId = _cachedUserData!['id_utilisateur']?.toString();
+        if (cachedAuthId == user.id || cachedUserId == user.id) {
           return _cachedFormattedName!;
         }
       }
@@ -94,9 +128,7 @@ class UserProfileHelper {
       }
 
       String fullName = '';
-      if (nom.isNotEmpty) {
-        fullName += nom;
-      }
+      if (nom.isNotEmpty) fullName += nom;
       if (prenom.isNotEmpty) {
         if (fullName.isNotEmpty) fullName += ' ';
         fullName += prenom;
@@ -110,6 +142,8 @@ class UserProfileHelper {
     }
   }
 }
+
+// ─── Widget utilitaire ────────────────────────────────────────────────────────
 
 class ConnectedUserText extends StatelessWidget {
   final TextStyle? style;
@@ -130,9 +164,10 @@ class ConnectedUserText extends StatelessWidget {
     return FutureBuilder<String>(
       future: UserProfileHelper.getFormattedName(),
       builder: (context, snapshot) {
-        final text = (snapshot.hasData && snapshot.data!.isNotEmpty)
-            ? snapshot.data!
-            : fallback;
+        final text =
+            (snapshot.hasData && snapshot.data!.isNotEmpty)
+                ? snapshot.data!
+                : fallback;
         return Text(text, style: style, overflow: overflow, maxLines: maxLines);
       },
     );

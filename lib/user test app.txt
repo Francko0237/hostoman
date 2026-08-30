@@ -1,0 +1,18 @@
+                                                            ** Centre de santé 1 **
+
+
+  Nom: Hopital de district de manjo
+
+Personnel:
+
+ - Directeur
+
+ . Nom: Kamga
+ . Usernam: admin1
+ . Password:admin1
+
+ - Argent d'accueil/ infirmier et stagiaire
+
+ . Nom: Kamga
+ . Usernam: admin1
+ . Password:admin1

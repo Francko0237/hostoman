@@ -1,8 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 /// Service centralisant les KPI temps réel pour la page d'accueil du Directeur.
-/// Toutes les requêtes attaquent directement Supabase.
+/// Toutes les requêtes sont désormais cloisonnées par l'hôpital connecté.
 class HomeDirecteurService {
   final SupabaseClient supabase;
   HomeDirecteurService(this.supabase);
@@ -21,15 +22,15 @@ class HomeDirecteurService {
       if (user == null) return {};
 
       Map<String, dynamic>? data = await supabase
-          .from('Personnel_hopital')
-          .select('Nom, Prenom, email, Specialite, sexe')
+          .from('utilisateur')
+          .select('Nom, Prenom, email, Specialite, sexe, id_hopital, hopital(nom_hopital)')
           .eq('auth_id', user.id)
           .maybeSingle();
 
       data ??= await supabase
-          .from('Personnel_hopital')
-          .select('Nom, Prenom, email, Specialite, sexe')
-          .eq('id_personnel', user.id)
+          .from('utilisateur')
+          .select('Nom, Prenom, email, Specialite, sexe, id_hopital, hopital(nom_hopital)')
+          .eq('id_utilisateur', user.id)
           .maybeSingle();
 
       return data ?? {};
@@ -42,92 +43,106 @@ class HomeDirecteurService {
   Future<Map<String, dynamic>> getTodayKpis() async {
     final today = DateTime.now();
     final range = _dayRange(today);
+    final hid = await UserProfileHelper.getHospitalId();
 
     try {
       // 1) Revenu du jour
-      final paiementsJour = await supabase
+      var qPaiements = supabase
           .from('paiement')
           .select('prix_a_paye')
           .eq('statut_paiement', 'payer')
           .gte('date_paiement', range['start']!)
           .lte('date_paiement', range['end']!);
+      if (hid != null) qPaiements = qPaiements.eq('id_hopital', hid);
+      final paiementsJour = await qPaiements;
       double revenuJour = 0;
       for (var p in paiementsJour) {
         revenuJour += (p['prix_a_paye'] as num).toDouble();
       }
 
       // 2) Patients admis aujourd'hui
-      final patientsJour = await supabase
+      var qPatients = supabase
           .from('Patient')
           .select('id_patient')
           .gte('date_enregistrement', range['start']!)
-          .lte('date_enregistrement', range['end']!)
-          .count(CountOption.exact);
+          .lte('date_enregistrement', range['end']!);
+      if (hid != null) qPatients = qPatients.eq('id_hopital', hid);
+      final patientsJour = await qPatients.count(CountOption.exact);
 
       // 3) Consultations en cours (tous les statuts actifs)
-      final consultationsEnCours = await supabase
+      var qConsultEnCours = supabase
           .from('Consultation')
           .select('id_consultation')
           .or(
             'Statut_Consultation.eq.En cours,Statut_Consultation.eq.en-attente-examen,Statut_Consultation.eq.en-attente-resultat,Statut_Consultation.eq.resultat-disponible',
-          )
-          .count(CountOption.exact);
+          );
+      if (hid != null) qConsultEnCours = qConsultEnCours.eq('id_hopital', hid);
+      final consultationsEnCours = await qConsultEnCours.count(CountOption.exact);
 
       // 4) Consultations terminées aujourd'hui
-      final consultationsFinies = await supabase
+      var qConsultFinies = supabase
           .from('Consultation')
           .select('id_consultation')
           .eq('Statut_Consultation', 'terminer')
           .gte('date_derniere_mise_ajour', range['start']!)
-          .lte('date_derniere_mise_ajour', range['end']!)
-          .count(CountOption.exact);
+          .lte('date_derniere_mise_ajour', range['end']!);
+      if (hid != null) qConsultFinies = qConsultFinies.eq('id_hopital', hid);
+      final consultationsFinies = await qConsultFinies.count(CountOption.exact);
 
       // 5) Personnel total
-      final personnelTotal = await supabase
-          .from('Personnel_hopital')
-          .select('id_personnel')
-          .count(CountOption.exact);
+      var qPersonnel = supabase
+          .from('utilisateur')
+          .select('id_utilisateur');
+      if (hid != null) qPersonnel = qPersonnel.eq('id_hopital', hid);
+      final personnelTotal = await qPersonnel.count(CountOption.exact);
 
       // 6) Paiements en attente
-      final paiementsAttente = await supabase
+      var qPaiementAtt = supabase
           .from('paiement')
           .select('id_paiement')
-          .eq('statut_paiement', 'en_attente')
-          .count(CountOption.exact);
+          .eq('statut_paiement', 'en_attente');
+      if (hid != null) qPaiementAtt = qPaiementAtt.eq('id_hopital', hid);
+      final paiementsAttente = await qPaiementAtt.count(CountOption.exact);
 
       // 7) Patients en attente au labo (distinct par consultation)
-      final examensAttenteRaw = await supabase
+      var qExam = supabase
           .from('examen_a_effectuer')
           .select('id_consultation')
           .eq('statut_examen', 'en attente');
+      if (hid != null) qExam = qExam.eq('id_hopital', hid);
+      final examensAttenteRaw = await qExam;
       final patientsAttenteExam = (examensAttenteRaw as List)
           .map((e) => e['id_consultation'])
           .toSet()
           .length;
 
       // 8) Patients en attente de consultation
-      final patientsAttenteConsult = await supabase
+      var qConsultAtt = supabase
           .from('Consultation')
           .select('id_consultation')
-          .eq('Statut_Consultation', 'en-attente-consultation')
-          .count(CountOption.exact);
+          .eq('Statut_Consultation', 'en-attente-consultation');
+      if (hid != null) qConsultAtt = qConsultAtt.eq('id_hopital', hid);
+      final patientsAttenteConsult = await qConsultAtt.count(CountOption.exact);
 
       // ── Pharmacie (non-fatal si table absente) ──────────────────────────
       int stockRupture = 0, stockBas = 0, lotsPerimes = 0;
       try {
-        final ruptureRes = await supabase
+        var qRupture = supabase
             .from('listemedicament')
             .select('id_medicament')
             .eq('actif', true)
-            .eq('stock', 0)
-            .count(CountOption.exact);
+            .eq('stock', 0);
+        if (hid != null) qRupture = qRupture.eq('id_hopital', hid);
+        final ruptureRes = await qRupture.count(CountOption.exact);
         stockRupture = ruptureRes.count;
 
-        final stockBasList = await supabase
+        var qStockBas = supabase
             .from('listemedicament')
             .select('stock, seuil_alerte')
             .eq('actif', true)
             .gt('stock', 0);
+        if (hid != null) qStockBas = qStockBas.eq('id_hopital', hid);
+        final stockBasList = await qStockBas;
         stockBas = (stockBasList as List).where((m) {
           final s = (m['stock'] as num?)?.toInt() ?? 0;
           final a = (m['seuil_alerte'] as num?)?.toInt() ?? 0;
@@ -135,11 +150,13 @@ class HomeDirecteurService {
         }).length;
 
         final todayStr = DateTime.now().toIso8601String().split('T').first;
-        final lotsPerimesRaw = await supabase
+        var qPerimes = supabase
             .from('stock_entree')
             .select('id_medicament')
             .not('date_peremption', 'is', null)
             .lt('date_peremption', todayStr);
+        if (hid != null) qPerimes = qPerimes.eq('id_hopital', hid);
+        final lotsPerimesRaw = await qPerimes;
         lotsPerimes = (lotsPerimesRaw as List)
             .map((e) => e['id_medicament'])
             .toSet()
@@ -182,25 +199,29 @@ class HomeDirecteurService {
   Future<List<Map<String, dynamic>>> getWeeklyActivity() async {
     final now = DateTime.now();
     final List<Map<String, dynamic>> activity = [];
+    final hid = await UserProfileHelper.getHospitalId();
+
     try {
       for (int i = 6; i >= 0; i--) {
         final date = now.subtract(Duration(days: i));
         final range = _dayRange(date);
         final label = DateFormat('E', 'fr_FR').format(date);
 
-        final consult = await supabase
+        var qConsult = supabase
             .from('Consultation')
             .select('id_consultation')
             .gte('date_enregistrement', range['start']!)
-            .lte('date_enregistrement', range['end']!)
-            .count(CountOption.exact);
+            .lte('date_enregistrement', range['end']!);
+        if (hid != null) qConsult = qConsult.eq('id_hopital', hid);
+        final consult = await qConsult.count(CountOption.exact);
 
-        final patients = await supabase
+        var qPatient = supabase
             .from('Patient')
             .select('id_patient')
             .gte('date_enregistrement', range['start']!)
-            .lte('date_enregistrement', range['end']!)
-            .count(CountOption.exact);
+            .lte('date_enregistrement', range['end']!);
+        if (hid != null) qPatient = qPatient.eq('id_hopital', hid);
+        final patients = await qPatient.count(CountOption.exact);
 
         activity.add({
           'day': label,
@@ -217,10 +238,11 @@ class HomeDirecteurService {
 
   // ===================== TOP SPÉCIALITÉS PERSONNEL =====================
   Future<List<Map<String, dynamic>>> getStaffBySpecialite() async {
+    final hid = await UserProfileHelper.getHospitalId();
     try {
-      final response = await supabase
-          .from('Personnel_hopital')
-          .select('Specialite');
+      var query = supabase.from('utilisateur').select('Specialite');
+      if (hid != null) query = query.eq('id_hopital', hid);
+      final response = await query;
       final Map<String, int> map = {};
       for (var p in response) {
         final s = p['Specialite']?.toString() ?? 'Autre';

@@ -13,7 +13,8 @@ import 'authentification/authen_patient.dart';
 import 'authentification/premiere_connexion.dart';
 import 'authentification/mot_de_passe_oublie.dart';
 
-//Directeur
+//SuperAdmin & Directeur
+import 'SuperAdmin/dashboard_superadmin.dart';
 import 'Directeur/Dashboard/dashboard_directeur.dart';
 
 //Accuiel
@@ -96,6 +97,12 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/Authen_Patient',
       builder: (context, state) => Authen_Patient(),
+    ),
+
+    // SuperAdmin
+    GoRoute(
+      path: '/Dashboard_SuperAdmin',
+      builder: (context, state) => const DashboardSuperAdmin(),
     ),
 
     // Directeur

@@ -48,8 +48,8 @@ class OrdonnancesService {
         .toList();
   }
 
-  /// Liste les prescriptions de type 'consultation' avec statut
-  /// 'en_attente_paiement', en joignant Patient ET Consultation (motif).
+  /// Liste les prescriptions de type 'consultation' en attente de paiement, payées ou partiellement délivrées,
+  /// en attente de traitement par le pharmacien.
   Future<List<Map<String, dynamic>>> listerConsultationsEnAttente() async {
     final response = await supabase
         .from('prescription')
@@ -60,7 +60,7 @@ class OrdonnancesService {
           'Consultation(id_consultation, Parametres_vitaux(motif_de_consultation))',
         )
         .eq('type_prescription', 'consultation')
-        .eq('statut_prescription', 'en_attente_paiement')
+        .inFilter('statut_prescription', ['en_attente_paiement', 'paye', 'partiellement_delivre'])
         .order('date_prescription', ascending: false)
         .limit(200);
     return (response as List<dynamic>)
@@ -238,11 +238,22 @@ class OrdonnancesService {
 
     int total = 0, delivrees = 0;
     for (final l in lignes as List<dynamic>) {
-      total++;
       final s = l['statut_ligne']?.toString();
+      if (s == 'annule' || s == 'rupture') continue; // Exclure les médicaments annulés ou en rupture
+      total++;
       if (s == 'delivre' || s == 'substitue') delivrees++;
     }
-    if (total == 0) return;
+    if (total == 0) {
+      // Si tous les médicaments de l'ordonnance ont été annulés ou en rupture
+      await supabase
+          .from('prescription')
+          .update({
+            'statut_prescription': 'annule',
+            'date_derniere_mise_ajour': DateTime.now().toIso8601String(),
+          })
+          .eq('id_prescription', idPrescription);
+      return;
+    }
 
     final String nouveauStatut;
     if (delivrees == total) {
@@ -271,12 +282,38 @@ class OrdonnancesService {
         .eq('id_prescription', idPrescription);
   }
 
-  /// Marque une ligne en rupture (non délivrée).
+  /// Marque une ligne en rupture (non délivrée) et recalcule le statut de la prescription.
   Future<void> marquerRupture(int idLigne) async {
+    final ligne = await supabase
+        .from('prescription_ligne')
+        .select('id_prescription')
+        .eq('id_ligne', idLigne)
+        .single();
+    final idPrescription = (ligne['id_prescription'] as num).toInt();
+
     await supabase
         .from('prescription_ligne')
         .update({'statut_ligne': 'rupture'})
         .eq('id_ligne', idLigne);
+
+    await _recalculerStatutPrescription(idPrescription);
+  }
+
+  /// Annule une ligne de prescription et recalcule le statut global.
+  Future<void> annulerLigne(int idLigne) async {
+    final ligne = await supabase
+        .from('prescription_ligne')
+        .select('id_prescription')
+        .eq('id_ligne', idLigne)
+        .single();
+    final idPrescription = (ligne['id_prescription'] as num).toInt();
+
+    await supabase
+        .from('prescription_ligne')
+        .update({'statut_ligne': 'annule'})
+        .eq('id_ligne', idLigne);
+
+    await _recalculerStatutPrescription(idPrescription);
   }
 
   /// Saisie/modification du prix unitaire d'une ligne (utile pour

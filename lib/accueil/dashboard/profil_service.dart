@@ -13,15 +13,15 @@ class MedecinService {
 
       // Chercher par auth_id (nouveaux comptes) ou id_personnel (anciens comptes)
       Map<String, dynamic>? response = await client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .select()
           .eq('auth_id', user.id)
           .maybeSingle();
 
       response ??= await client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .select()
-          .eq('id_personnel', user.id)
+          .eq('id_utilisateur', user.id)
           .maybeSingle();
 
       if (response == null) return null;
@@ -41,7 +41,7 @@ class MedecinService {
       final response = await client
           .from('Parametres_vitaux')
           .select('id_parametres_vitaux')
-          .eq('id_personnel', user.id);
+          .eq('id_utilisateur', user.id);
 
       return response.length;
     } catch (e) {

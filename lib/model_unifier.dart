@@ -86,7 +86,7 @@ class Parametres_vitaux {
       'statut_VIH': statut_VIH,
       'vaccination': vaccination,
       'motif_de_consultation': motif_de_consultation,
-      'id_personnel': id_personnel,
+      'id_utilisateur': id_personnel,
       'date_enregistrement': date_enregistrement.toIso8601String(),
       'type_service': type_service,
     };
@@ -102,7 +102,7 @@ class Parametres_vitaux {
       statut_VIH: map['statut_VIH'],
       vaccination: map['vaccination'],
       motif_de_consultation: map['motif_de_consultation'],
-      id_personnel: map['id_personnel'],
+      id_personnel: map['id_utilisateur'],
       date_enregistrement: DateTime.parse(map['date_enregistrement']),
       type_service: map['type_service'],
     );
@@ -145,7 +145,7 @@ class Medecin {
       'patient_enregistre': patient_enregistre,
       'age': age,
       'Specialite': specialite,
-      'id_personnel': id_personnel,
+      'id_utilisateur': id_personnel,
       'sexe': sexe,
     };
   }
@@ -155,7 +155,7 @@ class Medecin {
       nom: (map['Nom'] ?? 'nomError'),
       prenom: (map['Prenom'] ?? 'prenomError'),
       specialite: (map['Specialite'] ?? 'specialiteError'),
-      id_personnel: (map['id_personnel']),
+      id_personnel: (map['id_utilisateur']),
       telephone: (map['telephone']),
       adresse: (map['adresse']),
       email: (map['email']),
@@ -211,7 +211,7 @@ class Consultation {
       'type_service': type_service,
       'id_patient': id_patient,
       'id_parametres_vitaux': id_parametres_vitaux,
-      'id_personnel': id_personnel,
+      'id_utilisateur': id_personnel,
       'date_derniere_mise_ajour': date_derniere_mise_ajour,
       'antecedents': antecedents,
       'signes_symptomes': signes_symptomes,
@@ -230,7 +230,7 @@ class Consultation {
       type_service: (map['type_service']),
       id_patient: (map['id_patient']),
       id_parametres_vitaux: (map['id_parametres_vitaux']),
-      id_personnel: (map['id_personnel']),
+      id_personnel: (map['id_utilisateur']),
       date_derniere_mise_ajour: (map['date_derniere_mise_ajour']),
       antecedents: (map['antecedents']),
       signes_symptomes: (map['signes_symptomes']),

@@ -19,7 +19,7 @@ class PatientDuJourService {
       final response = await client
           .from('Parametres_vitaux')
           .select('id_parametres_vitaux')
-          .eq('id_personnel', user.id)
+          .eq('id_utilisateur', user.id)
           .gte('date_enregistrement', startOfDay.toIso8601String())
           .lt('date_enregistrement', endOfDay.toIso8601String());
 

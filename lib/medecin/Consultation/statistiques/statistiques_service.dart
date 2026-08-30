@@ -14,7 +14,7 @@ class StatistiquesService {
         .from('Consultation')
         .select('id_consultation')
         .eq('Statut_Consultation', 'terminer')
-        .eq('id_personnel', userId)
+        .eq('id_utilisateur', userId)
         .gte('date_derniere_mise_ajour', debut.toIso8601String())
         .lte('date_derniere_mise_ajour', fin.toIso8601String());
 
@@ -30,7 +30,7 @@ class StatistiquesService {
         .from('Consultation')
         .select('id_consultation')
         .eq('Statut_Consultation', 'annuler')
-        .eq('id_personnel', userId)
+        .eq('id_utilisateur', userId)
         .gte('date_derniere_mise_ajour', debut.toIso8601String())
         .lte('date_derniere_mise_ajour', fin.toIso8601String());
 
@@ -47,7 +47,7 @@ class StatistiquesService {
         .select('id_consultation')
         .eq('Statut_Consultation', 'terminer')
         .eq('programmation_rdv', 'programmer')
-        .eq('id_personnel', userId)
+        .eq('id_utilisateur', userId)
         .gte('date_derniere_mise_ajour', debut.toIso8601String())
         .lte('date_derniere_mise_ajour', fin.toIso8601String());
 
@@ -75,7 +75,7 @@ class StatistiquesService {
             age
           )
         ''')
-        .eq('id_personnel', userId)
+        .eq('id_utilisateur', userId)
         .gte('date_derniere_mise_ajour', debut.toIso8601String())
         .lte('date_derniere_mise_ajour', fin.toIso8601String());
 
@@ -116,7 +116,7 @@ class StatistiquesService {
         ''')
         .eq('Statut_Consultation', 'terminer')
         .eq('programmation_rdv', 'programmer')
-        .eq('id_personnel', userId)
+        .eq('id_utilisateur', userId)
         .gte('date_derniere_mise_ajour', debut.toIso8601String())
         .lte('date_derniere_mise_ajour', fin.toIso8601String())
         .order('date_derniere_mise_ajour', ascending: false);

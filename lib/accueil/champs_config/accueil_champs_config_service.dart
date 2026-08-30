@@ -14,7 +14,7 @@ class AccueilChampsConfigService {
       final response = await supabase
           .from(_table)
           .select()
-          .eq('id_personnel', idPersonnel)
+          .eq('id_utilisateur', idPersonnel)
           .eq('visible', true)
           .order('ordre', ascending: true);
 

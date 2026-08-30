@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'personnel_service.dart';
+import 'package:hostoman/shared/user_profile_helper.dart';
 
 const Color dirPrimaryColor = Color(0xFF1A237E);
 const Color dirAccentColor = Color(0xFFFFD700);
@@ -78,10 +79,13 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
 
   Future<void> _loadDemandesReset() async {
     try {
-      final result = await Supabase.instance.client
-          .from('Personnel_hopital')
-          .select('id_personnel, Nom, Prenom, username, reset_password_statut')
+      final hid = await UserProfileHelper.getHospitalId();
+      var query = Supabase.instance.client
+          .from('utilisateur')
+          .select('id_utilisateur, Nom, Prenom, username, reset_password_statut')
           .eq('reset_password_statut', 'en_attente');
+      if (hid != null) query = query.eq('id_hopital', hid);
+      final result = await query;
       if (mounted) {
         setState(
           () => _demandesReset = List<Map<String, dynamic>>.from(result),
@@ -93,9 +97,9 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
   Future<void> _traiterDemande(String idPersonnel, bool valider) async {
     final statut = valider ? 'valide' : 'rejete';
     await Supabase.instance.client
-        .from('Personnel_hopital')
+        .from('utilisateur')
         .update({'reset_password_statut': statut})
-        .eq('id_personnel', idPersonnel);
+        .eq('id_utilisateur', idPersonnel);
     _loadDemandesReset();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -216,6 +220,36 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                           key: formKey,
                           child: Column(
                             children: [
+                              if (isEdit && ((existing['username'] != null && existing['username'].toString().isNotEmpty) || (existing['id_utilisateur'] != null && existing['id_utilisateur'].toString().isNotEmpty)))
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  margin: const EdgeInsets.only(bottom: 14),
+                                  decoration: BoxDecoration(
+                                    color: dirPrimaryColor.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: dirPrimaryColor.withValues(alpha: 0.25)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.badge, color: dirPrimaryColor, size: 20),
+                                      const SizedBox(width: 10),
+                                      const Text(
+                                        'ID d\'activation Agent : ',
+                                        style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
+                                      ),
+                                      SelectableText(
+                                        '${existing['username'] ?? existing['id_utilisateur']}',
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: dirPrimaryColor,
+                                          letterSpacing: 1.1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               Row(
                                 children: [
                                   Expanded(
@@ -417,38 +451,101 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                                 'Nom': nomCtrl.text.trim(),
                                 'Prenom': prenomCtrl.text.trim(),
                                 'telephone': int.tryParse(telCtrl.text) ?? 0,
-                                'adresse': adresseCtrl.text.trim(),
+                                      'adresse': adresseCtrl.text.trim(),
                                 'Specialite': selectedRole,
                                 'sexe': selectedSexe,
                                 'age': int.tryParse(ageCtrl.text) ?? 0,
                               };
                               Navigator.pop(ctx);
-                              String? error;
                               if (isEdit) {
-                                error = await _service.updatePersonnel(
-                                  existing['id_personnel'],
+                                final error = await _service.updatePersonnel(
+                                  existing['id_utilisateur'],
                                   data,
                                 );
-                              } else {
-                                error = await _service.addPersonnel(data);
-                              }
-                              if (!mounted) return;
-                              if (error == null) {
-                                _loadPersonnel();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      isEdit
-                                          ? 'staff_updated_ok'.tr()
-                                          : 'staff_added_ok'.tr(),
+                                if (!mounted) return;
+                                if (error == null) {
+                                  _loadPersonnel();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('staff_updated_ok'.tr()),
+                                      backgroundColor: Colors.green,
                                     ),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(error), backgroundColor: Colors.red),
+                                  );
+                                }
                               } else {
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(SnackBar(content: Text(error)));
+                                final res = await _service.addPersonnel(data);
+                                final String? error = res['error'];
+                                final String? genId = res['generatedId'];
+                                if (!mounted) return;
+
+                                if (error == null) {
+                                  _loadPersonnel();
+                                  if (genId != null) {
+                                    showDialog(
+                                      context: context,
+                                      builder: (alertCtx) => AlertDialog(
+                                        title: const Row(
+                                          children: [
+                                            Icon(Icons.verified_user, color: dirPrimaryColor),
+                                            SizedBox(width: 8),
+                                            Text('Compte créé avec succès'),
+                                          ],
+                                        ),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'La fiche a été créée. Transmettez cet ID d\'activation à l\'agent pour sa 1ère connexion :',
+                                              style: TextStyle(fontSize: 13),
+                                            ),
+                                            const SizedBox(height: 14),
+                                            Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                              decoration: BoxDecoration(
+                                                color: dirPrimaryColor.withOpacity(0.08),
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: dirPrimaryColor.withOpacity(0.3)),
+                                              ),
+                                              child: SelectableText(
+                                                genId,
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: dirPrimaryColor,
+                                                  letterSpacing: 1.2,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(alertCtx),
+                                            child: const Text('Compris'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('staff_added_ok'.tr()),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(error), backgroundColor: Colors.red),
+                                  );
+                                }
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -543,7 +640,7 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final error = await _service.deletePersonnel(p['id_personnel']);
+              final error = await _service.deletePersonnel(p['id_utilisateur']);
               if (!mounted) return;
               if (error == null) {
                 _loadPersonnel();
@@ -834,9 +931,28 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
                         ),
                       ),
                     ),
+                    if ((p['id_utilisateur'] != null && p['id_utilisateur'].toString().isNotEmpty) || (p['username'] != null && p['username'].toString().isNotEmpty)) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          'ID: ${p['id_utilisateur'] ?? p['username']}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(width: 8),
                     Icon(
-                      sexe == 'F' ? Icons.female_rounded : Icons.male_rounded,
+                      sexe == 'Femme' ? Icons.female_rounded : Icons.male_rounded,
                       size: 16,
                       color: Colors.grey,
                     ),
@@ -946,7 +1062,7 @@ class _GestionPersonnelPageState extends State<GestionPersonnelPage> {
   Widget _buildDemandeResetCard(Map<String, dynamic> p) {
     final nom = '${p['Prenom'] ?? ''} ${p['Nom'] ?? ''}'.trim();
     final username = p['username']?.toString() ?? 'N/A';
-    final idPersonnel = p['id_personnel'].toString();
+    final idPersonnel = p['id_utilisateur'].toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

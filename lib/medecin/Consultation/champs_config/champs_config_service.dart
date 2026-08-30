@@ -13,7 +13,7 @@ class ChampsConfigService {
       final response = await supabase
           .from('medecin_champs_config')
           .select()
-          .eq('id_personnel', idPersonnel)
+          .eq('id_utilisateur', idPersonnel)
           .eq('visible', true)
           .order('ordre', ascending: true);
 

@@ -51,21 +51,27 @@ class _MotDePasseOubliePageState extends State<MotDePasseOubliePage> {
     if (!_formKey1.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
-    final username = _usernameCtrl.text.trim().toLowerCase();
+    final input = _usernameCtrl.text.trim();
 
     try {
-      final fiche = await Supabase.instance.client
-          .from('Personnel_hopital')
-          .select(
-            'id_personnel, Nom, Prenom, compte_actif, reset_password_statut',
-          )
-          .eq('username', username)
-          .maybeSingle();
+      List<dynamic> results = await Supabase.instance.client
+          .from('utilisateur')
+          .select('id_utilisateur, Nom, Prenom, compte_actif, reset_password_statut, auth_id, username')
+          .ilike('id_utilisateur', input);
 
-      if (fiche == null) {
-        _showSnack('mdpo_error_not_found'.tr(), isError: true);
+      if (results.isEmpty) {
+        results = await Supabase.instance.client
+            .from('utilisateur')
+            .select('id_utilisateur, Nom, Prenom, compte_actif, reset_password_statut, auth_id, username')
+            .ilike('username', input);
+      }
+
+      if (results.isEmpty) {
+        _showSnack('Aucun compte trouvé avec l\'ID Agent "$input".', isError: true);
         return;
       }
+
+      final fiche = results.first as Map<String, dynamic>;
 
       if (fiche['compte_actif'] != true) {
         _showSnack('mdpo_error_inactive'.tr(), isError: true);
@@ -132,9 +138,9 @@ class _MotDePasseOubliePageState extends State<MotDePasseOubliePage> {
       }
 
       await Supabase.instance.client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .update({'reset_password_statut': 'en_attente'})
-          .eq('id_personnel', fiche['id_personnel']);
+          .eq('id_utilisateur', fiche['id_utilisateur']);
 
       _showSnack('mdpo_success_sent'.tr());
       await Future.delayed(const Duration(seconds: 2));
@@ -183,9 +189,9 @@ class _MotDePasseOubliePageState extends State<MotDePasseOubliePage> {
       }
 
       await Supabase.instance.client
-          .from('Personnel_hopital')
+          .from('utilisateur')
           .update({'reset_password_statut': null})
-          .eq('id_personnel', _ficheTrouvee!['id_personnel']);
+          .eq('id_utilisateur', _ficheTrouvee!['id_utilisateur']);
 
       _showSnack('mdpo_success_reset'.tr());
       await Future.delayed(const Duration(seconds: 1));
@@ -204,21 +210,26 @@ class _MotDePasseOubliePageState extends State<MotDePasseOubliePage> {
     if (!_formKey1.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
-    final username = _usernameCtrl.text.trim().toLowerCase();
+    final input = _usernameCtrl.text.trim();
     try {
-      final fiche = await Supabase.instance.client
-          .from('Personnel_hopital')
-          .select(
-            'id_personnel, Nom, Prenom, auth_id, compte_actif, reset_password_statut',
-          )
-          .eq('username', username)
-          .maybeSingle();
+      List<dynamic> results = await Supabase.instance.client
+          .from('utilisateur')
+          .select('id_utilisateur, Nom, Prenom, auth_id, compte_actif, reset_password_statut, username')
+          .ilike('id_utilisateur', input);
 
-      if (fiche == null) {
+      if (results.isEmpty) {
+        results = await Supabase.instance.client
+            .from('utilisateur')
+            .select('id_utilisateur, Nom, Prenom, auth_id, compte_actif, reset_password_statut, username')
+            .ilike('username', input);
+      }
+
+      if (results.isEmpty) {
         _showSnack('mdpo_error_not_found'.tr(), isError: true);
         return;
       }
 
+      final fiche = results.first as Map<String, dynamic>;
       final statut = fiche['reset_password_statut']?.toString();
       if (statut == 'valide') {
         setState(() {
@@ -507,7 +518,7 @@ class _MotDePasseOubliePageState extends State<MotDePasseOubliePage> {
             style: const TextStyle(fontSize: 15),
             decoration: _inputDeco(
               label: 'mdpo_username_label'.tr(),
-              icon: Icons.person_outline,
+              icon: Icons.badge_outlined,
             ),
             validator: (v) {
               if (v == null || v.trim().isEmpty)

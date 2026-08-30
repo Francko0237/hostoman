@@ -177,7 +177,7 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
     final selected = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) =>
-          _SubstitutPicker(catalogue: _catalogue, quantiteRequise: qteRequise),
+          SubstitutPicker(catalogue: _catalogue, quantiteRequise: qteRequise),
     );
     if (selected == null) return;
 
@@ -813,19 +813,19 @@ class _OrdonnanceDetailState extends State<OrdonnanceDetail> {
 }
 
 /// Mini-dialog pour choisir un médicament de substitution.
-class _SubstitutPicker extends StatefulWidget {
+class SubstitutPicker extends StatefulWidget {
   final List<Map<String, dynamic>> catalogue;
   final int quantiteRequise;
-  const _SubstitutPicker({
+  const SubstitutPicker({
     required this.catalogue,
     required this.quantiteRequise,
   });
 
   @override
-  State<_SubstitutPicker> createState() => _SubstitutPickerState();
+  State<SubstitutPicker> createState() => _SubstitutPickerState();
 }
 
-class _SubstitutPickerState extends State<_SubstitutPicker> {
+class _SubstitutPickerState extends State<SubstitutPicker> {
   String _search = '';
 
   @override
