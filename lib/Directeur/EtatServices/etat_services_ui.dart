@@ -137,19 +137,6 @@ class _EtatServicesPageState extends State<EtatServicesPage> {
               ],
             ),
           ),
-          ElevatedButton.icon(
-            onPressed: _loadData,
-            icon: const Icon(Icons.refresh, size: 16),
-            label: Text('refresh'.tr()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: dirAccentColor,
-              foregroundColor: Colors.black87,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
         ],
       ),
     );

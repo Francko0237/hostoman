@@ -214,8 +214,6 @@ class _HomeDirecteurPageState extends State<HomeDirecteurPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  _buildRefreshButton(),
                 ],
               ),
             ),
@@ -254,21 +252,6 @@ class _HomeDirecteurPageState extends State<HomeDirecteurPage> {
     );
   }
 
-  Widget _buildRefreshButton() {
-    return ElevatedButton.icon(
-      onPressed: _load,
-      icon: const Icon(Icons.refresh_rounded, size: 18),
-      label: Text('refresh'.tr()),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _accent,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-      ),
-    );
-  }
 
   String _greeting() {
     final h = DateTime.now().hour;
